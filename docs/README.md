@@ -19,6 +19,7 @@
 | [planning/baseline_plan.md](planning/baseline_plan.md) | V0/V1/V2 数据闭环基线 |
 | [planning/hal_ik_roadmap.md](planning/hal_ik_roadmap.md) | Phase 1：HAL + IK + 笛卡尔 |
 | [planning/rrt_roadmap.md](planning/rrt_roadmap.md) | Phase 2：双向 RRT + 碰撞检测 |
+| [planning/day1_grasp_spec.md](planning/day1_grasp_spec.md) | **三天冲刺 Day 1**：物理抓取 + 评测升级 |
 | [planning/design_10day.md](planning/design_10day.md) | 10 天增强栈总览 |
 | [planning/portfolio_roadmap.md](planning/portfolio_roadmap.md) | 广撒网 4 周投递路线 |
 
@@ -27,6 +28,7 @@
 | 文档 | 用途 |
 |------|------|
 | [reference/knowledge_base.md](reference/knowledge_base.md) | 具身机械臂概念知识库 |
+| [reference/learning_capability_alignment.md](reference/learning_capability_alignment.md) | **能力对齐学习手册**（AI 辅助开发后自检、阶段学习、岗位路径） |
 | [reference/pybullet_audit.md](reference/pybullet_audit.md) | Phase 1 PyBullet 控制审计 |
 | [reference/migration_ros2_moveit.md](reference/migration_ros2_moveit.md) | HAL → ROS2 / MoveIt 迁移 |
 

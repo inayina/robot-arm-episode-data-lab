@@ -148,12 +148,15 @@ robot-arm-episode-data-lab/
 ```bash
 python scripts/run_rrt_demo.py --seed 7
 python scripts/run_rrt_demo.py --gui   # 可选视觉确认
+python scripts/run_rrt_demo.py --seed 7 \
+  --save-gif assets/gifs/demo_rrt_obstacle.gif
 ```
 
 验收标准：
 
 - [x] headless 规划成功，EE 误差 < 8 cm。
 - [x] 退出码 0。
+- [x] `--save-gif` 可生成 README 展示用绕障回放。
 
 完成记录：
 

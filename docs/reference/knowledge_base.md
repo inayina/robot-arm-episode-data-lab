@@ -2,6 +2,8 @@
 
 本文档面向 `robot-arm-episode-data-lab` 项目，整理具身智能机械臂方向的核心概念、技术路线、工程模块和学习资料。目标不是写成论文综述，而是作为后续实现 HAL、IK、RRT、抓取、数据采集、LeRobot 转换和模仿学习的项目知识底座。
 
+**若需按仓库已实现能力逐块自学、自检与面试对齐**，见 companion 文档 [learning_capability_alignment.md](learning_capability_alignment.md)（含 AI 辅助开发后的掌握流程与动手清单）。
+
 ## 1. 一句话理解具身智能机械臂
 
 具身智能机械臂系统不是单纯的视觉识别模型，也不是单纯的机械臂控制程序，而是一个持续闭环：

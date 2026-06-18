@@ -2,69 +2,54 @@
 
 本文档由 `scripts/update_project_docs.py` 自动生成。
 
-文档索引：[docs/README.md](../README.md)
+文档索引：[docs/README.md](../README.md) · 设计总览：[design_10day.md](../planning/design_10day.md)
 
-广撒网 4 周路线：[portfolio_roadmap.md](../planning/portfolio_roadmap.md)。
+> **单线进度（截至今日）**：数据闭环、HAL/IK、FSM 评测、RRT、**物理 constraint 抓取**、批量/LeRobot 脚本与 CI 已就绪；
+> **再开发 2 天**（Day 2–3 展示与投递收尾）按下方冲刺清单完成即可对外展示。
 
-## 作品集基线
+## 已完成
 
-- [x] V0 最小样例：`dataset_sample/v0/`
-- [x] V1 episode 数据闭环：`dataset_sample/episode_000001/`
-- [x] 数据校验脚本：`scripts/validate_dataset.py`
-- [x] 回放 GIF 脚本：`scripts/visualize_episode.py`
-- [x] 数据结构与采集流程文档：`docs/dev/data_schema.md`, `docs/dev/collection_pipeline.md`
+### 数据管线
 
-## Phase 0.5 工程与展示（广撒网）
+- [x] Episode 闭环（image / state / action / pose）：`collect_episode.py` + `validate_dataset.py`
+- [x] CI 门禁（reach + pick_and_lift）：`.github/workflows/ci.yml`
+- [x] 仿真世界与落盘模块：`core/world.py`, `core/episode_writer.py`
+- [x] 回放与 schema 文档：`visualize_episode.py`, `data_schema.md`
 
-- [x] config 接入采集脚本：`collect_episode.py --config configs/default.yaml`
-- [x] 统一样例 episode：`dataset_sample/episode_000001/`（100 步、640×480）
-- [x] 展示 GIF：`assets/gifs/demo_replay.gif`
-- [x] pytest 测试：`pytest -q`
-- [x] GitHub Actions CI：`.github/workflows/ci.yml`
-- [x] LICENSE：`LICENSE`
+### 规划与任务
 
-## Phase 1 HAL + IK + 笛卡尔
+- [x] HAL + IK + 笛卡尔插补：`core/hal.py`, `core/ik.py`, `core/trajectory.py`
+- [x] Pick-lift FSM + Evaluator：constraint 抓取 + grasp/slip 评测标签
+- [x] 双向 RRT + 碰撞检测：`--planner rrt`, `run_rrt_demo.py`
+- [x] 批量 / LeRobot 脚本骨架：`batch_collect.py`, `export_lerobot_style.py`
 
-- [x] 任务 1：PyBullet 控制逻辑审计：`docs/reference/pybullet_audit.md`
-- [x] 任务 2：RobotControl 抽象基类：`core/hal.py`
-- [x] 任务 3：PyBulletRobot 控制封装：`core/pybullet_robot.py`
-- [x] 任务 4：HAL smoke demo：`scripts/run_cartesian_demo.py`
-- [x] 任务 5：IK 求解封装：`core/ik.py`
-- [x] 任务 6：笛卡尔直线插补：`core/trajectory.py`
-- [x] 任务 8：采集脚本接入 cartesian_ik 模式：`collect_episode.py --control-mode cartesian_ik`
+### 文档与材料
 
-## Phase 1.5 任务可信度（广撒网）
+- [x] 开发文档与架构：`docs/dev/`
+- [x] 面试讲稿与学习手册：讲稿 + 能力对齐文档
+- [x] 10 天设计 / RRT 路线图：`design_10day.md`, `rrt_roadmap.md`
 
-- [x] Task FSM：`agents/task_fsm.py`
-- [x] Evaluator Agent：`agents/evaluator.py`
-- [x] Motion planner 模块：`agents/motion_planner.py`
-- [x] 成功 pick/lift GIF：`assets/gifs/demo_pick_success.gif`
+## 三天冲刺 → 成型作品集
 
-## Phase 2 RRT 避障（design 10-day）
+对齐 `design_10day.md` Day 5–10 与投递展示要求；完成下列全部 `[ ]` 即可对外展示。
 
-- [x] 关节限位模块：`core/joint_limits.py`
-- [x] PyBullet 碰撞检测：`core/collision.py`
-- [x] 双向 RRT-Connect：`core/rrt.py`
-- [x] plan_rrt_segment：`agents/motion_planner.py`
-- [x] RRT 可视化 demo：`scripts/run_rrt_demo.py`
-- [x] 采集链路 --planner rrt：`collect_episode.py --planner rrt`
-- [x] 规划失败 metadata：`metadata.json` 扩展字段
-- [x] Evaluator 碰撞拦截：`agents/evaluator.py`
-- [x] RRT 测试：`tests/test_rrt*.py`, `tests/test_collision.py`
-- [x] Phase 2 路线图文档：`docs/planning/rrt_roadmap.md`
+### Day 1 · 抓取可信度
 
-## Phase 2 批量数据 + LeRobot（作品集）
+- [x] 物理夹爪或约束抓取：替换 `sync_object_to_grasp_offset` kinematic demo
+- [x] 物理向 success / failure 判定：Evaluator 接触 / 力 / 夹持判定
+- [x] 抓取链路 pytest：新增 grasp / gripper 集成测试
 
-- [x] 批量采集脚本：`scripts/batch_collect.py`
-- [x] 数据集目录 ≥ 20 episode：`dataset/v1/`（本地生成，不提交 Git）
-- [x] LeRobot 真导出：`export_lerobot_style.py`
-- [x] 数据集 README：`dataset/v1/README.md`
+### Day 2 · 批量数据与展示
 
-## Phase 3 展示与迁移叙事（广撒网）
+- [x] 本地 batch ≥ 20 episode：`batch_collect.py --num-episodes 20`
+- [x] 数据集 README（成功率统计）：`dataset/v1/README.md`
+- [x] 三条 demo GIF 齐全：`demo_replay` / `demo_pick_success` / `demo_rrt_obstacle`
 
-- [x] 面试讲稿：`docs/portfolio/interview_walkthrough.md`
-- [x] ROS/MoveIt 迁移设计：`docs/reference/migration_ros2_moveit.md`
-- [x] 广撒网路线图文档：`docs/planning/portfolio_roadmap.md`
+### Day 3 · 导出与成型投递
+
+- [x] LeRobot 导出本地跑通：`export_lerobot_style.py dataset/v1`
+- [x] 讲稿与实现一致：更新 `interview_walkthrough.md` 局限与演示命令
+- [x] 30 秒可复现（README + CI）：README 快速开始 + CI 绿
 
 ## 更新方式
 
@@ -73,4 +58,4 @@ python scripts/update_project_docs.py
 ```
 
 如已启用 `.githooks/pre-commit`，提交前会自动刷新
-`README.md` 与本文件中的自动进度快照。
+`README.md` 与 `docs/portfolio/project_status.md`。

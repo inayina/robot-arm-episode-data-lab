@@ -16,7 +16,8 @@ if str(REPO_ROOT) not in sys.path:
 from core.ik import solve_ik
 from core.pybullet_robot import PyBulletRobot
 from core.trajectory import interpolate_cartesian_line
-from scripts.collect_episode import connect, get_controlled_joints, setup_world
+from core.collect_config import CameraConfig
+from core.world import connect, disconnect, setup_world
 
 try:
     import pybullet as p
@@ -148,7 +149,7 @@ def main() -> int:
                 steps_per_waypoint=args.steps_per_waypoint,
             )
     finally:
-        p.disconnect(client_id)
+        disconnect(client_id)
     return 0
 
 

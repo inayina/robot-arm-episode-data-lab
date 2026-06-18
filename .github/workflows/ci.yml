@@ -37,7 +37,23 @@ jobs:
       - name: Validate sample episode
         run: python scripts/validate_dataset.py dataset_sample/episode_000001
 
+      - name: Generate pick_and_lift sample episode
+        run: |
+          python scripts/collect_episode.py \
+            --task pick_and_lift \
+            --output dataset_sample/episode_pick_ci \
+            --num-steps 40 \
+            --width 64 \
+            --height 48 \
+            --seed 7
+
+      - name: Validate pick_and_lift sample episode
+        run: python scripts/validate_dataset.py dataset_sample/episode_pick_ci
+
       - name: Run pytest
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: pytest -q
+
+      - name: Verify generated docs
+        run: python scripts/update_project_docs.py --check

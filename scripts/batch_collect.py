@@ -16,14 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.collect_episode import (
-    CollectSettings,
-    connect,
-    collect_episode,
-    collect_pick_and_lift,
-    settings_from_config,
-    DEFAULT_CONFIG_PATH,
-)
+from core.collect_config import CollectSettings, DEFAULT_CONFIG_PATH, settings_from_config
+from core.world import connect, disconnect
+from scripts.collect_episode import collect_episode, collect_pick_and_lift
 from scripts.validate_dataset import collect_dataset_summary, collect_errors
 
 try:
@@ -220,7 +215,7 @@ def collect_one_episode(
             cube_xy_offset=cube_xy_offset,
         )
     finally:
-        p.disconnect(client_id)
+        disconnect(client_id)
 
     metadata_path = episode_dir / "metadata.json"
     success = None

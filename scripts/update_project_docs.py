@@ -14,8 +14,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-AUTO_START = "<!-- AUTO_STATUS_START -->"
-AUTO_END = "<!-- AUTO_STATUS_END -->"
+INTRO_START = "<!-- README_INTRO_START -->"
+INTRO_END = "<!-- README_INTRO_END -->"
+FOOTER_START = "<!-- README_FOOTER_START -->"
+FOOTER_END = "<!-- README_FOOTER_END -->"
 PROJECT_STATUS_PATH = "docs/portfolio/project_status.md"
 
 
@@ -43,363 +45,318 @@ def file_contains(relative_path: str, pattern: str) -> bool:
     return re.search(pattern, path.read_text(encoding="utf-8"), re.MULTILINE) is not None
 
 
-def json_metadata_has_true_success(relative_dir: str) -> bool:
-    path = ROOT / relative_dir / "metadata.json"
-    if not path.exists():
-        return False
-    try:
-        import json
-
-        metadata = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return False
-    return metadata.get("success") is True
+def checkbox(done: bool) -> str:
+    return "x" if done else " "
 
 
-def count_episode_frames(relative_dir: str) -> int:
-    images_dir = ROOT / relative_dir / "images"
-    if not images_dir.is_dir():
-        return 0
-    return len(sorted(images_dir.glob("*.png")))
+def ci_generates_reach_episode() -> bool:
+    return file_contains(".github/workflows/ci.yml", r"episode_000001") and file_contains(
+        ".github/workflows/ci.yml", r"--num-steps 100"
+    )
+
+
+def ci_generates_pick_lift_episode() -> bool:
+    return file_contains(".github/workflows/ci.yml", r"pick_and_lift") and file_contains(
+        ".github/workflows/ci.yml", r"episode_pick_ci"
+    )
 
 
 def count_dataset_episodes(relative_dir: str) -> int:
     root = ROOT / relative_dir
     if not root.is_dir():
         return 0
-    count = 0
-    for child in sorted(root.iterdir()):
-        if child.is_dir() and (child / "metadata.json").exists():
-            count += 1
-    return count
+    return sum(
+        1
+        for child in sorted(root.iterdir())
+        if child.is_dir() and (child / "metadata.json").exists()
+    )
 
 
-def checkbox(done: bool) -> str:
-    return "x" if done else " "
+def uses_kinematic_grasp_sync() -> bool:
+    return file_contains("scripts/collect_episode.py", r"sync_object_to_grasp_offset")
 
 
-def episode_matches_default_sample(relative_dir: str) -> bool:
-    path = ROOT / relative_dir / "metadata.json"
-    if not path.exists():
-        return False
-    try:
-        import json
-
-        metadata = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return False
-    return (
-        metadata.get("num_steps") == 100
-        and metadata.get("image_width") == 640
-        and metadata.get("image_height") == 480
-        and count_episode_frames(relative_dir) == 100
+def demo_gifs_ready() -> bool:
+    return all(
+        exists(path)
+        for path in (
+            "assets/gifs/demo_replay.gif",
+            "assets/gifs/demo_pick_success.gif",
+            "assets/gifs/demo_rrt_obstacle.gif",
+        )
     )
 
 
 def build_status_sections() -> list[StatusSection]:
-    baseline = StatusSection(
-        "作品集基线",
-        [
-            StatusItem(
-                "V0 最小样例",
-                exists("dataset_sample/v0/image.png")
-                and exists("dataset_sample/v0/joint_state.npy")
-                and exists("dataset_sample/v0/metadata.json"),
-                "`dataset_sample/v0/`",
-            ),
-            StatusItem(
-                "V1 episode 数据闭环",
-                exists("dataset_sample/episode_000001/states.npy")
-                and exists("dataset_sample/episode_000001/actions.npy")
-                and exists("dataset_sample/episode_000001/ee_poses.npy")
-                and exists("dataset_sample/episode_000001/object_poses.npy")
-                and exists("dataset_sample/episode_000001/metadata.json")
-                and count_episode_frames("dataset_sample/episode_000001") > 0,
-                "`dataset_sample/episode_000001/`",
-            ),
-            StatusItem(
-                "数据校验脚本",
-                exists("scripts/validate_dataset.py"),
-                "`scripts/validate_dataset.py`",
-            ),
-            StatusItem(
-                "回放 GIF 脚本",
-                exists("scripts/visualize_episode.py"),
-                "`scripts/visualize_episode.py`",
-            ),
-            StatusItem(
-                "数据结构与采集流程文档",
-                exists("docs/dev/data_schema.md")
-                and exists("docs/dev/collection_pipeline.md"),
-                "`docs/dev/data_schema.md`, `docs/dev/collection_pipeline.md`",
-            ),
-        ],
-    )
-
-    phase05 = StatusSection(
-        "Phase 0.5 工程与展示（广撒网）",
-        [
-            StatusItem(
-                "config 接入采集脚本",
-                file_contains("scripts/collect_episode.py", r"--config")
-                and file_contains("scripts/collect_episode.py", r"default\.yaml"),
-                "`collect_episode.py --config configs/default.yaml`",
-            ),
-            StatusItem(
-                "统一样例 episode",
-                episode_matches_default_sample("dataset_sample/episode_000001"),
-                "`dataset_sample/episode_000001/`（100 步、640×480）",
-            ),
-            StatusItem(
-                "展示 GIF",
-                exists("assets/gifs/demo_replay.gif"),
-                "`assets/gifs/demo_replay.gif`",
-            ),
-            StatusItem(
-                "pytest 测试",
-                exists("tests/test_validate_dataset.py")
-                and exists("tests/test_rrt.py"),
-                "`pytest -q`",
-            ),
-            StatusItem(
-                "GitHub Actions CI",
-                exists(".github/workflows/ci.yml"),
-                "`.github/workflows/ci.yml`",
-            ),
-            StatusItem(
-                "LICENSE",
-                exists("LICENSE"),
-                "`LICENSE`",
-            ),
-        ],
-    )
-
-    phase1 = StatusSection(
-        "Phase 1 HAL + IK + 笛卡尔",
-        [
-            StatusItem(
-                "任务 1：PyBullet 控制逻辑审计",
-                exists("docs/reference/pybullet_audit.md"),
-                "`docs/reference/pybullet_audit.md`",
-            ),
-            StatusItem(
-                "任务 2：RobotControl 抽象基类",
-                exists("core/hal.py"),
-                "`core/hal.py`",
-            ),
-            StatusItem(
-                "任务 3：PyBulletRobot 控制封装",
-                exists("core/pybullet_robot.py"),
-                "`core/pybullet_robot.py`",
-            ),
-            StatusItem(
-                "任务 4：HAL smoke demo",
-                exists("scripts/run_cartesian_demo.py"),
-                "`scripts/run_cartesian_demo.py`",
-            ),
-            StatusItem(
-                "任务 5：IK 求解封装",
-                exists("core/ik.py"),
-                "`core/ik.py`",
-            ),
-            StatusItem(
-                "任务 6：笛卡尔直线插补",
-                exists("core/trajectory.py"),
-                "`core/trajectory.py`",
-            ),
-            StatusItem(
-                "任务 8：采集脚本接入 cartesian_ik 模式",
-                file_contains("scripts/collect_episode.py", r"--control-mode")
-                and file_contains("scripts/collect_episode.py", r"cartesian_ik"),
-                "`collect_episode.py --control-mode cartesian_ik`",
-            ),
-        ],
-    )
-
-    phase15 = StatusSection(
-        "Phase 1.5 任务可信度（广撒网）",
-        [
-            StatusItem(
-                "Task FSM",
-                exists("agents/task_fsm.py"),
-                "`agents/task_fsm.py`",
-            ),
-            StatusItem(
-                "Evaluator Agent",
-                exists("agents/evaluator.py"),
-                "`agents/evaluator.py`",
-            ),
-            StatusItem(
-                "Motion planner 模块",
-                exists("agents/motion_planner.py"),
-                "`agents/motion_planner.py`",
-            ),
-            StatusItem(
-                "成功 pick/lift GIF",
-                exists("assets/gifs/demo_pick_success.gif")
-                or json_metadata_has_true_success("dataset_sample/episode_pick_001"),
-                "`assets/gifs/demo_pick_success.gif`",
-            ),
-        ],
-    )
-
-    phase2_rrt = StatusSection(
-        "Phase 2 RRT 避障（design 10-day）",
-        [
-            StatusItem(
-                "关节限位模块",
-                exists("core/joint_limits.py"),
-                "`core/joint_limits.py`",
-            ),
-            StatusItem(
-                "PyBullet 碰撞检测",
-                exists("core/collision.py"),
-                "`core/collision.py`",
-            ),
-            StatusItem(
-                "双向 RRT-Connect",
-                exists("core/rrt.py"),
-                "`core/rrt.py`",
-            ),
-            StatusItem(
-                "plan_rrt_segment",
-                file_contains("agents/motion_planner.py", r"plan_rrt_segment"),
-                "`agents/motion_planner.py`",
-            ),
-            StatusItem(
-                "RRT 可视化 demo",
-                exists("scripts/run_rrt_demo.py"),
-                "`scripts/run_rrt_demo.py`",
-            ),
-            StatusItem(
-                "采集链路 --planner rrt",
-                file_contains("scripts/collect_episode.py", r"--planner"),
-                "`collect_episode.py --planner rrt`",
-            ),
-            StatusItem(
-                "规划失败 metadata",
-                file_contains("scripts/collect_episode.py", r"planning_failure_reason"),
-                "`metadata.json` 扩展字段",
-            ),
-            StatusItem(
-                "Evaluator 碰撞拦截",
-                file_contains("agents/evaluator.py", r"unexpected_collision"),
-                "`agents/evaluator.py`",
-            ),
-            StatusItem(
-                "RRT 测试",
-                exists("tests/test_rrt.py")
-                and exists("tests/test_collision.py")
-                and exists("tests/test_rrt_integration.py"),
-                "`tests/test_rrt*.py`, `tests/test_collision.py`",
-            ),
-            StatusItem(
-                "Phase 2 路线图文档",
-                exists("docs/planning/rrt_roadmap.md"),
-                "`docs/planning/rrt_roadmap.md`",
-            ),
-        ],
-    )
-
-    phase2_portfolio = StatusSection(
-        "Phase 2 批量数据 + LeRobot（作品集）",
-        [
-            StatusItem(
-                "批量采集脚本",
-                exists("scripts/batch_collect.py"),
-                "`scripts/batch_collect.py`",
-            ),
-            StatusItem(
-                "数据集目录 ≥ 20 episode",
-                count_dataset_episodes("dataset/v1") >= 20,
-                "`dataset/v1/`（本地生成，不提交 Git）",
-            ),
-            StatusItem(
-                "LeRobot 真导出",
-                file_contains("scripts/export_lerobot_style.py", r"lerobot")
-                or exists("dataset/v1/lerobot_export"),
-                "`export_lerobot_style.py`",
-            ),
-            StatusItem(
-                "数据集 README",
-                exists("dataset/v1/README.md"),
-                "`dataset/v1/README.md`",
-            ),
-        ],
-    )
-
-    phase3 = StatusSection(
-        "Phase 3 展示与迁移叙事（广撒网）",
-        [
-            StatusItem(
-                "面试讲稿",
-                exists("docs/portfolio/interview_walkthrough.md"),
-                "`docs/portfolio/interview_walkthrough.md`",
-            ),
-            StatusItem(
-                "ROS/MoveIt 迁移设计",
-                exists("docs/reference/migration_ros2_moveit.md"),
-                "`docs/reference/migration_ros2_moveit.md`",
-            ),
-            StatusItem(
-                "广撒网路线图文档",
-                exists("docs/planning/portfolio_roadmap.md"),
-                "`docs/planning/portfolio_roadmap.md`",
-            ),
-        ],
-    )
-
+    """Single-track portfolio progress: done today + 3-day sprint to ship."""
     return [
-        baseline,
-        phase05,
-        phase1,
-        phase15,
-        phase2_rrt,
-        phase2_portfolio,
-        phase3,
+        StatusSection(
+            "已完成 · 数据管线",
+            [
+                StatusItem(
+                    "Episode 闭环（image / state / action / pose）",
+                    exists("scripts/collect_episode.py")
+                    and exists("scripts/validate_dataset.py"),
+                    "`collect_episode.py` + `validate_dataset.py`",
+                ),
+                StatusItem(
+                    "CI 门禁（reach + pick_and_lift）",
+                    ci_generates_reach_episode() and ci_generates_pick_lift_episode(),
+                    "`.github/workflows/ci.yml`",
+                ),
+                StatusItem(
+                    "仿真世界与落盘模块",
+                    exists("core/world.py") and exists("core/episode_writer.py"),
+                    "`core/world.py`, `core/episode_writer.py`",
+                ),
+                StatusItem(
+                    "回放与 schema 文档",
+                    exists("scripts/visualize_episode.py")
+                    and exists("docs/dev/data_schema.md"),
+                    "`visualize_episode.py`, `data_schema.md`",
+                ),
+            ],
+        ),
+        StatusSection(
+            "已完成 · 规划与任务",
+            [
+                StatusItem(
+                    "HAL + IK + 笛卡尔插补",
+                    exists("core/hal.py")
+                    and exists("core/ik.py")
+                    and exists("core/trajectory.py"),
+                    "`core/hal.py`, `core/ik.py`, `core/trajectory.py`",
+                ),
+                StatusItem(
+                    "Pick-lift FSM + Evaluator",
+                    exists("agents/task_fsm.py")
+                    and exists("agents/evaluator.py")
+                    and exists("core/grasp.py"),
+                    "constraint 抓取 + grasp/slip 评测标签",
+                ),
+                StatusItem(
+                    "双向 RRT + 碰撞检测",
+                    exists("core/rrt.py")
+                    and exists("core/collision.py")
+                    and exists("tests/test_rrt_integration.py"),
+                    "`--planner rrt`, `run_rrt_demo.py`",
+                ),
+                StatusItem(
+                    "批量 / LeRobot 脚本骨架",
+                    exists("scripts/batch_collect.py")
+                    and exists("scripts/export_lerobot_style.py")
+                    and exists("tests/test_collect_integration.py"),
+                    "`batch_collect.py`, `export_lerobot_style.py`",
+                ),
+            ],
+        ),
+        StatusSection(
+            "已完成 · 文档与材料",
+            [
+                StatusItem(
+                    "开发文档与架构",
+                    exists("docs/dev/quickstart.md")
+                    and exists("docs/dev/architecture.md"),
+                    "`docs/dev/`",
+                ),
+                StatusItem(
+                    "面试讲稿与学习手册",
+                    exists("docs/portfolio/interview_walkthrough.md")
+                    and exists("docs/reference/learning_capability_alignment.md"),
+                    "讲稿 + 能力对齐文档",
+                ),
+                StatusItem(
+                    "10 天设计 / RRT 路线图",
+                    exists("docs/planning/design_10day.md")
+                    and exists("docs/planning/rrt_roadmap.md"),
+                    "`design_10day.md`, `rrt_roadmap.md`",
+                ),
+            ],
+        ),
+        StatusSection(
+            "Day 1 · 抓取可信度",
+            [
+                StatusItem(
+                    "物理夹爪或约束抓取",
+                    not uses_kinematic_grasp_sync(),
+                    "替换 `sync_object_to_grasp_offset` kinematic demo",
+                ),
+                StatusItem(
+                    "物理向 success / failure 判定",
+                    not uses_kinematic_grasp_sync()
+                    and file_contains("agents/evaluator.py", r"contact|force|grasp"),
+                    "Evaluator 接触 / 力 / 夹持判定",
+                ),
+                StatusItem(
+                    "抓取链路 pytest",
+                    exists("tests/test_gripper.py") or exists("tests/test_grasp.py"),
+                    "新增 grasp / gripper 集成测试",
+                ),
+            ],
+        ),
+        StatusSection(
+            "Day 2 · 批量数据与展示",
+            [
+                StatusItem(
+                    "本地 batch ≥ 20 episode",
+                    count_dataset_episodes("dataset/v1") >= 20,
+                    "`batch_collect.py --num-episodes 20`",
+                ),
+                StatusItem(
+                    "数据集 README（成功率统计）",
+                    exists("dataset/v1/README.md") and count_dataset_episodes("dataset/v1") >= 20,
+                    "`dataset/v1/README.md`",
+                ),
+                StatusItem(
+                    "三条 demo GIF 齐全",
+                    demo_gifs_ready(),
+                    "`demo_replay` / `demo_pick_success` / `demo_rrt_obstacle`",
+                ),
+            ],
+        ),
+        StatusSection(
+            "Day 3 · 导出与成型投递",
+            [
+                StatusItem(
+                    "LeRobot 导出本地跑通",
+                    exists("dataset/v1/lerobot_export/meta/info.json"),
+                    "`export_lerobot_style.py dataset/v1`",
+                ),
+                StatusItem(
+                    "讲稿与实现一致",
+                    exists("docs/portfolio/interview_walkthrough.md")
+                    and not uses_kinematic_grasp_sync(),
+                    "更新 `interview_walkthrough.md` 局限与演示命令",
+                ),
+                StatusItem(
+                    "30 秒可复现（README + CI）",
+                    demo_gifs_ready()
+                    and ci_generates_pick_lift_episode()
+                    and file_contains("docs/dev/quickstart.md", r"episode_pick_ci"),
+                    "README 快速开始 + CI 绿",
+                ),
+            ],
+        ),
     ]
 
 
-def render_status_block() -> str:
-    sections = build_status_sections()
+def render_readme_intro() -> str:
     lines = [
-        AUTO_START,
-        "## 自动进度快照",
-        "",
-        "> 这个区块由 `python scripts/update_project_docs.py` 根据仓库文件自动生成；",
-        "> 手动修改会在下次运行时被覆盖。完整文档索引见 [docs/README.md](docs/README.md)。",
+        INTRO_START,
+        "PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理 constraint 抓取**、自动评测、批量采集与 LeRobot 导出。",
         "",
     ]
-    for section in sections:
-        lines.extend([f"### {section.title}", ""])
-        lines.extend(
-            f"- [{checkbox(item.done)}] {item.label}：{item.evidence}"
-            for item in section.items
-        )
-        lines.append("")
-    lines.append(AUTO_END)
+    for alt, relative_path in (
+        ("关节轨迹回放", "assets/gifs/demo_replay.gif"),
+        ("Pick-Lift 任务回放", "assets/gifs/demo_pick_success.gif"),
+        ("RRT 绕障规划回放", "assets/gifs/demo_rrt_obstacle.gif"),
+    ):
+        if exists(relative_path):
+            lines.extend([f"![{alt}]({relative_path})", ""])
+    lines.extend(
+        [
+            "**文档入口 → [docs/README.md](docs/README.md)**（开发先看 [docs/dev/quickstart.md](docs/dev/quickstart.md)）",
+            "",
+            "单线进度与 **3 天冲刺清单** 见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。",
+            INTRO_END,
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_readme_footer() -> str:
+    lines = [
+        FOOTER_START,
+        "## 快速开始",
+        "",
+        "```bash",
+        "python -m pip install -r requirements.txt",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q",
+        "python scripts/run_rrt_demo.py --seed 7",
+        "python scripts/collect_episode.py --task pick_and_lift --num-steps 40 \\",
+        "  --output dataset_sample/episode_pick_ci --width 64 --height 48 --seed 7",
+        "python scripts/validate_dataset.py dataset_sample/episode_pick_ci",
+        "```",
+        "",
+        "完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。",
+        "",
+        "## 文档导航",
+        "",
+        "| 场景 | 文档 |",
+        "|------|------|",
+        "| 日常开发 | [docs/dev/](docs/dev/) |",
+        "| 规划 / 路线图 | [docs/planning/](docs/planning/) |",
+        "| 概念参考 | [docs/reference/](docs/reference/) |",
+        "| **能力学习与自检** | [docs/reference/learning_capability_alignment.md](docs/reference/learning_capability_alignment.md) |",
+        "| 面试材料 | [docs/portfolio/](docs/portfolio/) |",
+        "| 智能体规范 | [AGENTS.md](AGENTS.md) |",
+        "",
+        "## 能力概览",
+        "",
+        "| 领域 | 关键路径 |",
+        "|------|----------|",
+        "| HAL + IK + 笛卡尔 | `core/hal.py`, `core/ik.py`, `core/trajectory.py` |",
+        "| 仿真世界 + 落盘 | `core/world.py`, `core/episode_writer.py`, `core/collect_config.py` |",
+        "| RRT 避障 | `core/rrt.py`, `core/collision.py`, `scripts/run_rrt_demo.py` |",
+        "| 物理抓取 | `core/grasp.py`（`ConstraintGraspController`） |",
+        "| 任务 FSM + 评测 | `agents/task_fsm.py`, `agents/evaluator.py` |",
+        "| 采集主入口 | `scripts/collect_episode.py` |",
+        "| 数据 schema | [docs/dev/data_schema.md](docs/dev/data_schema.md) |",
+        "",
+        "简历定位：**机器人数据工程 + 仿真采集管线**；剩余 2 天见 [project_status.md](docs/portfolio/project_status.md)。",
+        FOOTER_END,
+    ]
     return "\n".join(lines)
 
 
 def write_project_status() -> str:
     sections = build_status_sections()
+    completed = sections[:3]
+    sprint = sections[3:]
+
     lines = [
         "# Project Status",
         "",
         "本文档由 `scripts/update_project_docs.py` 自动生成。",
         "",
-        "文档索引：[docs/README.md](../README.md)",
+        "文档索引：[docs/README.md](../README.md) · 设计总览：[design_10day.md](../planning/design_10day.md)",
         "",
-        "广撒网 4 周路线：[portfolio_roadmap.md](../planning/portfolio_roadmap.md)。",
+        "> **单线进度（截至今日）**：数据闭环、HAL/IK、FSM 评测、RRT、**物理 constraint 抓取**、批量/LeRobot 脚本与 CI 已就绪；",
+        "> **再开发 2 天**（Day 2–3 展示与投递收尾）按下方冲刺清单完成即可对外展示。",
         "",
     ]
-    for section in sections:
-        lines.extend([f"## {section.title}", ""])
+
+    lines.extend(["## 已完成", ""])
+    for section in completed:
+        lines.append(f"### {section.title.removeprefix('已完成 · ')}")
+        lines.append("")
         lines.extend(
             f"- [{checkbox(item.done)}] {item.label}：{item.evidence}"
             for item in section.items
         )
         lines.append("")
+
+    lines.extend(
+        [
+            "## 三天冲刺 → 成型作品集",
+            "",
+            "对齐 `design_10day.md` Day 5–10 与投递展示要求；完成下列全部 `[ ]` 即可对外展示。",
+            "",
+        ]
+    )
+    for section in sprint:
+        lines.extend(
+            [
+                f"### {section.title}",
+                "",
+            ]
+        )
+        lines.extend(
+            f"- [{checkbox(item.done)}] {item.label}：{item.evidence}"
+            for item in section.items
+        )
+        lines.append("")
+
     lines.extend(
         [
             "## 更新方式",
@@ -409,7 +366,7 @@ def write_project_status() -> str:
             "```",
             "",
             "如已启用 `.githooks/pre-commit`，提交前会自动刷新",
-            "`README.md` 与本文件中的自动进度快照。",
+            "`README.md` 与 `docs/portfolio/project_status.md`。",
         ]
     )
     content = "\n".join(lines) + "\n"
@@ -422,22 +379,25 @@ def write_project_status() -> str:
     return ""
 
 
-def replace_or_insert_block(path: Path, block: str) -> bool:
-    content = path.read_text(encoding="utf-8")
-    pattern = re.compile(
-        rf"{re.escape(AUTO_START)}.*?{re.escape(AUTO_END)}",
-        re.DOTALL,
+def render_readme() -> str:
+    return "\n".join(
+        [
+            "# robot-arm-episode-data-lab",
+            "",
+            render_readme_intro(),
+            "",
+            render_readme_footer(),
+            "",
+        ]
     )
-    if pattern.search(content):
-        updated = pattern.sub(block, content)
-    else:
-        lines = content.splitlines()
-        if lines and lines[0].startswith("# "):
-            updated = "\n".join([lines[0], "", block, "", *lines[1:]]) + "\n"
-        else:
-            updated = block + "\n\n" + content
-    if updated != content:
-        path.write_text(updated, encoding="utf-8")
+
+
+def update_readme() -> bool:
+    readme_path = ROOT / "README.md"
+    content = render_readme()
+    old = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
+    if content != old:
+        readme_path.write_text(content, encoding="utf-8")
         return True
     return False
 
@@ -448,9 +408,7 @@ def update_docs() -> list[str]:
     if status_path:
         changed.append(status_path)
 
-    block = render_status_block()
-    readme_path = ROOT / "README.md"
-    if replace_or_insert_block(readme_path, block):
+    if update_readme():
         changed.append("README.md")
     return changed
 

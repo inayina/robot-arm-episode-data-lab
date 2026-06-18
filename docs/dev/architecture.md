@@ -5,7 +5,7 @@
 ```text
 scripts/          应用入口（采集、批量、校验、Demo）
 agents/           Task FSM、Motion Planner、Evaluator
-core/             HAL、IK、轨迹、RRT、碰撞检测
+core/             HAL、IK、轨迹、RRT、碰撞检测、物理抓取、仿真世界、episode 落盘
 configs/          YAML 默认参数
 dataset_sample/   本地样例数据（gitignore，本机生成）
 dataset/v1/       批量数据集（gitignore，本机生成）
@@ -22,10 +22,14 @@ dataset/v1/       批量数据集（gitignore，本机生成）
 | `core/rrt.py` | 双向 RRT-Connect |
 | `core/collision.py` | PyBullet 配置空间碰撞检测 |
 | `core/joint_limits.py` | URDF 关节限位 |
+| `core/grasp.py` | `ConstraintGraspController`（fixed constraint 抓取） |
+| `core/world.py` | PyBullet 世界搭建、渲染、低层控制 |
+| `core/episode_writer.py` | Episode 目录、数组落盘、metadata |
+| `core/collect_config.py` | 采集配置类型与 YAML 加载 |
 | `agents/task_fsm.py` | pick-lift 阶段目标 |
 | `agents/motion_planner.py` | `plan_cartesian_segment` / `plan_rrt_segment` |
 | `agents/evaluator.py` | 步进安全 + success 标签 |
-| `scripts/collect_episode.py` | 仿真主循环与 episode 落盘 |
+| `scripts/collect_episode.py` | 采集编排（V0 / reach / pick_and_lift） |
 
 ## 数据流（pick_and_lift）
 
@@ -36,7 +40,9 @@ flowchart LR
   MP -->|rrt| RRT[rrt + collision]
   IK --> Apply[collect_episode.apply_action]
   RRT --> Apply
-  Apply --> EV[evaluator]
+  Apply --> Grasp[core/grasp]
+  Grasp --> EV[evaluator]
+  Apply --> EV
   EV --> Save[episode 落盘]
 ```
 
@@ -58,6 +64,7 @@ flowchart LR
 | 基线 V0/V1/V2 | [baseline_plan.md](../planning/baseline_plan.md) | 已完成 |
 | roadmap Phase 1 | [hal_ik_roadmap.md](../planning/hal_ik_roadmap.md) | 已完成 |
 | design 10-day Phase 2 | [rrt_roadmap.md](../planning/rrt_roadmap.md) | 已完成 |
+| 三天冲刺 Day 1 | [day1_grasp_spec.md](../planning/day1_grasp_spec.md) | 物理 constraint 抓取已完成 |
 | portfolio Phase 2 | [portfolio_roadmap.md](../planning/portfolio_roadmap.md) | 批量 + LeRobot 脚本已有 |
 
 智能体协作约定见根目录 [AGENTS.md](../../AGENTS.md)。

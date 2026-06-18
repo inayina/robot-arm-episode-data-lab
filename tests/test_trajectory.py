@@ -5,7 +5,7 @@ import pytest
 
 from core.ik import solve_ik
 from core.trajectory import interpolate_cartesian_line
-from scripts.collect_episode import smooth_trajectory
+from core.world import smooth_trajectory
 
 
 class _FakeRobot:

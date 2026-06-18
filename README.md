@@ -1,89 +1,29 @@
 # robot-arm-episode-data-lab
 
-PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、自动评测、批量采集与 LeRobot 导出。
+<!-- README_INTRO_START -->
+PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理 constraint 抓取**、自动评测、批量采集与 LeRobot 导出。
 
 ![关节轨迹回放](assets/gifs/demo_replay.gif)
 
 ![Pick-Lift 任务回放](assets/gifs/demo_pick_success.gif)
 
+![RRT 绕障规划回放](assets/gifs/demo_rrt_obstacle.gif)
+
 **文档入口 → [docs/README.md](docs/README.md)**（开发先看 [docs/dev/quickstart.md](docs/dev/quickstart.md)）
 
-<!-- AUTO_STATUS_START -->
-## 自动进度快照
+单线进度与 **3 天冲刺清单** 见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。
+<!-- README_INTRO_END -->
 
-> 这个区块由 `python scripts/update_project_docs.py` 根据仓库文件自动生成；
-> 手动修改会在下次运行时被覆盖。完整文档索引见 [docs/README.md](docs/README.md)。
-
-### 作品集基线
-
-- [x] V0 最小样例：`dataset_sample/v0/`
-- [x] V1 episode 数据闭环：`dataset_sample/episode_000001/`
-- [x] 数据校验脚本：`scripts/validate_dataset.py`
-- [x] 回放 GIF 脚本：`scripts/visualize_episode.py`
-- [x] 数据结构与采集流程文档：`docs/dev/data_schema.md`, `docs/dev/collection_pipeline.md`
-
-### Phase 0.5 工程与展示（广撒网）
-
-- [x] config 接入采集脚本：`collect_episode.py --config configs/default.yaml`
-- [x] 统一样例 episode：`dataset_sample/episode_000001/`（100 步、640×480）
-- [x] 展示 GIF：`assets/gifs/demo_replay.gif`
-- [x] pytest 测试：`pytest -q`
-- [x] GitHub Actions CI：`.github/workflows/ci.yml`
-- [x] LICENSE：`LICENSE`
-
-### Phase 1 HAL + IK + 笛卡尔
-
-- [x] 任务 1：PyBullet 控制逻辑审计：`docs/reference/pybullet_audit.md`
-- [x] 任务 2：RobotControl 抽象基类：`core/hal.py`
-- [x] 任务 3：PyBulletRobot 控制封装：`core/pybullet_robot.py`
-- [x] 任务 4：HAL smoke demo：`scripts/run_cartesian_demo.py`
-- [x] 任务 5：IK 求解封装：`core/ik.py`
-- [x] 任务 6：笛卡尔直线插补：`core/trajectory.py`
-- [x] 任务 8：采集脚本接入 cartesian_ik 模式：`collect_episode.py --control-mode cartesian_ik`
-
-### Phase 1.5 任务可信度（广撒网）
-
-- [x] Task FSM：`agents/task_fsm.py`
-- [x] Evaluator Agent：`agents/evaluator.py`
-- [x] Motion planner 模块：`agents/motion_planner.py`
-- [x] 成功 pick/lift GIF：`assets/gifs/demo_pick_success.gif`
-
-### Phase 2 RRT 避障（design 10-day）
-
-- [x] 关节限位模块：`core/joint_limits.py`
-- [x] PyBullet 碰撞检测：`core/collision.py`
-- [x] 双向 RRT-Connect：`core/rrt.py`
-- [x] plan_rrt_segment：`agents/motion_planner.py`
-- [x] RRT 可视化 demo：`scripts/run_rrt_demo.py`
-- [x] 采集链路 --planner rrt：`collect_episode.py --planner rrt`
-- [x] 规划失败 metadata：`metadata.json` 扩展字段
-- [x] Evaluator 碰撞拦截：`agents/evaluator.py`
-- [x] RRT 测试：`tests/test_rrt*.py`, `tests/test_collision.py`
-- [x] Phase 2 路线图文档：`docs/planning/rrt_roadmap.md`
-
-### Phase 2 批量数据 + LeRobot（作品集）
-
-- [x] 批量采集脚本：`scripts/batch_collect.py`
-- [x] 数据集目录 ≥ 20 episode：`dataset/v1/`（本地生成，不提交 Git）
-- [x] LeRobot 真导出：`export_lerobot_style.py`
-- [x] 数据集 README：`dataset/v1/README.md`
-
-### Phase 3 展示与迁移叙事（广撒网）
-
-- [x] 面试讲稿：`docs/portfolio/interview_walkthrough.md`
-- [x] ROS/MoveIt 迁移设计：`docs/reference/migration_ros2_moveit.md`
-- [x] 广撒网路线图文档：`docs/planning/portfolio_roadmap.md`
-
-<!-- AUTO_STATUS_END -->
-
+<!-- README_FOOTER_START -->
 ## 快速开始
 
 ```bash
 python -m pip install -r requirements.txt
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
 python scripts/run_rrt_demo.py --seed 7
-python scripts/collect_episode.py --task pick_and_lift --num-steps 80 \
-  --output dataset_sample/episode_pick_001
+python scripts/collect_episode.py --task pick_and_lift --num-steps 40 \
+  --output dataset_sample/episode_pick_ci --width 64 --height 48 --seed 7
+python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 ```
 
 完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。
@@ -95,6 +35,7 @@ python scripts/collect_episode.py --task pick_and_lift --num-steps 80 \
 | 日常开发 | [docs/dev/](docs/dev/) |
 | 规划 / 路线图 | [docs/planning/](docs/planning/) |
 | 概念参考 | [docs/reference/](docs/reference/) |
+| **能力学习与自检** | [docs/reference/learning_capability_alignment.md](docs/reference/learning_capability_alignment.md) |
 | 面试材料 | [docs/portfolio/](docs/portfolio/) |
 | 智能体规范 | [AGENTS.md](AGENTS.md) |
 
@@ -103,9 +44,12 @@ python scripts/collect_episode.py --task pick_and_lift --num-steps 80 \
 | 领域 | 关键路径 |
 |------|----------|
 | HAL + IK + 笛卡尔 | `core/hal.py`, `core/ik.py`, `core/trajectory.py` |
+| 仿真世界 + 落盘 | `core/world.py`, `core/episode_writer.py`, `core/collect_config.py` |
 | RRT 避障 | `core/rrt.py`, `core/collision.py`, `scripts/run_rrt_demo.py` |
+| 物理抓取 | `core/grasp.py`（`ConstraintGraspController`） |
 | 任务 FSM + 评测 | `agents/task_fsm.py`, `agents/evaluator.py` |
 | 采集主入口 | `scripts/collect_episode.py` |
 | 数据 schema | [docs/dev/data_schema.md](docs/dev/data_schema.md) |
 
-简历定位：**机器人数据工程 + 仿真采集管线**，而非完整生产级抓取系统。
+简历定位：**机器人数据工程 + 仿真采集管线**；剩余 2 天见 [project_status.md](docs/portfolio/project_status.md)。
+<!-- README_FOOTER_END -->

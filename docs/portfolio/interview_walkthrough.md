@@ -1,6 +1,8 @@
 # 面试讲稿：机械臂 Episode 数据采集平台
 
 > 预计讲解时长：3–5 分钟。面向机器人软件 / 具身智能 / 数据工程岗位。
+>
+> **讲稿前学习准备**：[learning_capability_alignment.md](../reference/learning_capability_alignment.md)（能力矩阵、阶段自检题、岗位路径）。
 
 ---
 
@@ -115,8 +117,9 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 - `success` / `failure_reason` / `object_z_lift`
 - `language_instruction`（如 `"pick up the cube"`）
 - `gripper_states` / `task_phases`
+- `grasp_mode` / `grasp_established`（物理 constraint 抓取）
 
-当前 `dataset/v1`：**20 条 episode，成功率 100%**（仿真 kinematic grasp，见局限说明）。
+当前 `dataset/v1`：批量数据可能仍为 kinematic 时代采集；新采集使用 **PyBullet fixed constraint** 抓取（`grasp_mode: constraint`）。
 
 ---
 
@@ -124,12 +127,12 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 
 | 局限 | 说明 | 后续改进 |
 |------|------|----------|
-| 无真实夹爪 | close_gripper 阶段用运动学同步抬起 cube | 接入 gripper URDF + 力闭合判定 |
-| RRT 避障 | 可选 `--planner rrt`；独立 demo 见 `scripts/run_rrt_demo.py` | [dev/architecture.md](../dev/architecture.md) |
-| 仿真成功率偏高 | 当前 grasp 为工程 demo 方案 | 加 cube 位姿扰动、物理抓取评测 |
+| 约束抓取非真实夹爪 | `close_gripper` 用 `createConstraint` 固定 cube 与 EE，非 finger 力闭合 | 接入 gripper URDF + 接触力阈值 |
+| RRT + 物理抓取 | `--planner rrt` 可跑完 episode，但绕障后抓取更易 `object_slipped` | 调 grasp 时机 / 夹爪几何 |
+| 仿真成功率 | cartesian 模式较稳；物理约束下失败会写入 `grasp_failed` / `object_slipped` | cube 位姿扰动、重采 batch |
 | 未接真机 / ROS | 仅有 HAL 抽象与迁移设计文档 | 见 `../reference/migration_ros2_moveit.md` |
 
-**面试话术**：「我清楚这是仿真 demo 级抓取，价值在于数据链路、评测标签和可扩展架构，而不是宣称 100% 物理抓取成功率。」
+**面试话术**：「抓取从 kinematic sync 升级为 PyBullet fixed constraint，Evaluator 要求 `grasp_established` 且抬升达标才算 success。这是仿真到真机的过渡方案，真机侧替换为 gripper action + 力阈值。」
 
 ---
 

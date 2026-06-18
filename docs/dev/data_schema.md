@@ -171,6 +171,11 @@ metadata.json
 - `object_z_lift`：物体 Z 轴抬升量
 - `gripper_states`：逐步夹爪开闭标记
 - `task_phases`：逐步 FSM 阶段名
+- `grasp_mode`：抓取实现方式，例如 `constraint`（PyBullet fixed constraint）
+- `grasp_established`：是否建立物理抓取
+- `grasp_established_at_step`：首次抓取成功的 step 索引（可选）
+
+`failure_reason` 在物理抓取模式下还可能为 `grasp_failed`、`object_slipped`。
 
 ### 运动规划扩展字段（`--planner rrt`）
 
