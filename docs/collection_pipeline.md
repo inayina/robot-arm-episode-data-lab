@@ -6,6 +6,14 @@
 
 `scripts/collect_episode.py` 默认以 PyBullet DIRECT 模式启动仿真。
 
+默认会从 `configs/default.yaml` 读取采集参数（步数、分辨率、相机、任务名等）。
+CLI 参数会覆盖配置文件中的同名字段，例如：
+
+```bash
+python scripts/collect_episode.py --config configs/default.yaml --output dataset_sample/episode_000001
+python scripts/collect_episode.py --num-steps 30
+```
+
 环境中加载：
 
 - 地面平面

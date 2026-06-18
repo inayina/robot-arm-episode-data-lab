@@ -4,8 +4,10 @@ robot: kuka_iiwa
 object: cube
 control_mode: joint_position
 num_steps: 100
+seed: 7
 image_width: 640
 image_height: 480
+output_dir: dataset_sample/episode_000001
 camera:
   type: fixed_rgb
   eye: [1.15, -1.05, 0.85]

@@ -11,18 +11,22 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import numpy as np
+import yaml
 from PIL import Image
 
 try:
     import pybullet as p
     import pybullet_data
-except ImportError as exc:  # pragma: no cover - exercised only without deps.
-    raise SystemExit(
-        "Missing dependency: pybullet. Install dependencies with "
-        "`python -m pip install -r requirements.txt`."
-    ) from exc
+except ImportError:  # pragma: no cover - exercised only without deps.
+    p = None
+    pybullet_data = None
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CONFIG_PATH = REPO_ROOT / "configs" / "default.yaml"
 
 
 @dataclass(frozen=True)
@@ -33,6 +37,25 @@ class CameraConfig:
     target: tuple[float, float, float] = (0.45, 0.0, 0.25)
     up: tuple[float, float, float] = (0.0, 0.0, 1.0)
     fov: float = 55.0
+    type: str = "fixed_rgb"
+
+
+@dataclass(frozen=True)
+class CollectSettings:
+    mode: str
+    output: Path
+    num_steps: int
+    width: int
+    height: int
+    gui: bool
+    seed: int
+    simulator: str
+    task_name: str
+    robot: str
+    object_name: str
+    control_mode: str
+    camera: CameraConfig
+    config_path: Path | None
 
 
 @dataclass(frozen=True)
@@ -46,31 +69,194 @@ class World:
 FRAME_NAME_RE = re.compile(r"^\d{6}\.png$")
 
 
+def resolve_config_path(config_path: Path) -> Path:
+    if config_path.is_absolute():
+        return config_path
+    cwd_candidate = Path.cwd() / config_path
+    if cwd_candidate.exists():
+        return cwd_candidate
+    repo_candidate = REPO_ROOT / config_path
+    if repo_candidate.exists():
+        return repo_candidate
+    return cwd_candidate
+
+
+def _as_float_triplet(value: Any, field_name: str) -> tuple[float, float, float]:
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise ValueError(f"{field_name} must be a list of three numbers.")
+    return (float(value[0]), float(value[1]), float(value[2]))
+
+
+def load_yaml_config(config_path: Path) -> dict[str, Any]:
+    resolved = resolve_config_path(config_path)
+    if not resolved.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    with resolved.open(encoding="utf-8") as handle:
+        raw = yaml.safe_load(handle)
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"Config root must be a mapping: {resolved}")
+    return raw
+
+
+def camera_from_mapping(
+    image_width: int,
+    image_height: int,
+    camera_mapping: dict[str, Any] | None,
+) -> CameraConfig:
+    camera_mapping = camera_mapping or {}
+    return CameraConfig(
+        width=image_width,
+        height=image_height,
+        eye=_as_float_triplet(
+            camera_mapping.get("eye", [1.15, -1.05, 0.85]),
+            "camera.eye",
+        ),
+        target=_as_float_triplet(
+            camera_mapping.get("target", [0.45, 0.0, 0.25]),
+            "camera.target",
+        ),
+        up=_as_float_triplet(
+            camera_mapping.get("up", [0.0, 0.0, 1.0]),
+            "camera.up",
+        ),
+        fov=float(camera_mapping.get("fov", 55.0)),
+        type=str(camera_mapping.get("type", "fixed_rgb")),
+    )
+
+
+def settings_from_config(config_path: Path) -> CollectSettings:
+    config = load_yaml_config(config_path)
+    camera_mapping = config.get("camera")
+    if camera_mapping is not None and not isinstance(camera_mapping, dict):
+        raise ValueError("camera must be a mapping in the config file.")
+
+    width = int(config.get("image_width", 640))
+    height = int(config.get("image_height", 480))
+    output_raw = config.get("output_dir", "dataset_sample/episode_000001")
+
+    return CollectSettings(
+        mode="episode",
+        output=Path(str(output_raw)),
+        num_steps=int(config.get("num_steps", 100)),
+        width=width,
+        height=height,
+        gui=False,
+        seed=int(config.get("seed", 7)),
+        simulator=str(config.get("simulator", "pybullet")),
+        task_name=str(config.get("task_name", "reach_cube")),
+        robot=str(config.get("robot", "kuka_iiwa")),
+        object_name=str(config.get("object", "cube")),
+        control_mode=str(config.get("control_mode", "joint_position")),
+        camera=camera_from_mapping(width, height, camera_mapping),
+        config_path=resolve_config_path(config_path),
+    )
+
+
+def resolve_settings(args: argparse.Namespace) -> CollectSettings:
+    config_arg = getattr(args, "config", None)
+    if config_arg is None:
+        base = settings_from_config(DEFAULT_CONFIG_PATH)
+        config_path: Path | None = None
+    else:
+        config_path = resolve_config_path(Path(config_arg))
+        base = settings_from_config(config_path)
+
+    output = Path(getattr(args, "output", None) or base.output)
+    mode = getattr(args, "mode", None) or base.mode
+    num_steps = getattr(args, "num_steps", None) or base.num_steps
+    width = getattr(args, "width", None) or base.width
+    height = getattr(args, "height", None) or base.height
+    seed = getattr(args, "seed", None) or base.seed
+    gui = bool(getattr(args, "gui", False))
+
+    camera = camera_from_mapping(
+        width,
+        height,
+        {
+            "type": base.camera.type,
+            "eye": list(base.camera.eye),
+            "target": list(base.camera.target),
+            "up": list(base.camera.up),
+            "fov": base.camera.fov,
+        },
+    )
+
+    return CollectSettings(
+        mode=mode,
+        output=output,
+        num_steps=num_steps,
+        width=width,
+        height=height,
+        gui=gui,
+        seed=seed,
+        simulator=base.simulator,
+        task_name=base.task_name,
+        robot=base.robot,
+        object_name=base.object_name,
+        control_mode=base.control_mode,
+        camera=camera,
+        config_path=config_path if config_arg is not None else None,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Collect V0 or V1 PyBullet robot-arm episode data."
     )
     parser.add_argument(
+        "--config",
+        type=Path,
+        nargs="?",
+        const=DEFAULT_CONFIG_PATH,
+        default=argparse.SUPPRESS,
+        help=(
+            "YAML config file. Defaults to configs/default.yaml when omitted. "
+            "CLI flags override config values."
+        ),
+    )
+    parser.add_argument(
         "--mode",
         choices=("v0", "episode"),
-        default="episode",
+        default=argparse.SUPPRESS,
         help="Use v0 for one image and one joint_state.npy; episode for full V1 data.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("dataset_sample/episode_000001"),
+        default=argparse.SUPPRESS,
         help="Output directory.",
     )
-    parser.add_argument("--num-steps", type=int, default=100, help="Episode length.")
-    parser.add_argument("--width", type=int, default=640, help="Camera image width.")
-    parser.add_argument("--height", type=int, default=480, help="Camera image height.")
+    parser.add_argument(
+        "--num-steps",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="Episode length.",
+    )
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="Camera image width.",
+    )
+    parser.add_argument(
+        "--height",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="Camera image height.",
+    )
     parser.add_argument("--gui", action="store_true", help="Run PyBullet with GUI.")
-    parser.add_argument("--seed", type=int, default=7, help="Numpy random seed.")
+    parser.add_argument("--seed", type=int, default=argparse.SUPPRESS, help="Numpy random seed.")
     return parser.parse_args()
 
 
 def connect(gui: bool) -> int:
+    if p is None or pybullet_data is None:
+        raise SystemExit(
+            "Missing dependency: pybullet. Install dependencies with "
+            "`python -m pip install -r requirements.txt`."
+        )
     connection_mode = p.GUI if gui else p.DIRECT
     client_id = p.connect(connection_mode)
     if client_id < 0:
@@ -208,7 +394,7 @@ def save_png(path: Path, rgb: np.ndarray) -> None:
     Image.fromarray(rgb, mode="RGB").save(path)
 
 
-def collect_v0(output_dir: Path, camera: CameraConfig, gui: bool) -> None:
+def collect_v0(output_dir: Path, camera: CameraConfig, gui: bool, settings: CollectSettings) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     world = setup_world()
     image = render_rgb(camera)
@@ -221,6 +407,7 @@ def collect_v0(output_dir: Path, camera: CameraConfig, gui: bool) -> None:
         state_dim=len(world.joint_indices),
         action_dim=len(world.joint_indices),
         camera=camera,
+        settings=settings,
     )
     (output_dir / "metadata.json").write_text(
         json.dumps(metadata, indent=2), encoding="utf-8"
@@ -235,6 +422,7 @@ def collect_episode(
     num_steps: int,
     camera: CameraConfig,
     gui: bool,
+    settings: CollectSettings,
 ) -> None:
     if num_steps <= 0:
         raise ValueError("--num-steps must be positive.")
@@ -275,6 +463,7 @@ def collect_episode(
         state_dim=states_array.shape[1],
         action_dim=actions_array.shape[1],
         camera=camera,
+        settings=settings,
     )
     (output_dir / "metadata.json").write_text(
         json.dumps(metadata, indent=2), encoding="utf-8"
@@ -289,23 +478,31 @@ def build_metadata(
     state_dim: int,
     action_dim: int,
     camera: CameraConfig,
+    settings: CollectSettings,
 ) -> dict[str, object]:
+    notes = (
+        "Minimal PyBullet image-state-action episode for portfolio "
+        "data collection demonstration."
+    )
+    if settings.config_path is not None:
+        notes += f" Loaded config: {settings.config_path}."
+
     return {
         "episode_id": output_dir.name,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "simulator": "pybullet",
+        "simulator": settings.simulator,
         "mode": mode,
-        "task_name": "reach_cube",
+        "task_name": settings.task_name,
         "num_steps": num_steps,
         "image_width": camera.width,
         "image_height": camera.height,
         "state_dim": state_dim,
         "action_dim": action_dim,
-        "control_mode": "joint_position",
-        "robot": "kuka_iiwa",
-        "object": "cube",
+        "control_mode": settings.control_mode,
+        "robot": settings.robot,
+        "object": settings.object_name,
         "camera": {
-            "type": "fixed_rgb",
+            "type": camera.type,
             "width": camera.width,
             "height": camera.height,
             "eye": list(camera.eye),
@@ -313,23 +510,27 @@ def build_metadata(
             "up": list(camera.up),
             "fov": camera.fov,
         },
-        "notes": (
-            "Minimal PyBullet image-state-action episode for portfolio "
-            "data collection demonstration."
-        ),
+        "seed": settings.seed,
+        "notes": notes,
     }
 
 
 def main() -> int:
     args = parse_args()
-    np.random.seed(args.seed)
-    camera = CameraConfig(width=args.width, height=args.height)
-    client_id = connect(args.gui)
+    settings = resolve_settings(args)
+    np.random.seed(settings.seed)
+    client_id = connect(settings.gui)
     try:
-        if args.mode == "v0":
-            collect_v0(args.output, camera, args.gui)
+        if settings.mode == "v0":
+            collect_v0(settings.output, settings.camera, settings.gui, settings)
         else:
-            collect_episode(args.output, args.num_steps, camera, args.gui)
+            collect_episode(
+                settings.output,
+                settings.num_steps,
+                settings.camera,
+                settings.gui,
+                settings,
+            )
     finally:
         p.disconnect(client_id)
     return 0

@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+excluded_files="$(
+  git diff --cached --name-only --diff-filter=ACM |
+    grep -vE '(^LICENSE$|^\.githooks/pre-commit$|\.py$|\.json$|\.ya?ml$|\.txt$|\.md$|\.gif$)' ||
+    true
+)"
+
+if [ -n "$excluded_files" ]; then
+  echo "Error: Only source code files are allowed to commit. The following non-code files were staged:"
+  echo "$excluded_files"
+  exit 1
+fi
+
+python scripts/update_project_docs.py
+
+if command -v git >/dev/null 2>&1; then
+  git add README.md PLAN.md roadmap.md docs/project_status.md
+fi
