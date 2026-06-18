@@ -80,3 +80,59 @@ def test_evaluator_aborts_on_joint_delta_spike() -> None:
 
     assert reason == "joint_delta_spike"
     assert evaluator.aborted is True
+
+
+def test_evaluator_aborts_when_object_falls_below_table() -> None:
+    evaluator = EvaluatorAgent(initial_object_z=0.025, min_object_z=-0.02)
+    observation = StepObservation(
+        step=1,
+        joint_positions=np.zeros(7, dtype=np.float32),
+        ee_position=np.zeros(3, dtype=np.float32),
+        object_position=np.array([0.63, 0.0, -0.05], dtype=np.float32),
+        phase=TaskPhase.APPROACH.value,
+        gripper_open=True,
+    )
+
+    reason = evaluator.inspect_step(observation, None)
+
+    assert reason == "object_fell_below_table"
+    assert evaluator.aborted is True
+
+
+def test_evaluator_aborts_on_object_slipped_during_lift() -> None:
+    evaluator = EvaluatorAgent(
+        initial_object_z=0.025,
+        require_grasp_established=True,
+        max_grasp_slip_distance=0.05,
+    )
+    observation = StepObservation(
+        step=10,
+        joint_positions=np.zeros(7, dtype=np.float32),
+        ee_position=np.array([0.63, 0.0, 0.20], dtype=np.float32),
+        object_position=np.array([0.63, 0.0, 0.03], dtype=np.float32),
+        phase=TaskPhase.LIFT.value,
+        gripper_open=False,
+        grasp_active=True,
+    )
+
+    reason = evaluator.inspect_step(observation, None)
+
+    assert reason == "object_slipped"
+    assert evaluator.aborted is True
+
+
+def test_evaluator_success_requires_grasp_when_enabled() -> None:
+    evaluator = EvaluatorAgent(
+        initial_object_z=0.025,
+        lift_threshold=0.03,
+        require_grasp_established=True,
+    )
+    object_positions = np.tile(np.array([0.63, 0.0, 0.06], dtype=np.float32), (5, 1))
+
+    without_grasp = evaluator.evaluate_success(object_positions, grasp_established=False)
+    with_grasp = evaluator.evaluate_success(object_positions, grasp_established=True)
+
+    assert without_grasp.success is False
+    assert without_grasp.failure_reason == "grasp_failed"
+    assert with_grasp.success is True
+    assert with_grasp.failure_reason is None

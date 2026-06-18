@@ -61,6 +61,7 @@ def test_collect_pick_and_lift_writes_valid_episode(tmp_path: Path) -> None:
     assert metadata["grasp_mode"] == "constraint"
     assert metadata["grasp_established"] is True
     assert metadata["success"] is evaluation.success
+    assert metadata["aborted"] is evaluation.aborted
     assert metadata["language_instruction"] == "pick up the cube"
     assert collect_errors(episode_dir) == []
     assert evaluation.success is True

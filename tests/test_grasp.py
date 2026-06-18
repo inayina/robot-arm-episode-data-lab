@@ -134,7 +134,7 @@ def test_evaluator_aborts_on_lift_without_grasp() -> None:
         ee_position=np.array([0.63, 0.0, 0.08], dtype=np.float32),
         object_position=np.array([0.63, 0.0, 0.03], dtype=np.float32),
         phase=TaskPhase.LIFT.value,
-        gripper_open=False,
+        gripper_open=True,
         grasp_active=False,
     )
 

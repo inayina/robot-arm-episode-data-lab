@@ -8,6 +8,23 @@ import numpy as np
 
 from core.collision import CollisionChecker
 
+# pick_and_lift 评测可能写入 metadata.failure_reason 的取值
+FAILURE_REASONS = frozenset(
+    {
+        "grasp_failed",
+        "object_slipped",
+        "insufficient_lift",
+        "object_fell_below_table",
+        "joint_delta_spike",
+        "unexpected_collision",
+        "planning_failed",
+        "start_in_collision",
+        "goal_in_collision",
+        "timeout",
+        "ik_unreachable",
+    }
+)
+
 
 @dataclass(frozen=True)
 class StepObservation:
@@ -90,16 +107,15 @@ class EvaluatorAgent:
             return self._failure_reason
 
         if observation.phase == "lift" and self._require_grasp_established:
-            if not observation.grasp_active and not observation.gripper_open:
+            if not observation.grasp_active:
                 self._abort("grasp_failed")
                 return self._failure_reason
-            if observation.grasp_active:
-                slip_distance = float(
-                    np.linalg.norm(observation.ee_position - observation.object_position)
-                )
-                if slip_distance > self._max_grasp_slip_distance:
-                    self._abort("object_slipped")
-                    return self._failure_reason
+            slip_distance = float(
+                np.linalg.norm(observation.ee_position - observation.object_position)
+            )
+            if slip_distance > self._max_grasp_slip_distance:
+                self._abort("object_slipped")
+                return self._failure_reason
 
         return None
 

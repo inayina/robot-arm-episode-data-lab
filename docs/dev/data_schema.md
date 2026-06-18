@@ -187,8 +187,31 @@ metadata.json
 - `grasp_mode`：抓取实现方式，例如 `constraint`（PyBullet fixed constraint）或 `gripper_urdf`（平行夹爪 URDF；此时 `state_dim`/`action_dim` 通常为 9 = 7 臂关节 + 2 指关节）
 - `grasp_established`：是否建立物理抓取
 - `grasp_established_at_step`：首次抓取成功的 step 索引（可选）
+- `aborted`：episode 内是否触发 Evaluator 步进拦截（`true` 时通常 `success=false`）
 
 `failure_reason` 在物理抓取模式下还可能为 `grasp_failed`、`object_slipped`。
+
+### 评测闭环（pick_and_lift）
+
+`agents/evaluator.py` 在采集时负责 **步进安全检查** 与 **episode 末 success 标签**：
+
+```text
+success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值（默认 0.03 m）
+```
+
+步进检查（`inspect_step`）常见 `failure_reason`：
+
+| 值 | 触发条件 |
+|----|----------|
+| `object_fell_below_table` | 物体 Z 低于桌面阈值 |
+| `joint_delta_spike` | 相邻步关节变化过大 |
+| `unexpected_collision` | RRT 模式下环境碰撞（`--planner rrt`） |
+| `grasp_failed` | LIFT 阶段仍未建立抓取 |
+| `object_slipped` | 抓取后 cube 相对 EE 距离超阈值 |
+
+episode 末未拦截但抬升不足时写入 `insufficient_lift`。规划失败时写入 `planning_failure_reason`（可与 `failure_reason` 相同，如 `timeout`）。
+
+`validate_dataset.py` 对 `task_name=pick_and_lift` 额外检查：`success` / `failure_reason` / `grasp_established` / `grasp_mode` / `aborted` 一致性与已知 `failure_reason` 枚举。
 
 ### 运动规划扩展字段（`--planner rrt`）
 

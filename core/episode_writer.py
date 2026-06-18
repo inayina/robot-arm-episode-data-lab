@@ -124,6 +124,7 @@ def build_metadata(
         metadata["success"] = evaluation.success
         metadata["failure_reason"] = evaluation.failure_reason
         metadata["object_z_lift"] = round(evaluation.object_z_lift, 6)
+        metadata["aborted"] = evaluation.aborted
     if gripper_states is not None:
         metadata["gripper_states"] = gripper_states
     if phase_labels is not None:

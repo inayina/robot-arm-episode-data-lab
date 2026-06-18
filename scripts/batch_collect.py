@@ -156,6 +156,7 @@ def write_dataset_readme(
         "- `language_instruction`（pick-lift 任务）",
         "- `gripper_states`、`task_phases`",
         "- `grasp_mode`、`grasp_established`（pick-lift 物理抓取）",
+        "- `aborted`（Evaluator 步进拦截标记）",
         "",
         "## Episode 索引",
         "",

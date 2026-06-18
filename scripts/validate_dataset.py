@@ -6,11 +6,17 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from agents.evaluator import FAILURE_REASONS
 
 REQUIRED_ARRAYS = {
     "states.npy": None,
@@ -31,6 +37,14 @@ REQUIRED_METADATA_KEYS = {
     "robot",
     "object",
     "camera",
+}
+PICK_LIFT_EVAL_KEYS = {
+    "success",
+    "failure_reason",
+    "object_z_lift",
+    "grasp_established",
+    "grasp_mode",
+    "aborted",
 }
 FRAME_RE = re.compile(r"^(\d{6})\.png$")
 
@@ -160,6 +174,41 @@ def collect_errors(episode_dir: Path) -> list[str]:
             )
         compare_dim(metadata, "state_dim", arrays.get("states.npy"), errors)
         compare_dim(metadata, "action_dim", arrays.get("actions.npy"), errors)
+        errors.extend(validate_pick_lift_evaluation(metadata))
+
+    return errors
+
+
+def validate_pick_lift_evaluation(metadata: dict[str, object]) -> list[str]:
+    """Check success / failure_reason / grasp fields for pick_and_lift episodes."""
+    if metadata.get("task_name") != "pick_and_lift":
+        return []
+
+    errors: list[str] = []
+    missing = sorted(PICK_LIFT_EVAL_KEYS - set(metadata))
+    for key in missing:
+        errors.append(f"metadata.json missing pick_and_lift eval key: {key}")
+
+    success = metadata.get("success")
+    failure_reason = metadata.get("failure_reason")
+    grasp_established = metadata.get("grasp_established")
+
+    if success is True:
+        if failure_reason is not None:
+            errors.append("metadata success=true requires failure_reason=null")
+        if grasp_established is not True:
+            errors.append("metadata success=true requires grasp_established=true")
+    elif success is False:
+        if not isinstance(failure_reason, str) or not failure_reason:
+            errors.append("metadata success=false requires a non-empty failure_reason")
+        elif failure_reason not in FAILURE_REASONS:
+            errors.append(
+                f"metadata failure_reason={failure_reason!r} is not a known reason"
+            )
+
+    object_z_lift = metadata.get("object_z_lift")
+    if object_z_lift is not None and not isinstance(object_z_lift, (int, float)):
+        errors.append("metadata object_z_lift must be numeric")
 
     return errors
 

@@ -18,6 +18,7 @@ def write_episode(
     num_steps: int = 3,
     image_width: int = 8,
     image_height: int = 6,
+    task_name: str = "reach_cube",
     success: bool | None = None,
 ) -> None:
     images_dir = episode_dir / "images"
@@ -35,22 +36,26 @@ def write_episode(
     metadata = {
         "episode_id": episode_dir.name,
         "simulator": "pybullet",
-        "task_name": "pick_and_lift",
+        "task_name": task_name,
         "num_steps": num_steps,
         "image_width": image_width,
         "image_height": image_height,
         "state_dim": 7,
         "action_dim": 7,
-        "control_mode": "task_fsm",
+        "control_mode": "task_fsm" if task_name == "pick_and_lift" else "joint_position",
         "robot": "kuka_iiwa",
         "object": "cube",
         "camera": {"type": "fixed_rgb"},
-        "language_instruction": "pick up the cube",
     }
+    if task_name == "pick_and_lift":
+        metadata["language_instruction"] = "pick up the cube"
     if success is not None:
         metadata["success"] = success
         metadata["failure_reason"] = None if success else "insufficient_lift"
         metadata["object_z_lift"] = 0.05 if success else 0.0
+        metadata["grasp_established"] = bool(success)
+        metadata["grasp_mode"] = "constraint"
+        metadata["aborted"] = not success
     (episode_dir / "metadata.json").write_text(
         json.dumps(metadata),
         encoding="utf-8",
@@ -59,8 +64,8 @@ def write_episode(
 
 def test_collect_dataset_summary_reports_success_rate(tmp_path: Path) -> None:
     dataset_dir = tmp_path / "dataset"
-    write_episode(dataset_dir / "episode_000001", success=True)
-    write_episode(dataset_dir / "episode_000002", success=False)
+    write_episode(dataset_dir / "episode_000001", task_name="pick_and_lift", success=True)
+    write_episode(dataset_dir / "episode_000002", task_name="pick_and_lift", success=False)
 
     summary = collect_dataset_summary(dataset_dir)
 
@@ -81,8 +86,18 @@ def test_discover_episode_dirs_supports_dataset_root(tmp_path: Path) -> None:
 
 def test_export_lerobot_style_writes_v21_layout(tmp_path: Path) -> None:
     dataset_dir = tmp_path / "dataset"
-    write_episode(dataset_dir / "episode_000001", num_steps=4, success=True)
-    write_episode(dataset_dir / "episode_000002", num_steps=5, success=False)
+    write_episode(
+        dataset_dir / "episode_000001",
+        num_steps=4,
+        task_name="pick_and_lift",
+        success=True,
+    )
+    write_episode(
+        dataset_dir / "episode_000002",
+        num_steps=5,
+        task_name="pick_and_lift",
+        success=False,
+    )
     output_dir = tmp_path / "lerobot_export"
 
     summary = export_dataset(dataset_dir, output_dir, fps=10.0)
@@ -103,6 +118,19 @@ def test_export_lerobot_style_writes_v21_layout(tmp_path: Path) -> None:
     assert "observation.state" in table.column_names
     assert "action" in table.column_names
     assert "language_instruction" in table.column_names
+
+
+def test_collect_errors_reports_invalid_pick_lift_evaluation(tmp_path: Path) -> None:
+    episode_dir = tmp_path / "episode_bad_eval"
+    write_episode(episode_dir, task_name="pick_and_lift", success=True)
+    metadata_path = episode_dir / "metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["grasp_established"] = False
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    errors = collect_errors(episode_dir)
+
+    assert any("success=true requires grasp_established=true" in error for error in errors)
 
 
 def test_collect_errors_accepts_valid_episode(tmp_path: Path) -> None:

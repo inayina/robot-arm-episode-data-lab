@@ -84,7 +84,7 @@ python scripts/collect_episode.py --task pick_and_lift \
 success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值
 ```
 
-常见 `failure_reason`：`grasp_failed`、`object_slipped`、`insufficient_lift`。字段详见 [data_schema.md](data_schema.md)。
+常见 `failure_reason`：`grasp_failed`、`object_slipped`、`insufficient_lift`。步进拦截写入 `metadata.aborted=true`。字段与校验规则详见 [data_schema.md](data_schema.md) §评测闭环。
 
 **验证命令**（与 CI 同款 seed）：
 

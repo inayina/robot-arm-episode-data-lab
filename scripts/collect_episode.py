@@ -446,6 +446,19 @@ def collect_pick_and_lift(
         current_ee_pose = link_pose(world.robot_id, world.ee_link_index)
         gripper_open = not grasp_controller.is_grasped
 
+        if not aborted:
+            observation = StepObservation(
+                step=len(states),
+                joint_positions=current_joints,
+                ee_position=current_ee_pose[:3],
+                object_position=current_object_pose[:3],
+                phase=TaskPhase.DONE.value,
+                gripper_open=gripper_open,
+                grasp_active=grasp_controller.is_grasped,
+            )
+            if evaluator.inspect_step(observation, previous_joints):
+                aborted = True
+
         states.append(current_joints)
         actions.append(last_action)
         ee_poses.append(current_ee_pose)
@@ -453,6 +466,7 @@ def collect_pick_and_lift(
         gripper_states.append(1 if gripper_open else 0)
         phase_labels.append(TaskPhase.DONE.value)
         save_png(images_dir / f"{len(states) - 1:06d}.png", render_rgb(camera))
+        previous_joints = current_joints
 
     object_poses_array = np.stack(object_poses).astype(np.float32)
     evaluation = evaluator.evaluate_success(
