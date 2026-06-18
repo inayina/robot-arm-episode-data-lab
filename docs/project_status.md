@@ -15,7 +15,7 @@
 ## Phase 0.5 工程与展示（广撒网）
 
 - [x] config 接入采集脚本：`collect_episode.py --config configs/default.yaml`
-- [x] 统一样例 episode：`dataset_sample/episode_000001/`（100 步、640×480）
+- [ ] 统一样例 episode：`dataset_sample/episode_000001/`（100 步、640×480）
 - [x] 展示 GIF：`assets/gifs/demo_replay.gif`
 - [x] pytest 测试：`pytest -q`
 - [x] GitHub Actions CI：`.github/workflows/ci.yml`

@@ -7,3 +7,14 @@ __pycache__/
 venv/
 *.egg-info/
 .marscode/
+
+# Local/generated episode data (regenerate with scripts/batch_collect.py)
+dataset/v1/
+dataset/lerobot_export/
+dataset_sample/**/metadata.json
+dataset_sample/**/images/
+dataset_sample/**/*.npy
+dataset_sample/**/replay.gif
+dataset_sample/**/image.png
+dataset_sample/**/joint_state.npy
+!dataset_sample/.gitkeep
