@@ -1,7 +1,7 @@
 # robot-arm-episode-data-lab
 
 <!-- README_INTRO_START -->
-PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理 constraint 抓取**、自动评测、批量采集与 LeRobot 导出。
+PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理抓取**（constraint 默认 / gripper URDF 实验）、自动评测、批量采集与 LeRobot 导出。
 
 ![关节轨迹回放](assets/gifs/demo_replay.gif)
 
@@ -46,7 +46,7 @@ python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 | HAL + IK + 笛卡尔 | `core/hal.py`, `core/ik.py`, `core/trajectory.py` |
 | 仿真世界 + 落盘 | `core/world.py`, `core/episode_writer.py`, `core/collect_config.py` |
 | RRT 避障 | `core/rrt.py`, `core/collision.py`, `scripts/run_rrt_demo.py` |
-| 物理抓取 | `core/grasp.py`（`ConstraintGraspController`） |
+| 物理抓取 | `core/grasp.py`（constraint）、`core/gripper.py`（`--grasp-mode gripper_urdf`） |
 | 任务 FSM + 评测 | `agents/task_fsm.py`, `agents/evaluator.py` |
 | 采集主入口 | `scripts/collect_episode.py` |
 | 数据 schema | [docs/dev/data_schema.md](docs/dev/data_schema.md) |

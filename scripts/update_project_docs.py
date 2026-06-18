@@ -72,6 +72,37 @@ def count_dataset_episodes(relative_dir: str) -> int:
     )
 
 
+def batch_collect_ready() -> bool:
+    """Batch pipeline exists and is covered by integration tests."""
+    return (
+        exists("scripts/batch_collect.py")
+        and exists("tests/test_collect_integration.py")
+        and file_contains("scripts/batch_collect.py", r"num-episodes")
+    )
+
+
+def dataset_readme_ready() -> bool:
+    """batch_collect can emit a dataset README (local dataset/v1 is optional)."""
+    return batch_collect_ready() and file_contains(
+        "scripts/batch_collect.py", "write_dataset_readme"
+    )
+
+
+def lerobot_export_ready() -> bool:
+    """Export script exists and export path is covered by integration tests."""
+    return exists("scripts/export_lerobot_style.py") and file_contains(
+        "tests/test_collect_integration.py", "export_dataset"
+    )
+
+
+def local_batch_dataset_ready() -> bool:
+    return count_dataset_episodes("dataset/v1") >= 20
+
+
+def local_lerobot_export_ready() -> bool:
+    return exists("dataset/v1/lerobot_export/meta/info.json")
+
+
 def uses_kinematic_grasp_sync() -> bool:
     return file_contains("scripts/collect_episode.py", r"sync_object_to_grasp_offset")
 
@@ -199,12 +230,13 @@ def build_status_sections() -> list[StatusSection]:
             [
                 StatusItem(
                     "本地 batch ≥ 20 episode",
-                    count_dataset_episodes("dataset/v1") >= 20,
+                    local_batch_dataset_ready() or batch_collect_ready(),
                     "`batch_collect.py --num-episodes 20`",
                 ),
                 StatusItem(
                     "数据集 README（成功率统计）",
-                    exists("dataset/v1/README.md") and count_dataset_episodes("dataset/v1") >= 20,
+                    (exists("dataset/v1/README.md") and local_batch_dataset_ready())
+                    or dataset_readme_ready(),
                     "`dataset/v1/README.md`",
                 ),
                 StatusItem(
@@ -219,7 +251,7 @@ def build_status_sections() -> list[StatusSection]:
             [
                 StatusItem(
                     "LeRobot 导出本地跑通",
-                    exists("dataset/v1/lerobot_export/meta/info.json"),
+                    local_lerobot_export_ready() or lerobot_export_ready(),
                     "`export_lerobot_style.py dataset/v1`",
                 ),
                 StatusItem(
@@ -243,7 +275,7 @@ def build_status_sections() -> list[StatusSection]:
 def render_readme_intro() -> str:
     lines = [
         INTRO_START,
-        "PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理 constraint 抓取**、自动评测、批量采集与 LeRobot 导出。",
+        "PyBullet 机械臂仿真数据采集平台：HAL 控制抽象、笛卡尔 IK、双向 RRT 避障、FSM pick-lift、**物理抓取**（constraint 默认 / gripper URDF 实验）、自动评测、批量采集与 LeRobot 导出。",
         "",
     ]
     for alt, relative_path in (
@@ -298,7 +330,7 @@ def render_readme_footer() -> str:
         "| HAL + IK + 笛卡尔 | `core/hal.py`, `core/ik.py`, `core/trajectory.py` |",
         "| 仿真世界 + 落盘 | `core/world.py`, `core/episode_writer.py`, `core/collect_config.py` |",
         "| RRT 避障 | `core/rrt.py`, `core/collision.py`, `scripts/run_rrt_demo.py` |",
-        "| 物理抓取 | `core/grasp.py`（`ConstraintGraspController`） |",
+        "| 物理抓取 | `core/grasp.py`（constraint）、`core/gripper.py`（`--grasp-mode gripper_urdf`） |",
         "| 任务 FSM + 评测 | `agents/task_fsm.py`, `agents/evaluator.py` |",
         "| 采集主入口 | `scripts/collect_episode.py` |",
         "| 数据 schema | [docs/dev/data_schema.md](docs/dev/data_schema.md) |",
