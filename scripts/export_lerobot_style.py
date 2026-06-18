@@ -15,6 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from core.video_encode import encode_png_sequence_to_mp4, ffmpeg_available
+
 try:
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -25,6 +27,7 @@ except ImportError:  # pragma: no cover - exercised only without deps.
 
 CODEBASE_VERSION = "v2.1"
 DEFAULT_FPS = 10.0
+DEFAULT_CAMERA_KEY = "observation.images.main"
 JOINT_NAMES = [f"joint_{index}" for index in range(7)]
 
 
@@ -44,6 +47,17 @@ def parse_args() -> argparse.Namespace:
         help="Export directory. Defaults to <dataset_dir>/lerobot_export.",
     )
     parser.add_argument("--fps", type=float, default=DEFAULT_FPS, help="Dataset FPS.")
+    parser.add_argument(
+        "--export-videos",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Encode episode PNG sequences to MP4 under videos/ (requires ffmpeg).",
+    )
+    parser.add_argument(
+        "--camera-key",
+        default=DEFAULT_CAMERA_KEY,
+        help="LeRobot video feature key for the fixed RGB camera.",
+    )
     return parser.parse_args()
 
 
@@ -75,8 +89,16 @@ def load_episode_arrays(episode_dir: Path) -> dict[str, Any]:
     }
 
 
-def build_features(state_dim: int, action_dim: int) -> dict[str, dict[str, Any]]:
-    return {
+def build_features(
+    state_dim: int,
+    action_dim: int,
+    *,
+    export_videos: bool,
+    camera_key: str,
+    image_shape: tuple[int, int, int] | None,
+    fps: float,
+) -> dict[str, dict[str, Any]]:
+    features: dict[str, dict[str, Any]] = {
         "observation.state": {
             "dtype": "float32",
             "shape": [state_dim],
@@ -98,6 +120,38 @@ def build_features(state_dim: int, action_dim: int) -> dict[str, dict[str, Any]]
             "names": ["x", "y", "z", "qx", "qy", "qz", "qw"],
         },
     }
+    if export_videos and image_shape is not None:
+        height, width, channels = image_shape
+        features[camera_key] = {
+            "dtype": "video",
+            "shape": [height, width, channels],
+            "names": ["height", "width", "channel"],
+            "info": {
+                "video.height": height,
+                "video.width": width,
+                "video.codec": "h264",
+                "video.pix_fmt": "yuv420p",
+                "video.fps": fps,
+                "video.channels": channels,
+                "video.is_depth_map": False,
+            },
+        }
+    return features
+
+
+def discover_image_paths(episode_dir: Path) -> list[Path]:
+    return sorted((episode_dir / "images").glob("*.png"))
+
+
+def probe_image_shape(episode_dir: Path) -> tuple[int, int, int]:
+    from PIL import Image
+
+    image_paths = discover_image_paths(episode_dir)
+    if not image_paths:
+        raise FileNotFoundError(f"No PNG frames found in {episode_dir / 'images'}")
+    with Image.open(image_paths[0]) as image:
+        width, height = image.size
+    return height, width, 3
 
 
 def compute_feature_stats(
@@ -156,18 +210,41 @@ def episode_to_table(
     return pa.Table.from_pydict(rows)
 
 
-def export_dataset(dataset_dir: Path, output_dir: Path, fps: float) -> dict[str, Any]:
+def export_dataset(
+    dataset_dir: Path,
+    output_dir: Path,
+    fps: float,
+    *,
+    export_videos: bool = True,
+    camera_key: str = DEFAULT_CAMERA_KEY,
+) -> dict[str, Any]:
     episode_dirs = discover_episode_dirs(dataset_dir)
     episodes = [load_episode_arrays(path) for path in episode_dirs]
 
     state_dim = int(episodes[0]["states"].shape[1])
     action_dim = int(episodes[0]["actions"].shape[1])
-    features = build_features(state_dim, action_dim)
+    image_shape = probe_image_shape(episode_dirs[0]) if export_videos else None
+    if export_videos and not ffmpeg_available():
+        raise RuntimeError(
+            "Video export requested but ffmpeg was not found on PATH. "
+            "Install ffmpeg or pass --no-export-videos."
+        )
+    features = build_features(
+        state_dim,
+        action_dim,
+        export_videos=export_videos,
+        camera_key=camera_key,
+        image_shape=image_shape,
+        fps=fps,
+    )
 
     data_chunk_dir = output_dir / "data" / "chunk-000"
     meta_dir = output_dir / "meta"
+    video_chunk_dir = output_dir / "videos" / "chunk-000" / camera_key
     data_chunk_dir.mkdir(parents=True, exist_ok=True)
     meta_dir.mkdir(parents=True, exist_ok=True)
+    if export_videos:
+        video_chunk_dir.mkdir(parents=True, exist_ok=True)
 
     episode_records: list[dict[str, Any]] = []
     global_index = 0
@@ -181,6 +258,14 @@ def export_dataset(dataset_dir: Path, output_dir: Path, fps: float) -> dict[str,
         parquet_path = data_chunk_dir / f"episode_{episode_index:06d}.parquet"
         pq.write_table(table, parquet_path)
         num_frames = int(episode["states"].shape[0])
+        if export_videos:
+            image_paths = discover_image_paths(episode_dir)
+            if len(image_paths) != num_frames:
+                raise ValueError(
+                    f"{episode_dir.name}: expected {num_frames} PNG frames, found {len(image_paths)}"
+                )
+            video_path = video_chunk_dir / f"episode_{episode_index:06d}.mp4"
+            encode_png_sequence_to_mp4(image_paths, video_path, fps=fps)
         episode_records.append(
             {
                 "episode_index": episode_index,
@@ -219,13 +304,17 @@ def export_dataset(dataset_dir: Path, output_dir: Path, fps: float) -> dict[str,
         "total_episodes": len(episodes),
         "total_frames": global_index,
         "total_tasks": len(task_records),
-        "total_videos": 0,
+        "total_videos": len(episodes) if export_videos else 0,
         "total_chunks": 1,
         "chunks_size": 1000,
         "fps": fps,
         "splits": {"train": f"0:{len(episodes)}"},
         "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
-        "video_path": None,
+        "video_path": (
+            "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4"
+            if export_videos
+            else None
+        ),
         "features": features,
     }
 
@@ -244,6 +333,7 @@ def export_dataset(dataset_dir: Path, output_dir: Path, fps: float) -> dict[str,
         "output_dir": str(output_dir),
         "total_episodes": len(episodes),
         "total_frames": global_index,
+        "total_videos": len(episodes) if export_videos else 0,
         "tasks": task_records,
     }
 
@@ -251,11 +341,18 @@ def export_dataset(dataset_dir: Path, output_dir: Path, fps: float) -> dict[str,
 def main() -> int:
     args = parse_args()
     output_dir = args.output or (args.dataset_dir / "lerobot_export")
-    summary = export_dataset(args.dataset_dir, output_dir, fps=args.fps)
+    summary = export_dataset(
+        args.dataset_dir,
+        output_dir,
+        fps=args.fps,
+        export_videos=args.export_videos,
+        camera_key=args.camera_key,
+    )
     print(
         "Wrote LeRobot-compatible export to "
         f"{summary['output_dir']} "
-        f"({summary['total_episodes']} episodes, {summary['total_frames']} frames)"
+        f"({summary['total_episodes']} episodes, {summary['total_frames']} frames, "
+        f"{summary['total_videos']} videos)"
     )
     return 0
 

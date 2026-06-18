@@ -282,13 +282,60 @@ def render_readme_intro() -> str:
         ("关节轨迹回放", "assets/gifs/demo_replay.gif"),
         ("Pick-Lift 任务回放", "assets/gifs/demo_pick_success.gif"),
         ("RRT 绕障规划回放", "assets/gifs/demo_rrt_obstacle.gif"),
+        ("Gripper URDF 实验回放", "assets/gifs/demo_gripper_urdf.gif"),
     ):
         if exists(relative_path):
             lines.extend([f"![{alt}]({relative_path})", ""])
+    if exists("assets/videos/demo_overview.mp4"):
+        lines.extend(
+            [
+                "### 一分钟概览视频",
+                "",
+                "[demo_overview.mp4](assets/videos/demo_overview.mp4)",
+                "",
+            ]
+        )
+    if exists("notebooks/portfolio_demo.ipynb"):
+        lines.extend(
+            [
+                "**Colab 一键复现 →** [notebooks/portfolio_demo.ipynb](notebooks/portfolio_demo.ipynb)",
+                "",
+            ]
+        )
     lines.extend(
         [
             "**文档入口 → [docs/README.md](docs/README.md)**（开发先看 [docs/dev/quickstart.md](docs/dev/quickstart.md)）",
             "",
+        ]
+    )
+    diagram_specs = (
+        ("架构与数据流", "系统分层架构", "assets/diagrams/architecture.png"),
+        (None, "pick_and_lift 数据流", "assets/diagrams/data_flow_pick_lift.png"),
+        (None, "Episode 目录与 step 对齐", "assets/diagrams/episode_structure.png"),
+    )
+    wrote_diagram_heading = False
+    for heading, alt, relative_path in diagram_specs:
+        if not exists(relative_path):
+            continue
+        if heading and not wrote_diagram_heading:
+            lines.extend([f"### {heading}", ""])
+            wrote_diagram_heading = True
+        lines.extend([f"![{alt}]({relative_path})", ""])
+    screenshot_specs = (
+        ("LeRobot 导出（v2.1）", "LeRobot 导出目录", "assets/screenshots/lerobot_export_tree.png"),
+        (None, "meta/info.json 字段", "assets/screenshots/lerobot_meta_info.png"),
+        (None, "parquet episode 列结构", "assets/screenshots/lerobot_parquet_schema.png"),
+    )
+    wrote_screenshot_heading = False
+    for heading, alt, relative_path in screenshot_specs:
+        if not exists(relative_path):
+            continue
+        if heading and not wrote_screenshot_heading:
+            lines.extend([f"### {heading}", ""])
+            wrote_screenshot_heading = True
+        lines.extend([f"![{alt}]({relative_path})", ""])
+    lines.extend(
+        [
             "单线进度与 **3 天冲刺清单** 见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。",
             INTRO_END,
         ]

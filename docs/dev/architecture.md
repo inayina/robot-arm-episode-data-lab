@@ -36,6 +36,8 @@ dataset/v1/       批量数据集（gitignore，本机生成）
 
 ## 数据流（pick_and_lift）
 
+![pick_and_lift 数据流](../../assets/diagrams/data_flow_pick_lift.png)
+
 ```mermaid
 flowchart LR
   FSM[task_fsm] --> MP[motion_planner]

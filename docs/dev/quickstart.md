@@ -63,8 +63,16 @@ python scripts/batch_collect.py --output dataset/v1 --num-episodes 20 --seed 42
 python scripts/validate_dataset.py dataset_sample/episode_pick_001
 python scripts/visualize_episode.py dataset_sample/episode_pick_001
 
-# LeRobot 导出
+# LeRobot 导出（默认含 observation.images.main MP4；无 ffmpeg 时用 --no-export-videos）
 python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_export
+
+# 作品集图表 / LeRobot 截图（README 展示用）
+python scripts/generate_portfolio_assets.py
+
+# 一分钟概览 MP4 + gripper_urdf 展示 GIF
+python scripts/render_portfolio_video.py
+python scripts/visualize_episode.py dataset_sample/episode_pick_gripper \
+  --save-gif assets/gifs/demo_gripper_urdf.gif
 ```
 
 ## 配置

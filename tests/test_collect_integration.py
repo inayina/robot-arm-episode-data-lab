@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 pybullet = pytest.importorskip("pybullet")
 
@@ -121,8 +122,58 @@ def test_batch_collect_and_export_lerobot_smoke(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr or result.stdout
 
     export_dir = tmp_path / "lerobot_export"
-    summary = export_dataset(dataset_dir, export_dir, fps=10.0)
+    summary = export_dataset(dataset_dir, export_dir, fps=10.0, export_videos=False)
 
     assert summary["total_episodes"] == 2
     assert (export_dir / "meta" / "info.json").exists()
     assert (export_dir / "data" / "chunk-000" / "episode_000000.parquet").exists()
+
+
+def test_export_dataset_writes_videos_when_ffmpeg_available(tmp_path: Path) -> None:
+    from core.video_encode import ffmpeg_available
+
+    if not ffmpeg_available():
+        pytest.skip("ffmpeg not available")
+
+    episode_dir = tmp_path / "episode_000001"
+    images_dir = episode_dir / "images"
+    images_dir.mkdir(parents=True)
+    for step in range(4):
+        Image.new("RGB", (32, 24), color=(step * 20, 40, 60)).save(
+            images_dir / f"{step:06d}.png"
+        )
+    import numpy as np
+
+    states = np.zeros((4, 7), dtype=np.float32)
+    actions = np.zeros((4, 7), dtype=np.float32)
+    ee_poses = np.zeros((4, 7), dtype=np.float32)
+    object_poses = np.zeros((4, 7), dtype=np.float32)
+    np.save(episode_dir / "states.npy", states)
+    np.save(episode_dir / "actions.npy", actions)
+    np.save(episode_dir / "ee_poses.npy", ee_poses)
+    np.save(episode_dir / "object_poses.npy", object_poses)
+    (episode_dir / "metadata.json").write_text(
+        json.dumps(
+            {
+                "task_name": "pick_and_lift",
+                "language_instruction": "pick up the cube",
+                "success": True,
+                "robot": "kuka_iiwa",
+                "state_dim": 7,
+                "action_dim": 7,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    export_dir = tmp_path / "lerobot_export"
+    summary = export_dataset(episode_dir, export_dir, fps=10.0, export_videos=True)
+    info = json.loads((export_dir / "meta" / "info.json").read_text(encoding="utf-8"))
+
+    assert summary["total_videos"] == 1
+    assert info["total_videos"] == 1
+    assert info["video_path"] is not None
+    assert "observation.images.main" in info["features"]
+    assert (
+        export_dir / "videos" / "chunk-000" / "observation.images.main" / "episode_000000.mp4"
+    ).exists()
