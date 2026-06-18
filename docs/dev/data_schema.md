@@ -47,15 +47,22 @@ shape：
 [T, state_dim]
 ```
 
-V1 含义：
+V1 含义（`state_dim=7`，默认 reach / joint 轨迹）：
 
-- 机械臂可控关节位置
+- 机械臂 7 个可控关节位置（KUKA iiwa revolute joints）
+
+`grasp_mode=gripper_urdf` 时（`state_dim=9`）：
+
+- 前 7 维：臂关节位置（与上相同）
+- 后 2 维：平行夹爪指关节位置（prismatic，`simple_gripper.urdf`）
+- 布局与 `core/world.py` 的 `state_vector()` 一致：`concat(arm, fingers)`
+
+`metadata.gripper_states` 是逐步 **开闭标记**（1=开、0=合），与 `states` 里的指关节连续数值不同；两种模式都会写入该字段。
 
 后续可扩展字段：
 
 - 关节速度
-- 夹爪状态
-- 任务阶段标记
+- 任务阶段标记（当前已在 `metadata.task_phases`）
 
 ## 动作
 
@@ -71,9 +78,15 @@ shape：
 [T, action_dim]
 ```
 
-V1 含义：
+V1 含义（`action_dim=7`）：
 
-- 发送给 PyBullet 位置控制器的目标关节位置
+- 发送给 PyBullet 位置控制器的目标关节位置（仅臂关节）
+
+`grasp_mode=gripper_urdf` 时（`action_dim=9`）：
+
+- 前 7 维：臂关节目标
+- 后 2 维：指关节目标（`FINGER_OPEN_POSITION` / `FINGER_CLOSE_POSITION`）
+- 由 `collect_episode._combine_arm_and_gripper_action()` 拼接
 
 ## 末端位姿
 
@@ -186,3 +199,7 @@ metadata.json
   - `goal_in_collision`
   - `timeout`
   - `ik_unreachable`
+
+### LeRobot 导出说明
+
+`scripts/export_lerobot_style.py` 从 episode 的 `state_dim` / `action_dim` 推断 feature shape。`gripper_urdf`（9 维）导出时 joint 名为泛化 `joint_0` … `joint_8`，而非语义化 finger 名；混用 7 维与 9 维 episode 的 dataset 需分开导出或统一 `grasp_mode`。

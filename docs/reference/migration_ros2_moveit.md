@@ -38,6 +38,15 @@ core/hal.py :: RobotControl # 抽象接口
 | `compute_ik()` | 逆解 | 生成 action 时使用 |
 | `step()` | 推进一个控制周期 | 仿真专用；真机为 wait/sync |
 
+### 2.1 夹爪与扩展 action 维度
+
+当前仿真在 `--grasp-mode gripper_urdf` 下将 **臂 + 指关节** 写入同一条 action 向量（9 维）。迁真机时常见两种做法：
+
+1. **扩展 HAL**：`RobotControl` 增加 `get_gripper_positions()` / `set_gripper_positions()`，或统一为 `get_joint_positions()` 返回 arm+gripper 拼接向量（与 episode 对齐）；
+2. **独立 gripper 接口**：臂走 MoveIt / `FollowJointTrajectory`，夹爪走 `GripperCommand` action（与 `GripperGraspController.open/close` 语义对应）。
+
+`ConstraintGraspController` 无对应真机 API，真机应使用 gripper 力控/位置控 + Evaluator 的 contact/力阈值逻辑（与 `gripper_urdf` 模式更接近）。
+
 ---
 
 ## 3. 目标 ROS2 软件栈
@@ -182,7 +191,7 @@ class Ros2Robot(RobotControl):
 | IK 解不一致（PyBullet vs MoveIt） | 采集前做 FK/IK 一致性标定；记录 solver 名称 |
 | 轨迹跟踪误差 | `actions.npy` 存 **指令**，`states.npy` 存 **实测** |
 | 相机与关节时间不对齐 | 固定控制频率 + 最近邻/插值对齐 |
-| 仿真 grasp 无法迁移 | 真机阶段改为夹爪闭合信号 + 力阈值 |
+| 仿真 grasp 无法迁移 | constraint 模式用 fixed joint；真机改为 `gripper_urdf` 语义 + 力阈值或 `GripperCommand` |
 
 ---
 

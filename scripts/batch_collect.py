@@ -105,6 +105,8 @@ def build_episode_settings(
         control_mode="task_fsm" if task_name == "pick_and_lift" else base.control_mode,
         camera=base.camera,
         config_path=base.config_path,
+        planner=base.planner,
+        grasp_mode=base.grasp_mode,
     )
 
 
@@ -153,6 +155,7 @@ def write_dataset_readme(
         "- `success`、`failure_reason`、`object_z_lift`",
         "- `language_instruction`（pick-lift 任务）",
         "- `gripper_states`、`task_phases`",
+        "- `grasp_mode`、`grasp_established`（pick-lift 物理抓取）",
         "",
         "## Episode 索引",
         "",

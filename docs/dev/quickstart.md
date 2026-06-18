@@ -29,11 +29,17 @@ python scripts/run_rrt_demo.py --seed 7 \
 python scripts/collect_episode.py --task pick_and_lift \
   --output dataset_sample/episode_pick_001 --num-steps 80 --seed 7
 
-# CI 同款快速验证（64×48）
+# CI 同款快速验证（64×48；constraint 模式，与 GitHub Actions 一致）
 python scripts/collect_episode.py --task pick_and_lift --num-steps 40 \
   --output dataset_sample/episode_pick_ci --width 64 --height 48 --seed 7
 python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 # 期望 metadata：grasp_mode=constraint, grasp_established=true, success=true
+
+# 实验性夹爪 URDF 抓取（state_dim/action_dim=9；pytest 覆盖，CI 默认不跑）
+python scripts/collect_episode.py --task pick_and_lift --grasp-mode gripper_urdf \
+  --output dataset_sample/episode_pick_gripper --num-steps 40 --seed 7
+python scripts/validate_dataset.py dataset_sample/episode_pick_gripper
+# 期望 metadata：grasp_mode=gripper_urdf, state_dim=9, action_dim=9
 
 # Pick-lift + RRT 避障（带障碍物场景；抓取可能 object_slipped）
 python scripts/collect_episode.py --task pick_and_lift --planner rrt \
@@ -67,7 +73,17 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 
 ```bash
 python scripts/collect_episode.py --config configs/default.yaml --num-steps 80
+python scripts/collect_episode.py --task pick_and_lift --grasp-mode constraint --planner cartesian
 ```
+
+pick-lift 相关 YAML 字段（可选）：
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `grasp_mode` | `constraint` | `constraint` 或 `gripper_urdf` |
+| `planner` | `cartesian` | `cartesian` 或 `rrt` |
+
+`batch_collect.py` 从同一 config 读取上述字段；未指定时与单条采集默认一致。
 
 ## 下一步读什么
 

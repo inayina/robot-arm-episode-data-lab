@@ -8,6 +8,9 @@ seed: 7
 image_width: 640
 image_height: 480
 output_dir: dataset_sample/episode_000001
+# pick_and_lift 可选（默认 constraint + cartesian）：
+# grasp_mode: constraint   # constraint | gripper_urdf
+# planner: cartesian       # cartesian | rrt
 camera:
   type: fixed_rgb
   eye: [1.15, -1.05, 0.85]

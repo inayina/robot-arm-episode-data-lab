@@ -46,6 +46,8 @@ flowchart TB
         IK[ik.py]
         HAL[hal.py]
         PBR[pybullet_robot.py]
+        GR[grasp.py]
+        GP[gripper.py]
     end
 
     subgraph 数据层
@@ -59,6 +61,10 @@ flowchart TB
     MP --> IK
     IK --> HAL
     HAL --> PBR
+    CE --> GR
+    CE --> GP
+    GR --> EV
+    GP --> EV
     EV --> CE
     CE --> EP
     BC --> CE
@@ -85,7 +91,7 @@ flowchart TB
 
 ### 4.2 为什么用 FSM + Evaluator，而不是一条硬编码轨迹？
 
-硬编码关节轨迹无法表达「任务是否成功」。`PickLiftTaskFSM` 把任务拆成 reach → approach → close_gripper → lift；`EvaluatorAgent` 根据物体 Z 轴抬升量写 `metadata.success`，让数据集自带监督信号，适合具身 AI / 数据工程叙事。
+硬编码关节轨迹无法表达「任务是否成功」。`PickLiftTaskFSM` 把任务拆成 reach → approach → close_gripper → lift；`EvaluatorAgent` 在 episode 末判定 `success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值`，并写入 `failure_reason`（如 `grasp_failed`、`object_slipped`），让数据集自带监督信号，适合具身 AI / 数据工程叙事。
 
 ### 4.3 数据如何保证对齐？
 
@@ -117,9 +123,9 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 - `success` / `failure_reason` / `object_z_lift`
 - `language_instruction`（如 `"pick up the cube"`）
 - `gripper_states` / `task_phases`
-- `grasp_mode` / `grasp_established`（物理 constraint 抓取）
+- `grasp_mode` / `grasp_established`（物理抓取：`constraint` 默认，或实验性 `gripper_urdf`）
 
-当前 `dataset/v1`：批量数据可能仍为 kinematic 时代采集；新采集使用 **PyBullet fixed constraint** 抓取（`grasp_mode: constraint`）。
+默认 `--grasp-mode constraint`（PyBullet fixed constraint）；`--grasp-mode gripper_urdf` 时 `state_dim`/`action_dim`=9（7 臂 + 2 指关节）。CI 与批量采集默认 constraint；`gripper_urdf` 由 `tests/test_gripper.py` 覆盖。
 
 ---
 
@@ -127,12 +133,13 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 
 | 局限 | 说明 | 后续改进 |
 |------|------|----------|
-| 约束抓取非真实夹爪 | `close_gripper` 用 `createConstraint` 固定 cube 与 EE，非 finger 力闭合 | 接入 gripper URDF + 接触力阈值 |
+| 默认 constraint 非 finger 力闭合 | `grasp_mode=constraint` 用 `createConstraint` 固定 cube 与 EE | 已提供 `--grasp-mode gripper_urdf` 实验分支；真机走 gripper action + 力阈值 |
+| `gripper_urdf` 仍为 MVP | 简化平行夹爪 URDF，靠 contact 法向力 latch，成功率低于 constraint | 调摩擦/几何/力阈值；或工业 gripper 模型 |
 | RRT + 物理抓取 | `--planner rrt` 可跑完 episode，但绕障后抓取更易 `object_slipped` | 调 grasp 时机 / 夹爪几何 |
-| 仿真成功率 | cartesian 模式较稳；物理约束下失败会写入 `grasp_failed` / `object_slipped` | cube 位姿扰动、重采 batch |
+| 仿真成功率 | cartesian 模式较稳；物理抓取失败会写入 `grasp_failed` / `object_slipped` | cube 位姿扰动、重采 batch |
 | 未接真机 / ROS | 仅有 HAL 抽象与迁移设计文档 | 见 `../reference/migration_ros2_moveit.md` |
 
-**面试话术**：「抓取从 kinematic sync 升级为 PyBullet fixed constraint，Evaluator 要求 `grasp_established` 且抬升达标才算 success。这是仿真到真机的过渡方案，真机侧替换为 gripper action + 力阈值。」
+**面试话术**：「默认用 PyBullet fixed constraint；另有 `gripper_urdf` 实验模式做 finger 接触抓取。Evaluator 要求 `grasp_established` 且抬升达标才算 success，并区分 `grasp_failed` 与 `insufficient_lift`。真机侧替换为 gripper action + 力阈值，HAL 与 FSM 接口不变。」
 
 ---
 
@@ -177,7 +184,7 @@ python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_ex
 A：作品集第一阶段优先 10 秒内跑通数据闭环；HAL 已预留接口，迁移路径写在 `migration_ros2_moveit.md`。
 
 **Q：success 怎么判定？**  
-A：`EvaluatorAgent` 比较物体初始 Z 与结束 Z，抬升超过 3cm 且未触发安全拦截则 `success=true`。
+A：`success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值`（默认约 3 cm）。未建立抓取为 `grasp_failed`，抓取后滑落为 `object_slipped`，有抓取但抬升不足为 `insufficient_lift`。
 
 **Q：LeRobot 导出能直接训练吗？**  
 A：导出为 v2.1 布局（parquet + meta/info.json），含 state/action/ee_pose/language_instruction；视频流未导出，可按需补 MP4。

@@ -9,7 +9,10 @@
 ```bash
 python scripts/collect_episode.py --config configs/default.yaml --output dataset_sample/episode_000001
 python scripts/collect_episode.py --task pick_and_lift --planner rrt --num-steps 80
+python scripts/collect_episode.py --task pick_and_lift --grasp-mode gripper_urdf --num-steps 40 --seed 7
 ```
+
+`grasp_mode`、`planner` 也可写入 `configs/default.yaml`（见 [quickstart.md](quickstart.md) §配置）。
 
 场景组成：
 
@@ -34,23 +37,38 @@ Pick-lift 规划器（`--planner`）：
 
 规划失败时 metadata 写入 `planning_failure_reason`，episode 优雅中止。
 
-## 2.1 pick_and_lift 抓取链路（Day 1 · constraint grasp）
+## 2.1 pick_and_lift 抓取链路
 
-`--task pick_and_lift` 在 `CLOSE_GRIPPER` 阶段由 `core/grasp.py` 的 `ConstraintGraspController` 建立物理抓取，**不再**每帧调用 `sync_object_to_grasp_offset`（kinematic demo，已废弃于生产路径）。
+`--task pick_and_lift` 在 `CLOSE_GRIPPER` 阶段尝试建立物理抓取，**不再**每帧调用 `sync_object_to_grasp_offset`（kinematic demo，无 CLI，仅测试/对照保留）。
+
+### 模式 A：`constraint`（默认）
+
+`core/grasp.py` 的 `ConstraintGraspController`：
 
 ```text
 reach / approach（gripper_open）
-    → CLOSE_GRIPPER：每步 try_grasp()（contact 或 EE–cube XY ≤ 8 cm）
+    → CLOSE_GRIPPER：每步 try_grasp()（contact 或 EE–cube 距离阈值）
     → createConstraint(JOINT_FIXED)：cube base ↔ EE link
     → LIFT：约束随 EE 运动；Evaluator 检查 grasp_failed / object_slipped
     → episode 结束：release() 移除约束
 ```
 
-| 实现 | `metadata.grasp_mode` | 说明 |
-|------|----------------------|------|
-| **当前默认（main）** | `constraint` | PyBullet fixed constraint |
-| **实验分支** | `gripper_urdf` | `assets/urdf/simple_gripper.urdf` + contact 力阈值；`--grasp-mode gripper_urdf`；`state_dim`/`action_dim`=9 |
-| legacy | `kinematic` | `world.sync_object_to_grasp_offset`（仅对比/测试） |
+### 模式 B：`gripper_urdf`（实验）
+
+`core/gripper.py`：`attach_gripper()` 将 `assets/urdf/simple_gripper.urdf` 固定到 EE（`GRIPPER_MOUNT_OFFSET_Z=-0.055`），`GripperGraspController` 驱动两指 prismatic 关节：
+
+```text
+REACH / APPROACH：open()（指关节目标 0.025 m）
+    → CLOSE_GRIPPER：close() + try_grasp()（contact 法向力 ≥ grasp_force_threshold，默认 1.0 N）
+    → LIFT：保持闭合；靠摩擦/contact 携带 cube（无 fixed constraint）
+    → episode 结束：不调用 release()（与 constraint 模式不同）
+```
+
+| 实现 | `metadata.grasp_mode` | `state_dim` / `action_dim` | 说明 |
+|------|----------------------|----------------------------|------|
+| **默认** | `constraint` | 7 / 7 | PyBullet fixed constraint |
+| **实验** | `gripper_urdf` | 9 / 9 | 7 臂 + 2 指；见 `tests/test_gripper.py` |
+| legacy | — | — | `world.sync_object_to_grasp_offset`（无 `--grasp-mode kinematic`） |
 
 启用夹爪 URDF 模式：
 
@@ -78,7 +96,9 @@ python -c "import json; m=json.load(open('dataset_sample/episode_pick_phys/metad
 print(m['grasp_mode'], m['grasp_established'], m['success'])"
 ```
 
-`--planner rrt` 与抓取正交：episode 可落盘，但绕障后 EE 姿态可能导致 `object_slipped`（物理行为，非 kinematic 100% 成功）。
+`--planner rrt` 与抓取正交：episode 可落盘，但绕障后 EE 姿态可能导致 `object_slipped`。
+
+**测试覆盖**：CI 仅验证 `grasp_mode=constraint`；`gripper_urdf` 由 `pytest tests/test_gripper.py` 覆盖。
 
 ## 3. 仿真步进（每 frame）
 
@@ -115,5 +135,7 @@ python scripts/visualize_episode.py dataset_sample/episode_pick_001
 python scripts/batch_collect.py --output dataset/v1 --num-episodes 20
 python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_export
 ```
+
+批量采集默认 `grasp_mode=constraint`、`planner=cartesian`（可在 `configs/default.yaml` 修改）。LeRobot 导出对 7 维与 9 维 episode 混排时需留意 joint 命名，见 [data_schema.md](data_schema.md) §LeRobot 导出说明。
 
 本地数据目录见 `.gitignore`，需在本机重新生成。

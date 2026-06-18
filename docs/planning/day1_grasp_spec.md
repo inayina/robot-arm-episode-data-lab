@@ -6,13 +6,15 @@
 - [design_10day.md](design_10day.md) — Phase 3（Day 5–6）夹爪控制与物理抓取验证
 - [AGENTS.md](../../AGENTS.md) — Task / Motion / Evaluator 智能体职责边界
 
-**前提**：HAL/IK、FSM 评测、RRT、数据落盘与 CI 均已就绪；**Day 1 物理 constraint 抓取已完成**（本文档记录实施 spec 与验收清单）。
+**前提**：HAL/IK、FSM 评测、RRT、数据落盘与 CI 均已就绪；**Day 1 物理 constraint 抓取已完成**；**方案 B（`gripper_urdf`）已作为实验分支落地**（见附录 A）。
 
 ---
 
 ## 1. 背景与问题陈述
 
-### 1.1 当前实现（需替换）
+> **历史说明**：§1.1 描述的是 Day 1 **改造前** 的 kinematic sync 路径，已于 2026-06-18 从生产路径移除。
+
+### 1.1 改造前实现（已替换）
 
 `close_gripper` 阶段在 EE 接近 cube 后，通过 `sync_object_to_grasp_offset()` 每帧将 cube 位姿 **运动学同步** 到 EE 偏移位置，而非物理接触/夹持：
 
@@ -410,8 +412,9 @@ python scripts/update_project_docs.py --check
 ### 6.3 不变量（Regression Guard）
 
 - `states.npy` / `actions.npy` / `images/` 帧数一致。
-- `state_dim=7`, `action_dim=7`（方案 A 下不变）。
-- `--task reach`、`--mode v0` 不加载 `GraspController`。
+- `grasp_mode=constraint`（默认）：`state_dim=7`, `action_dim=7`。
+- `grasp_mode=gripper_urdf`：`state_dim=9`, `action_dim=9`（7 臂 + 2 指）。
+- `--task reach`、`--mode v0` 不加载 GraspController。
 - 默认 `--planner cartesian` 行为不变。
 
 ---
@@ -469,18 +472,28 @@ python scripts/update_project_docs.py --check
 
 ---
 
-## 附录 A：方案 B（夹爪 URDF）附加任务
+## 附录 A：方案 B（夹爪 URDF）— 已完成（实验分支）
 
-若 Day 1 提前完成且需视觉加分，可按序追加：
+**状态（2026-06-18）**：方案 B 已落地为 `--grasp-mode gripper_urdf`，与默认 constraint 并存；CI 仍只验证 constraint。
 
-1. 添加 `assets/urdf/simple_gripper.urdf`（或 pybullet 自带 gripper）。
-2. `core/world.py` — `load_gripper(parent_link=ee_link)`。
-3. `core/gripper.py` — `open()` / `close()` / `get_state()`。
-4. 扩展 `PyBulletRobot` 或 parallel finger control。
-5. `action_dim` / `state_dim` 扩展写入 schema（breaking → 仅 pick_and_lift + gripper 模式）。
-6. Evaluator 增加 finger joint 力矩或 contact 力阈值。
+| 任务 | 状态 | 路径 |
+|------|------|------|
+| 夹爪 URDF 资产 | [x] | `assets/urdf/simple_gripper.urdf` |
+| 挂载与 World 扩展 | [x] | `core/gripper.attach_gripper`、`core/world.World.gripper_*` |
+| 指关节控制 + contact latch | [x] | `core/gripper.GripperGraspController` |
+| 9 维 state/action | [x] | `collect_episode._combine_arm_and_gripper_action` |
+| schema / 采集文档 | [x] | `docs/dev/data_schema.md`、`collection_pipeline.md` |
+| 集成测试 | [x] | `tests/test_gripper.py` |
 
-**不建议**与方案 A 同日并行开发；应 A 全绿后再 fork 方案 B 分支。
+启用：
+
+```bash
+python scripts/collect_episode.py --task pick_and_lift \
+  --grasp-mode gripper_urdf \
+  --output dataset_sample/episode_pick_gripper --num-steps 40 --seed 7
+```
+
+**与方案 A 差异**：无 `createConstraint` / `release()`；靠 finger 闭合 + contact 法向力阈值 latch；成功率通常低于 constraint，适合演示「更接近真实夹爪语义」的数据形态。
 
 ---
 

@@ -55,6 +55,7 @@
 | 笛卡尔规划 | `core/trajectory.py` | 位姿插补、waypoint | `trajectory.py`, `motion_planner.plan_cartesian_segment` | `--control-mode cartesian_ik` | `test_motion_planner.py` |
 | 任务编排 | `agents/task_fsm.py` | FSM、阶段目标 | `task_fsm.py` | `--task pick_and_lift` | `test_agents.py` |
 | 自动评测 | `agents/evaluator.py` | Critic、success 标签 | `evaluator.py` | metadata.success | `test_agents.py` |
+| 物理抓取 | constraint / gripper_urdf | grasp latch、滑落检测 | `core/grasp.py`, `core/gripper.py` | `--grasp-mode …` | `test_grasp.py`, `test_gripper.py` |
 | 采样式规划 | `core/rrt.py` | 配置空间、RRT-Connect | `rrt.py`, `joint_limits.py` | `run_rrt_demo.py` | `test_rrt.py` |
 | 碰撞检测 | `core/collision.py` | 配置空间可行性 oracle | `collision.py` | `--planner rrt` | `test_collision.py` |
 | 规划调度 | `agents/motion_planner.py` | PlanningResult、失败语义 | `motion_planner.py` | cartesian vs rrt 对比 | `test_rrt_integration.py` |
@@ -195,38 +196,45 @@ python scripts/validate_dataset.py dataset_sample/episode_cartesian_001
 
 ### 3.4 Phase 1.5：FSM + Evaluator（任务可信度）
 
-**学习目标（L2）**：逐步讲 pick-lift 四阶段；能解释 success 判定逻辑与局限。
+**学习目标（L2）**：逐步讲 pick-lift 四阶段；能解释 success 判定逻辑与两种 grasp 模式差异。
 
 **核心概念**
 
 - **Task Planning Agent**（见 [AGENTS.md](../../AGENTS.md)）：FSM 产出阶段目标位姿
 - **Evaluation Agent**：每步安全检查 + 结束 success 标签
-- 仿真 constraint 抓取：`close_gripper` 阶段用 PyBullet `JOINT_FIXED` 约束 cube 与 EE（非 finger 力闭合）
+- **constraint**（默认）：`close_gripper` 阶段用 PyBullet `JOINT_FIXED` 约束 cube 与 EE
+- **gripper_urdf**（实验）：挂载平行夹爪 URDF，靠 contact 法向力 latch，`state_dim=9`
 
 **仓库映射**
 
-| 阶段 | FSM | Evaluator |
-|------|-----|-----------|
+| 阶段 | FSM | Evaluator / 抓取 |
+|------|-----|------------------|
 | reach | cube 上方 | 关节突变检测 |
 | approach | 下降 | 物体掉桌检测 |
-| close_gripper | 闭合 | `try_grasp()` → constraint |
+| close_gripper | 闭合 | `try_grasp()` |
 | lift | 抬升 | Z 轴抬升 + `grasp_established` → success |
 
 **必读代码**
 
 - `agents/task_fsm.py`：`TaskPhase`、`PHASE_FRACTIONS`、`PickLiftTaskFSM`
-- `core/grasp.py`：`ConstraintGraspController`、`try_grasp` / `release`
+- `core/grasp.py`：`ConstraintGraspController`（默认路径）
+- `core/gripper.py`：`attach_gripper`、`GripperGraspController`（`--grasp-mode gripper_urdf`）
 - `agents/evaluator.py`：`inspect_step`、`evaluate_success`（`grasp_failed` / `object_slipped`）
-- `collect_episode.py`：`collect_pick_and_lift` 抓取编排
+- `collect_episode.py`：`collect_pick_and_lift`、`_prepare_grasp_controller`
 
 **动手**
 
 ```bash
+# 默认 constraint（与 CI 一致）
 python scripts/collect_episode.py --task pick_and_lift \
-  --output dataset_sample/episode_pick_001 --num-steps 80
+  --output dataset_sample/episode_pick_001 --num-steps 80 --seed 7
+
+# 实验 gripper URDF
+python scripts/collect_episode.py --task pick_and_lift --grasp-mode gripper_urdf \
+  --output dataset_sample/episode_pick_gripper --num-steps 40 --seed 7
+
 python scripts/visualize_episode.py dataset_sample/episode_pick_001 \
   --save-gif assets/gifs/demo_pick_success.gif
-# 查看 metadata
 python -c "import json; print(json.load(open('dataset_sample/episode_pick_001/metadata.json')))"
 ```
 
@@ -234,7 +242,8 @@ python -c "import json; print(json.load(open('dataset_sample/episode_pick_001/me
 
 1. `language_instruction` 字段从哪来？对下游模仿学习有什么用？
 2. `failure_reason` 有哪些枚举值？各对应什么触发条件？
-3. 为什么 interview 里要主动说「constraint 抓取非真实夹爪」？
+3. `grasp_mode=constraint` 与 `gripper_urdf` 对 `state_dim`、`actions.npy` 布局有何影响？
+4. 为什么 CI 只跑 constraint，而 `gripper_urdf` 放在 `test_gripper.py`？
 
 ---
 
