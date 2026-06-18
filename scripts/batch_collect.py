@@ -141,7 +141,7 @@ def write_dataset_readme(
         "",
         "## 目录结构",
         "",
-        "每个子目录符合 `docs/data_schema.md` 约定：",
+        "每个子目录符合 `docs/dev/data_schema.md` 约定：",
         "",
         "```text",
         "episode_000001/",

@@ -16,5 +16,5 @@ fi
 python scripts/update_project_docs.py
 
 if command -v git >/dev/null 2>&1; then
-  git add README.md PLAN.md roadmap.md docs/project_status.md
+  git add README.md docs/portfolio/project_status.md
 fi

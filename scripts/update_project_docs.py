@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 AUTO_START = "<!-- AUTO_STATUS_START -->"
 AUTO_END = "<!-- AUTO_STATUS_END -->"
+PROJECT_STATUS_PATH = "docs/portfolio/project_status.md"
 
 
 @dataclass(frozen=True)
@@ -128,8 +129,9 @@ def build_status_sections() -> list[StatusSection]:
             ),
             StatusItem(
                 "数据结构与采集流程文档",
-                exists("docs/data_schema.md") and exists("docs/collection_pipeline.md"),
-                "`docs/data_schema.md`, `docs/collection_pipeline.md`",
+                exists("docs/dev/data_schema.md")
+                and exists("docs/dev/collection_pipeline.md"),
+                "`docs/dev/data_schema.md`, `docs/dev/collection_pipeline.md`",
             ),
         ],
     )
@@ -156,7 +158,7 @@ def build_status_sections() -> list[StatusSection]:
             StatusItem(
                 "pytest 测试",
                 exists("tests/test_validate_dataset.py")
-                and exists("tests/test_trajectory.py"),
+                and exists("tests/test_rrt.py"),
                 "`pytest -q`",
             ),
             StatusItem(
@@ -177,8 +179,8 @@ def build_status_sections() -> list[StatusSection]:
         [
             StatusItem(
                 "任务 1：PyBullet 控制逻辑审计",
-                exists("docs/phase1_task1_pybullet_audit.md"),
-                "`docs/phase1_task1_pybullet_audit.md`",
+                exists("docs/reference/pybullet_audit.md"),
+                "`docs/reference/pybullet_audit.md`",
             ),
             StatusItem(
                 "任务 2：RobotControl 抽象基类",
@@ -241,8 +243,66 @@ def build_status_sections() -> list[StatusSection]:
         ],
     )
 
-    phase2 = StatusSection(
-        "Phase 2 批量数据 + LeRobot（广撒网）",
+    phase2_rrt = StatusSection(
+        "Phase 2 RRT 避障（design 10-day）",
+        [
+            StatusItem(
+                "关节限位模块",
+                exists("core/joint_limits.py"),
+                "`core/joint_limits.py`",
+            ),
+            StatusItem(
+                "PyBullet 碰撞检测",
+                exists("core/collision.py"),
+                "`core/collision.py`",
+            ),
+            StatusItem(
+                "双向 RRT-Connect",
+                exists("core/rrt.py"),
+                "`core/rrt.py`",
+            ),
+            StatusItem(
+                "plan_rrt_segment",
+                file_contains("agents/motion_planner.py", r"plan_rrt_segment"),
+                "`agents/motion_planner.py`",
+            ),
+            StatusItem(
+                "RRT 可视化 demo",
+                exists("scripts/run_rrt_demo.py"),
+                "`scripts/run_rrt_demo.py`",
+            ),
+            StatusItem(
+                "采集链路 --planner rrt",
+                file_contains("scripts/collect_episode.py", r"--planner"),
+                "`collect_episode.py --planner rrt`",
+            ),
+            StatusItem(
+                "规划失败 metadata",
+                file_contains("scripts/collect_episode.py", r"planning_failure_reason"),
+                "`metadata.json` 扩展字段",
+            ),
+            StatusItem(
+                "Evaluator 碰撞拦截",
+                file_contains("agents/evaluator.py", r"unexpected_collision"),
+                "`agents/evaluator.py`",
+            ),
+            StatusItem(
+                "RRT 测试",
+                exists("tests/test_rrt.py")
+                and exists("tests/test_collision.py")
+                and exists("tests/test_rrt_integration.py"),
+                "`tests/test_rrt*.py`, `tests/test_collision.py`",
+            ),
+            StatusItem(
+                "Phase 2 路线图文档",
+                exists("docs/planning/rrt_roadmap.md"),
+                "`docs/planning/rrt_roadmap.md`",
+            ),
+        ],
+    )
+
+    phase2_portfolio = StatusSection(
+        "Phase 2 批量数据 + LeRobot（作品集）",
         [
             StatusItem(
                 "批量采集脚本",
@@ -252,7 +312,7 @@ def build_status_sections() -> list[StatusSection]:
             StatusItem(
                 "数据集目录 ≥ 20 episode",
                 count_dataset_episodes("dataset/v1") >= 20,
-                "`dataset/v1/`",
+                "`dataset/v1/`（本地生成，不提交 Git）",
             ),
             StatusItem(
                 "LeRobot 真导出",
@@ -273,23 +333,31 @@ def build_status_sections() -> list[StatusSection]:
         [
             StatusItem(
                 "面试讲稿",
-                exists("docs/interview_walkthrough.md"),
-                "`docs/interview_walkthrough.md`",
+                exists("docs/portfolio/interview_walkthrough.md"),
+                "`docs/portfolio/interview_walkthrough.md`",
             ),
             StatusItem(
                 "ROS/MoveIt 迁移设计",
-                exists("docs/migration_ros2_moveit.md"),
-                "`docs/migration_ros2_moveit.md`",
+                exists("docs/reference/migration_ros2_moveit.md"),
+                "`docs/reference/migration_ros2_moveit.md`",
             ),
             StatusItem(
                 "广撒网路线图文档",
-                exists("docs/portfolio_roadmap_broad.md"),
-                "`docs/portfolio_roadmap_broad.md`",
+                exists("docs/planning/portfolio_roadmap.md"),
+                "`docs/planning/portfolio_roadmap.md`",
             ),
         ],
     )
 
-    return [baseline, phase05, phase1, phase15, phase2, phase3]
+    return [
+        baseline,
+        phase05,
+        phase1,
+        phase15,
+        phase2_rrt,
+        phase2_portfolio,
+        phase3,
+    ]
 
 
 def render_status_block() -> str:
@@ -299,7 +367,7 @@ def render_status_block() -> str:
         "## 自动进度快照",
         "",
         "> 这个区块由 `python scripts/update_project_docs.py` 根据仓库文件自动生成；",
-        "> 手动修改会在下次运行时被覆盖。",
+        "> 手动修改会在下次运行时被覆盖。完整文档索引见 [docs/README.md](docs/README.md)。",
         "",
     ]
     for section in sections:
@@ -318,9 +386,11 @@ def write_project_status() -> str:
     lines = [
         "# Project Status",
         "",
-        "本文档由 `scripts/update_project_docs.py` 自动生成，用于减少手动同步进度文档的成本。",
+        "本文档由 `scripts/update_project_docs.py` 自动生成。",
         "",
-        "广撒网 4 周详细任务见 [portfolio_roadmap_broad.md](portfolio_roadmap_broad.md)。",
+        "文档索引：[docs/README.md](../README.md)",
+        "",
+        "广撒网 4 周路线：[portfolio_roadmap.md](../planning/portfolio_roadmap.md)。",
         "",
     ]
     for section in sections:
@@ -338,16 +408,17 @@ def write_project_status() -> str:
             "python scripts/update_project_docs.py",
             "```",
             "",
-            "如已启用 `.githooks/pre-commit`，提交前会自动刷新本文件以及",
-            "`README.md`、`PLAN.md`、`roadmap.md` 中的自动进度快照。",
+            "如已启用 `.githooks/pre-commit`，提交前会自动刷新",
+            "`README.md` 与本文件中的自动进度快照。",
         ]
     )
     content = "\n".join(lines) + "\n"
-    path = ROOT / "docs/project_status.md"
+    path = ROOT / PROJECT_STATUS_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
     old = path.read_text(encoding="utf-8") if path.exists() else None
     if old != content:
         path.write_text(content, encoding="utf-8")
-        return str(path.relative_to(ROOT))
+        return PROJECT_STATUS_PATH
     return ""
 
 
@@ -378,10 +449,9 @@ def update_docs() -> list[str]:
         changed.append(status_path)
 
     block = render_status_block()
-    for relative_path in ("README.md", "PLAN.md", "roadmap.md"):
-        path = ROOT / relative_path
-        if replace_or_insert_block(path, block):
-            changed.append(relative_path)
+    readme_path = ROOT / "README.md"
+    if replace_or_insert_block(readme_path, block):
+        changed.append("README.md")
     return changed
 
 
