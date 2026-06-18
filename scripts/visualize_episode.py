@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a lightweight GIF replay for a collected episode."""
+"""为已采集 episode 生成带标注的 GIF 回放。"""
 
 from __future__ import annotations
 

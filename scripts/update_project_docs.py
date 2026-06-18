@@ -77,6 +77,24 @@ def checkbox(done: bool) -> str:
     return "x" if done else " "
 
 
+def episode_matches_default_sample(relative_dir: str) -> bool:
+    path = ROOT / relative_dir / "metadata.json"
+    if not path.exists():
+        return False
+    try:
+        import json
+
+        metadata = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return (
+        metadata.get("num_steps") == 100
+        and metadata.get("image_width") == 640
+        and metadata.get("image_height") == 480
+        and count_episode_frames(relative_dir) == 100
+    )
+
+
 def build_status_sections() -> list[StatusSection]:
     baseline = StatusSection(
         "作品集基线",
@@ -124,6 +142,11 @@ def build_status_sections() -> list[StatusSection]:
                 file_contains("scripts/collect_episode.py", r"--config")
                 and file_contains("scripts/collect_episode.py", r"default\.yaml"),
                 "`collect_episode.py --config configs/default.yaml`",
+            ),
+            StatusItem(
+                "统一样例 episode",
+                episode_matches_default_sample("dataset_sample/episode_000001"),
+                "`dataset_sample/episode_000001/`（100 步、640×480）",
             ),
             StatusItem(
                 "展示 GIF",

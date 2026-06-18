@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a collected robot-arm episode directory."""
+"""校验已采集的 episode 或数据集目录。"""
 
 from __future__ import annotations
 
@@ -36,9 +36,69 @@ FRAME_RE = re.compile(r"^(\d{6})\.png$")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate an episode dataset.")
-    parser.add_argument("episode_dir", type=Path, help="Episode directory to validate.")
+    parser = argparse.ArgumentParser(
+        description="Validate an episode directory or dataset root."
+    )
+    parser.add_argument(
+        "path",
+        type=Path,
+        help="Episode directory or dataset root containing episode_* folders.",
+    )
     return parser.parse_args()
+
+
+def is_episode_dir(path: Path) -> bool:
+    return path.is_dir() and (path / "metadata.json").exists()
+
+
+def discover_episode_dirs(path: Path) -> list[Path]:
+    if is_episode_dir(path):
+        return [path]
+    return [
+        child
+        for child in sorted(path.iterdir())
+        if child.is_dir() and is_episode_dir(child)
+    ]
+
+
+def collect_dataset_summary(dataset_dir: Path) -> dict[str, object]:
+    episode_dirs = discover_episode_dirs(dataset_dir)
+    episode_summaries: list[dict[str, object]] = []
+    success_count = 0
+    labeled_count = 0
+
+    for episode_dir in episode_dirs:
+        metadata_path = episode_dir / "metadata.json"
+        metadata = (
+            json.loads(metadata_path.read_text(encoding="utf-8"))
+            if metadata_path.exists()
+            else {}
+        )
+        success = metadata.get("success")
+        if success is not None:
+            labeled_count += 1
+            if success is True:
+                success_count += 1
+        episode_summaries.append(
+            {
+                "episode_id": episode_dir.name,
+                "success": success,
+                "failure_reason": metadata.get("failure_reason"),
+                "object_z_lift": metadata.get("object_z_lift"),
+                "task_name": metadata.get("task_name"),
+            }
+        )
+
+    episode_count = len(episode_dirs)
+    success_rate = (success_count / labeled_count) if labeled_count else 0.0
+    return {
+        "dataset_dir": str(dataset_dir),
+        "episode_count": episode_count,
+        "labeled_count": labeled_count,
+        "success_count": success_count,
+        "success_rate": success_rate,
+        "episodes": episode_summaries,
+    }
 
 
 def collect_errors(episode_dir: Path) -> list[str]:
@@ -181,14 +241,36 @@ def compare_dim(
 
 def main() -> int:
     args = parse_args()
-    errors = collect_errors(args.episode_dir)
-    if errors:
-        print("Dataset validation failed:")
+    target = args.path
+    episode_dirs = discover_episode_dirs(target)
+    if not episode_dirs:
+        print(f"No episode directories found under {target}")
+        return 1
+
+    all_errors: list[str] = []
+    for episode_dir in episode_dirs:
+        errors = collect_errors(episode_dir)
         for error in errors:
+            all_errors.append(f"{episode_dir.name}: {error}")
+
+    if all_errors:
+        print("Dataset validation failed:")
+        for error in all_errors:
             print(f"  - {error}")
         return 1
 
-    print(f"Dataset validation passed: {args.episode_dir}")
+    if len(episode_dirs) == 1:
+        print(f"Dataset validation passed: {episode_dirs[0]}")
+        return 0
+
+    summary = collect_dataset_summary(target)
+    print(f"Dataset validation passed: {target}")
+    print(
+        "Summary: "
+        f"{summary['episode_count']} episodes, "
+        f"{summary['success_count']}/{summary['labeled_count']} successes "
+        f"({summary['success_rate']:.1%})"
+    )
     return 0
 
 

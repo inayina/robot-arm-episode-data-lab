@@ -1,6 +1,8 @@
 # robot-arm-episode-data-lab
 
-![PyBullet robot-arm episode replay](assets/gifs/demo_replay.gif)
+![关节轨迹回放](assets/gifs/demo_replay.gif)
+
+![Pick-Lift 任务回放](assets/gifs/demo_pick_success.gif)
 
 <!-- AUTO_STATUS_START -->
 ## 自动进度快照
@@ -19,6 +21,7 @@
 ### Phase 0.5 工程与展示（广撒网）
 
 - [x] config 接入采集脚本：`collect_episode.py --config configs/default.yaml`
+- [x] 统一样例 episode：`dataset_sample/episode_000001/`（100 步、640×480）
 - [x] 展示 GIF：`assets/gifs/demo_replay.gif`
 - [x] pytest 测试：`pytest -q`
 - [x] GitHub Actions CI：`.github/workflows/ci.yml`
@@ -27,49 +30,109 @@
 ### Phase 1 HAL + IK + 笛卡尔
 
 - [x] 任务 1：PyBullet 控制逻辑审计：`docs/phase1_task1_pybullet_audit.md`
-- [ ] 任务 2：RobotControl 抽象基类：`core/hal.py`
-- [ ] 任务 3：PyBulletRobot 控制封装：`core/pybullet_robot.py`
-- [ ] 任务 4：HAL smoke demo：`scripts/run_cartesian_demo.py`
-- [ ] 任务 5：IK 求解封装：`core/ik.py`
-- [ ] 任务 6：笛卡尔直线插补：`core/trajectory.py`
-- [ ] 任务 8：采集脚本接入 cartesian_ik 模式：`collect_episode.py --control-mode cartesian_ik`
+- [x] 任务 2：RobotControl 抽象基类：`core/hal.py`
+- [x] 任务 3：PyBulletRobot 控制封装：`core/pybullet_robot.py`
+- [x] 任务 4：HAL smoke demo：`scripts/run_cartesian_demo.py`
+- [x] 任务 5：IK 求解封装：`core/ik.py`
+- [x] 任务 6：笛卡尔直线插补：`core/trajectory.py`
+- [x] 任务 8：采集脚本接入 cartesian_ik 模式：`collect_episode.py --control-mode cartesian_ik`
 
 ### Phase 1.5 任务可信度（广撒网）
 
-- [ ] Task FSM：`agents/task_fsm.py`
-- [ ] Evaluator Agent：`agents/evaluator.py`
-- [ ] Motion planner 模块：`agents/motion_planner.py`
-- [ ] 成功 pick/lift GIF：`assets/gifs/demo_pick_success.gif`
+- [x] Task FSM：`agents/task_fsm.py`
+- [x] Evaluator Agent：`agents/evaluator.py`
+- [x] Motion planner 模块：`agents/motion_planner.py`
+- [x] 成功 pick/lift GIF：`assets/gifs/demo_pick_success.gif`
 
 ### Phase 2 批量数据 + LeRobot（广撒网）
 
-- [ ] 批量采集脚本：`scripts/batch_collect.py`
-- [ ] 数据集目录 ≥ 20 episode：`dataset/v1/`
-- [ ] LeRobot 真导出：`export_lerobot_style.py`
-- [ ] 数据集 README：`dataset/v1/README.md`
+- [x] 批量采集脚本：`scripts/batch_collect.py`
+- [x] 数据集目录 ≥ 20 episode：`dataset/v1/`
+- [x] LeRobot 真导出：`export_lerobot_style.py`
+- [x] 数据集 README：`dataset/v1/README.md`
 
 ### Phase 3 展示与迁移叙事（广撒网）
 
-- [ ] 面试讲稿：`docs/interview_walkthrough.md`
-- [ ] ROS/MoveIt 迁移设计：`docs/migration_ros2_moveit.md`
+- [x] 面试讲稿：`docs/interview_walkthrough.md`
+- [x] ROS/MoveIt 迁移设计：`docs/migration_ros2_moveit.md`
 - [x] 广撒网路线图文档：`docs/portfolio_roadmap_broad.md`
 
 <!-- AUTO_STATUS_END -->
 
 
-一个用于求职作品集的最小机械臂仿真数据采集项目。
+一个用于求职作品集的 **PyBullet 机械臂仿真数据采集平台**：覆盖 HAL 控制抽象、笛卡尔 IK 轨迹、FSM 驱动 pick-lift 任务、自动 success 评测、批量 episode 采集与 LeRobot 导出。
 
-本项目用 PyBullet 搭建一个简单桌面任务环境，采集机械臂执行过程中的 RGB 图像、关节状态、动作、末端位姿、物体位姿和元数据。项目重点是机器人数据采集、数据完整性校验和 `episode` 回放，而不是完整机械臂控制系统。
+## 快速开始
+
+```bash
+python -m pip install -r requirements.txt
+python scripts/validate_dataset.py dataset/v1
+python scripts/visualize_episode.py dataset_sample/episode_pick_001
+```
+
+## 系统架构
+
+```mermaid
+flowchart TB
+    subgraph 脚本层
+        CE[collect_episode.py]
+        BC[batch_collect.py]
+        VD[validate_dataset.py]
+        EX[export_lerobot_style.py]
+    end
+
+    subgraph 智能体层
+        FSM[task_fsm.py]
+        MP[motion_planner.py]
+        EV[evaluator.py]
+    end
+
+    subgraph 核心层
+        TR[trajectory.py]
+        IK[ik.py]
+        HAL[RobotControl]
+        PBR[PyBulletRobot]
+    end
+
+    subgraph 数据层
+        EP[episode 目录]
+        LR[lerobot_export]
+    end
+
+    CE --> FSM --> MP --> TR
+    MP --> IK --> HAL --> PBR
+    EV --> CE --> EP
+    BC --> CE
+    VD --> EP
+    EX --> LR
+```
+
+## 能力矩阵
+
+| 能力领域 | 本项目体现 | 关键路径 |
+|----------|------------|----------|
+| 仿真环境 | PyBullet KUKA iiwa + cube 桌面场景 | `scripts/collect_episode.py` |
+| 控制抽象 | `RobotControl` HAL，隔离上层与仿真 API | `core/hal.py`, `core/pybullet_robot.py` |
+| 运动学 / 轨迹 | 笛卡尔直线插补 + IK | `core/trajectory.py`, `core/ik.py` |
+| 任务编排 | reach → approach → close_gripper → lift | `agents/task_fsm.py` |
+| 自动评测 | success 标签、物体抬升判定 | `agents/evaluator.py` |
+| 数据 schema | image-state-action 按 step 对齐 | `docs/data_schema.md` |
+| 数据门禁 | 帧数 / 维度 / metadata 校验 | `scripts/validate_dataset.py` |
+| 批量采集 | 20+ episode、成功率统计 | `scripts/batch_collect.py`, `dataset/v1/` |
+| LeRobot 导出 | v2.1 parquet + meta | `scripts/export_lerobot_style.py` |
+| 工程化 | pytest + GitHub Actions CI | `tests/`, `.github/workflows/ci.yml` |
+| 迁移设计 | HAL → ROS2 / MoveIt 映射 | `docs/migration_ros2_moveit.md` |
 
 ## 项目展示能力
 
 - PyBullet 机械臂仿真环境搭建
 - RGB 图像、关节状态、动作、末端位姿、物体位姿的同步采集
 - `image-state-action-episode` 数据结构设计
-- `episode` 元数据设计
-- 数据完整性校验
+- FSM 驱动 pick-lift 与 `success` 自动标签
+- 批量采集与 LeRobot v2.1 导出
+- `episode` 元数据设计与完整性校验
 - 带标注的轨迹回放
-- 后续扩展到 LeRobot / Isaac Sim / MoveIt 的工程基础
+- HAL 抽象与 ROS2 / MoveIt 迁移设计文档
 
 ## 明确不做
 
@@ -81,6 +144,23 @@
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+```
+
+## Pick-Lift 任务采集
+
+```bash
+python scripts/collect_episode.py --task pick_and_lift \
+  --output dataset_sample/episode_pick_001 --num-steps 80
+python scripts/validate_dataset.py dataset_sample/episode_pick_001
+python scripts/visualize_episode.py dataset_sample/episode_pick_001
+```
+
+## 批量采集与 LeRobot 导出
+
+```bash
+python scripts/batch_collect.py --output dataset/v1 --num-episodes 20 --seed 42
+python scripts/validate_dataset.py dataset/v1
+python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_export
 ```
 
 ## V0 最小检查
@@ -156,21 +236,25 @@ dataset_sample/episode_000001/replay.gif
 
 ## 广撒网 4 周路线
 
-基线完成后向求职作品集升级，见 [docs/portfolio_roadmap_broad.md](docs/portfolio_roadmap_broad.md)
-（工程化 → HAL/IK → 任务评测 → 批量 LeRobot → 面试材料）。
+基线 → 工程化 → HAL/IK → 任务评测 → 批量 LeRobot → 面试材料，见 [docs/portfolio_roadmap_broad.md](docs/portfolio_roadmap_broad.md)。
+
+**面试与迁移文档**：
+
+- [docs/interview_walkthrough.md](docs/interview_walkthrough.md) — 3–5 分钟面试讲稿
+- [docs/migration_ros2_moveit.md](docs/migration_ros2_moveit.md) — HAL → ROS2 / MoveIt 迁移设计
 
 ## 作品集定位
 
 简历中可以这样表达：
 
-> 基于 PyBullet 搭建机械臂桌面任务仿真环境，实现 `image-state-action episode` 数据采集流程，支持 RGB 图像、关节状态、末端位姿、物体位姿、动作和元数据的同步保存，并实现 `episode` 数据完整性校验与轨迹回放。
+> 基于 PyBullet 实现 HAL 解耦的机械臂仿真采集平台：笛卡尔插补 + IK 生成 action，FSM 驱动 pick-lift 任务与自动 success 评测，批量采集 20+ 多模态 episode 并导出 LeRobot 格式；含 pytest/CI 与数据校验门禁。
 
 面试中重点说明：
 
-- 为什么先用 PyBullet 快速跑通最小数据闭环
-- 如何保证图像、状态、动作和位姿按 step 对齐
-- `validate_dataset.py` 如何发现缺失文件和帧数不一致
-- `visualize_episode.py` 如何把采集结果变成可展示材料
-- 后续如何扩展到 LeRobot 数据格式、Isaac Sim 合成数据、MoveIt 轨迹生成或 ROS2 执行日志
+- HAL 如何隔离 PyBullet，预留真机 / ROS2 实现
+- FSM + Evaluator 如何产生带 `success` 标签的数据
+- `validate_dataset.py` 如何作为数据质量门禁
+- 批量采集与 LeRobot 导出的字段映射
+- 仿真 grasp 的局限与迁移路径（见 migration 文档）
 
-这个项目应被表达为机器人数据工程和仿真采集流程项目，而不是完整控制算法项目。
+这个项目应被表达为 **机器人数据工程 + 仿真采集管线** 项目，而不是完整生产级抓取系统。
