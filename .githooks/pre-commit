@@ -3,7 +3,7 @@ set -eu
 
 excluded_files="$(
   git diff --cached --name-only --diff-filter=ACM |
-    grep -vE '(^LICENSE$|^\.githooks/pre-commit$|^\.gitignore$|\.gitkeep$|\.py$|\.json$|\.ya?ml$|\.txt$|\.md$|\.gif$)' ||
+    grep -vE '(^LICENSE$|^\.githooks/pre-commit$|^\.gitignore$|\.gitkeep$|\.py$|\.json$|\.ya?ml$|\.txt$|\.md$|\.gif$|\.urdf$)' ||
     true
 )"
 

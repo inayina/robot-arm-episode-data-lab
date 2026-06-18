@@ -30,6 +30,21 @@ class World:
     ee_link_index: int
     plane_id: int
     obstacle_ids: tuple[int, ...] = ()
+    gripper_id: int | None = None
+    gripper_joint_indices: tuple[int, ...] = ()
+    gripper_mount_constraint_id: int | None = None
+
+    @property
+    def arm_dim(self) -> int:
+        return len(self.joint_indices)
+
+    @property
+    def gripper_dim(self) -> int:
+        return len(self.gripper_joint_indices)
+
+    @property
+    def control_dim(self) -> int:
+        return self.arm_dim + self.gripper_dim
 
 
 def connect(gui: bool) -> int:
@@ -160,6 +175,20 @@ def joint_positions(world: World) -> np.ndarray:
     return np.asarray([state[0] for state in states], dtype=np.float32)
 
 
+def gripper_positions(world: World) -> np.ndarray:
+    if world.gripper_id is None or not world.gripper_joint_indices:
+        return np.zeros(0, dtype=np.float32)
+    states = p.getJointStates(world.gripper_id, list(world.gripper_joint_indices))
+    return np.asarray([state[0] for state in states], dtype=np.float32)
+
+
+def state_vector(world: World) -> np.ndarray:
+    arm = joint_positions(world)
+    if world.gripper_dim == 0:
+        return arm
+    return np.concatenate([arm, gripper_positions(world)]).astype(np.float32)
+
+
 def link_pose(robot_id: int, link_index: int) -> np.ndarray:
     link_state = p.getLinkState(robot_id, link_index, computeForwardKinematics=True)
     position = link_state[4]
@@ -251,13 +280,31 @@ def sync_object_to_grasp_offset(
 
 
 def apply_action(world: World, action: np.ndarray, gui: bool) -> None:
+    apply_episode_action(world, action, gui)
+
+
+def apply_episode_action(world: World, action: np.ndarray, gui: bool) -> None:
+    action = np.asarray(action, dtype=np.float32).reshape(-1)
+    arm_action = action[: world.arm_dim]
     p.setJointMotorControlArray(
         bodyUniqueId=world.robot_id,
         jointIndices=world.joint_indices,
         controlMode=p.POSITION_CONTROL,
-        targetPositions=action.tolist(),
-        forces=[120.0] * len(world.joint_indices),
+        targetPositions=arm_action.tolist(),
+        forces=[120.0] * world.arm_dim,
     )
+    if world.gripper_id is not None and world.gripper_dim > 0:
+        if action.shape[0] < world.control_dim:
+            finger_targets = gripper_positions(world)
+        else:
+            finger_targets = action[world.arm_dim : world.control_dim]
+        p.setJointMotorControlArray(
+            bodyUniqueId=world.gripper_id,
+            jointIndices=list(world.gripper_joint_indices),
+            controlMode=p.POSITION_CONTROL,
+            targetPositions=finger_targets.tolist(),
+            forces=[80.0] * world.gripper_dim,
+        )
     for _ in range(4):
         p.stepSimulation()
         if gui:

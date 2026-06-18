@@ -37,6 +37,7 @@ from core.episode_writer import (
 )
 from core.collision import CollisionChecker
 from core.grasp import ConstraintGraspController
+from core.gripper import GripperGraspController, attach_gripper
 from core.ik import solve_ik
 from core.joint_limits import JointLimits, get_joint_limits
 from core.pybullet_robot import PyBulletRobot
@@ -55,6 +56,7 @@ from core.world import (
     render_rgb,
     setup_world,
     smooth_trajectory,
+    state_vector,
 )
 
 # Backward-compatible re-exports for scripts/tests that import from collect_episode.
@@ -141,6 +143,12 @@ def parse_args() -> argparse.Namespace:
         choices=("cartesian", "rrt"),
         default=argparse.SUPPRESS,
         help="Motion planner for pick_and_lift: cartesian (default) or rrt.",
+    )
+    parser.add_argument(
+        "--grasp-mode",
+        choices=("constraint", "gripper_urdf"),
+        default=argparse.SUPPRESS,
+        help="Grasp backend for pick_and_lift: constraint (default) or gripper_urdf.",
     )
     return parser.parse_args()
 
@@ -262,6 +270,58 @@ def plan_segment_for_phase(
     )
 
 
+def _combine_arm_and_gripper_action(
+    world: World,
+    arm_action: np.ndarray,
+    finger_targets: np.ndarray | None,
+) -> np.ndarray:
+    arm = np.asarray(arm_action, dtype=np.float32).reshape(-1)
+    if world.gripper_dim == 0 or finger_targets is None:
+        return arm
+    fingers = np.asarray(finger_targets, dtype=np.float32).reshape(-1)
+    return np.concatenate([arm, fingers]).astype(np.float32)
+
+
+def _prepare_grasp_controller(
+    world: World,
+    grasp_mode: str,
+) -> tuple[World, ConstraintGraspController | GripperGraspController, str]:
+    if grasp_mode == "gripper_urdf":
+        world = attach_gripper(world)
+        return world, GripperGraspController(world), "gripper_urdf"
+    if grasp_mode != "constraint":
+        raise ValueError(f"Unsupported grasp_mode: {grasp_mode}")
+    return world, ConstraintGraspController(world), "constraint"
+
+
+def _update_gripper_for_phase(
+    grasp_controller: ConstraintGraspController | GripperGraspController,
+    phase: TaskPhase,
+    *,
+    use_gripper: bool,
+    step: int,
+) -> None:
+    if phase == TaskPhase.CLOSE_GRIPPER:
+        grasp_controller.try_grasp(step=step)
+        return
+    if not use_gripper or not isinstance(grasp_controller, GripperGraspController):
+        return
+    if phase in (TaskPhase.REACH, TaskPhase.APPROACH):
+        grasp_controller.open()
+    elif phase == TaskPhase.LIFT:
+        grasp_controller.close()
+
+
+def _finger_targets_for_controller(
+    grasp_controller: ConstraintGraspController | GripperGraspController,
+    *,
+    use_gripper: bool,
+) -> np.ndarray | None:
+    if not use_gripper or not isinstance(grasp_controller, GripperGraspController):
+        return None
+    return grasp_controller.finger_targets()
+
+
 def collect_pick_and_lift(
     output_dir: Path,
     num_steps: int,
@@ -275,7 +335,12 @@ def collect_pick_and_lift(
 
     images_dir = prepare_episode_dir(output_dir)
     use_obstacles = settings.planner == "rrt"
+    use_gripper = settings.grasp_mode == "gripper_urdf"
     world = setup_world(cube_xy_offset, with_obstacles=use_obstacles)
+    world, grasp_controller, grasp_mode_label = _prepare_grasp_controller(
+        world,
+        settings.grasp_mode,
+    )
     robot = make_robot(world)
     joint_limits = get_joint_limits(world.robot_id, world.joint_indices)
     collision_checker = make_collision_checker(world) if use_obstacles else None
@@ -284,7 +349,6 @@ def collect_pick_and_lift(
     cube_position = cube_pose[:3]
 
     fsm = PickLiftTaskFSM(cube_position)
-    grasp_controller = ConstraintGraspController(world)
     evaluator = EvaluatorAgent(
         initial_object_z=float(cube_position[2]),
         collision_checker=collision_checker,
@@ -332,12 +396,21 @@ def collect_pick_and_lift(
             if len(states) >= num_steps:
                 break
 
-            if segment.phase == TaskPhase.CLOSE_GRIPPER:
-                grasp_controller.try_grasp(step=len(states))
+            _update_gripper_for_phase(
+                grasp_controller,
+                segment.phase,
+                use_gripper=use_gripper,
+                step=len(states),
+            )
+            finger_targets = _finger_targets_for_controller(
+                grasp_controller,
+                use_gripper=use_gripper,
+            )
+            full_action = _combine_arm_and_gripper_action(world, action, finger_targets)
 
-            apply_action(world, action, gui)
-            last_action = action.astype(np.float32)
-            current_joints = joint_positions(world)
+            apply_action(world, full_action, gui)
+            last_action = full_action.astype(np.float32)
+            current_joints = state_vector(world)
             current_object_pose = object_pose(world.cube_id)
             current_ee_pose = link_pose(world.robot_id, world.ee_link_index)
 
@@ -368,7 +441,7 @@ def collect_pick_and_lift(
 
     while len(states) < num_steps:
         apply_action(world, last_action, gui)
-        current_joints = joint_positions(world)
+        current_joints = state_vector(world)
         current_object_pose = object_pose(world.cube_id)
         current_ee_pose = link_pose(world.robot_id, world.ee_link_index)
         gripper_open = not grasp_controller.is_grasped
@@ -409,6 +482,7 @@ def collect_pick_and_lift(
         camera=settings.camera,
         config_path=settings.config_path,
         planner=settings.planner,
+        grasp_mode=settings.grasp_mode,
     )
     metadata = build_metadata(
         output_dir=output_dir,
@@ -423,12 +497,13 @@ def collect_pick_and_lift(
         phase_labels=phase_labels,
         planning_success=planning_success,
         planning_failure_reason=planning_failure_reason,
-        grasp_mode="constraint",
+        grasp_mode=grasp_mode_label,
         grasp_established=grasp_controller.is_grasped,
         grasp_established_at_step=grasp_controller.grasp_established_at_step,
     )
     write_metadata(output_dir, metadata)
-    grasp_controller.release()
+    if isinstance(grasp_controller, ConstraintGraspController):
+        grasp_controller.release()
     print(
         f"Wrote pick_and_lift episode with {num_steps} steps to {output_dir} "
         f"(success={evaluation.success}, object_z_lift={evaluation.object_z_lift:.4f})"

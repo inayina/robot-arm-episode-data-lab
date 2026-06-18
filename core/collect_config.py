@@ -41,6 +41,7 @@ class CollectSettings:
     camera: CameraConfig
     config_path: Path | None
     planner: str = "cartesian"
+    grasp_mode: str = "constraint"
 
 
 def resolve_config_path(config_path: Path) -> Path:
@@ -125,6 +126,8 @@ def settings_from_config(config_path: Path) -> CollectSettings:
         control_mode=str(config.get("control_mode", "joint_position")),
         camera=camera_from_mapping(width, height, camera_mapping),
         config_path=resolve_config_path(config_path),
+        planner=str(config.get("planner", "cartesian")),
+        grasp_mode=str(config.get("grasp_mode", "constraint")),
     )
 
 
@@ -160,6 +163,7 @@ def resolve_settings(args: argparse.Namespace) -> CollectSettings:
     control_mode = getattr(args, "control_mode", None) or base.control_mode
     task_name = getattr(args, "task", None) or base.task_name
     planner = getattr(args, "planner", None) or base.planner
+    grasp_mode = getattr(args, "grasp_mode", None) or base.grasp_mode
 
     return CollectSettings(
         mode=mode,
@@ -177,4 +181,5 @@ def resolve_settings(args: argparse.Namespace) -> CollectSettings:
         camera=camera,
         config_path=config_path if config_arg is not None else None,
         planner=planner,
+        grasp_mode=grasp_mode,
     )

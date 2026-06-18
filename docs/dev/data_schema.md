@@ -171,7 +171,7 @@ metadata.json
 - `object_z_lift`：物体 Z 轴抬升量
 - `gripper_states`：逐步夹爪开闭标记
 - `task_phases`：逐步 FSM 阶段名
-- `grasp_mode`：抓取实现方式，例如 `constraint`（PyBullet fixed constraint）
+- `grasp_mode`：抓取实现方式，例如 `constraint`（PyBullet fixed constraint）或 `gripper_urdf`（平行夹爪 URDF；此时 `state_dim`/`action_dim` 通常为 9 = 7 臂关节 + 2 指关节）
 - `grasp_established`：是否建立物理抓取
 - `grasp_established_at_step`：首次抓取成功的 step 索引（可选）
 

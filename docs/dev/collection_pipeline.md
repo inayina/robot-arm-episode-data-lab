@@ -48,9 +48,17 @@ reach / approach（gripper_open）
 
 | 实现 | `metadata.grasp_mode` | 说明 |
 |------|----------------------|------|
-| **当前默认** | `constraint` | PyBullet fixed constraint |
+| **当前默认（main）** | `constraint` | PyBullet fixed constraint |
+| **实验分支** | `gripper_urdf` | `assets/urdf/simple_gripper.urdf` + contact 力阈值；`--grasp-mode gripper_urdf`；`state_dim`/`action_dim`=9 |
 | legacy | `kinematic` | `world.sync_object_to_grasp_offset`（仅对比/测试） |
-| 未来 | `gripper_urdf` | 夹爪 URDF + 力闭合（见 [day1_grasp_spec.md](../planning/day1_grasp_spec.md) 附录 A） |
+
+启用夹爪 URDF 模式：
+
+```bash
+python scripts/collect_episode.py --task pick_and_lift \
+  --grasp-mode gripper_urdf \
+  --output dataset_sample/episode_pick_gripper --num-steps 40 --seed 7
+```
 
 **success 判定**（`agents/evaluator.py`，`require_grasp_established=True`）：
 
