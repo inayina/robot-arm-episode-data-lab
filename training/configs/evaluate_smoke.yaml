@@ -1,0 +1,8 @@
+dataset: data/exports/panda_demo
+schema: configs/robot_schemas/panda.yaml
+checkpoint: training/reports/panda_act_smoke/checkpoint.npz
+output: training/reports/panda_act_smoke/eval.json
+metrics:
+  - mean_absolute_action_error
+  - rmse_action_error
+  - smoothness_proxy

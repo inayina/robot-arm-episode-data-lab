@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.video_encode import encode_png_sequence_to_mp4, ffmpeg_available
+from core.joint_names import lerobot_joint_names
 
 try:
     import pyarrow as pa
@@ -28,7 +29,6 @@ except ImportError:  # pragma: no cover - exercised only without deps.
 CODEBASE_VERSION = "v2.1"
 DEFAULT_FPS = 10.0
 DEFAULT_CAMERA_KEY = "observation.images.main"
-JOINT_NAMES = [f"joint_{index}" for index in range(7)]
 
 
 def parse_args() -> argparse.Namespace:
@@ -97,17 +97,25 @@ def build_features(
     camera_key: str,
     image_shape: tuple[int, int, int] | None,
     fps: float,
+    robot: str,
+    grasp_mode: str,
 ) -> dict[str, dict[str, Any]]:
+    state_joint_names = lerobot_joint_names(
+        robot=robot, grasp_mode=grasp_mode, dim=state_dim,
+    )
+    action_joint_names = lerobot_joint_names(
+        robot=robot, grasp_mode=grasp_mode, dim=action_dim,
+    )
     features: dict[str, dict[str, Any]] = {
         "observation.state": {
             "dtype": "float32",
             "shape": [state_dim],
-            "names": JOINT_NAMES[:state_dim],
+            "names": state_joint_names,
         },
         "action": {
             "dtype": "float32",
             "shape": [action_dim],
-            "names": JOINT_NAMES[:action_dim],
+            "names": action_joint_names,
         },
         "observation.ee_pose": {
             "dtype": "float32",
@@ -223,6 +231,9 @@ def export_dataset(
 
     state_dim = int(episodes[0]["states"].shape[1])
     action_dim = int(episodes[0]["actions"].shape[1])
+    first_meta = episodes[0]["metadata"]
+    robot = str(first_meta.get("robot", "kuka_iiwa"))
+    grasp_mode = str(first_meta.get("grasp_mode", "constraint"))
     image_shape = probe_image_shape(episode_dirs[0]) if export_videos else None
     if export_videos and not ffmpeg_available():
         raise RuntimeError(
@@ -236,6 +247,8 @@ def export_dataset(
         camera_key=camera_key,
         image_shape=image_shape,
         fps=fps,
+        robot=robot,
+        grasp_mode=grasp_mode,
     )
 
     data_chunk_dir = output_dir / "data" / "chunk-000"

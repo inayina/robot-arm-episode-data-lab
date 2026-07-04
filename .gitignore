@@ -9,8 +9,14 @@ venv/
 .marscode/
 
 # Local/generated episode data (regenerate with scripts/batch_collect.py)
+dataset/
 dataset/v1/
 dataset/lerobot_export/
+data/exports/
+!data/exports/
+!data/exports/README.md
+training/reports/*
+!training/reports/.gitkeep
 dataset_sample/**/metadata.json
 dataset_sample/**/images/
 dataset_sample/**/*.npy

@@ -233,4 +233,4 @@ episode 末未拦截但抬升不足时写入 `insufficient_lift`。规划失败�
 videos/chunk-000/observation.images.main/episode_000000.mp4
 ```
 
-`meta/info.json` 中 `features["observation.images.main"]` 为 `dtype: video`；可用 `--no-export-videos` 跳过（仅需 parquet 时）。`gripper_urdf`（9 维）导出时 joint 名为泛化 `joint_0` … `joint_8`；混用 7 维与 9 维 episode 的 dataset 需分开导出或统一 `grasp_mode`。
+`meta/info.json` 中 `features["observation.state"].names` 为 **URDF 关节名**（`lbr_iiwa_joint_1` … `7`），与 bridge 一致。`gripper_urdf`（9 维）追加 `left_finger_joint` / `right_finger_joint`。混用 7 维与 9 维 episode 的 dataset 需分开导出或统一 `grasp_mode`。

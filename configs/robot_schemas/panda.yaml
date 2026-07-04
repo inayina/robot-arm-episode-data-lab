@@ -1,0 +1,130 @@
+schema_id: panda_ee_delta_gripper_v0
+version: 0.1.0
+robot: panda
+description: Franka Panda observation/action contract for dataset inspection, smoke training, offline evaluation, and replay export.
+
+joint_names:
+  - panda_joint1
+  - panda_joint2
+  - panda_joint3
+  - panda_joint4
+  - panda_joint5
+  - panda_joint6
+  - panda_joint7
+
+gripper:
+  type: parallel_jaw
+  state_range: [0.0, 1.0]
+  command_range: [0.0, 1.0]
+  meaning:
+    0.0: closed
+    1.0: open
+
+observation:
+  state:
+    required: true
+    dim: 8
+    dtype: float32
+    fields:
+      - joint_position[7]
+      - gripper_opening[1]
+
+  ee_pose:
+    required: true
+    dim: 7
+    dtype: float32
+    fields:
+      - position_xyz[3]
+      - orientation_xyzw[4]
+
+  object_pose:
+    required: false
+    dim: 7
+    dtype: float32
+    fields:
+      - position_xyz[3]
+      - orientation_xyzw[4]
+
+  ft:
+    required: false
+    dim: 6
+    dtype: float32
+    fields:
+      - force_xyz[3]
+      - torque_xyz[3]
+
+  images:
+    required: false
+    scene_rgb:
+      key: observation.images.scene
+      shape: [480, 640, 3]
+      dtype: uint8
+    wrist_rgb:
+      key: observation.images.wrist
+      shape: [240, 320, 3]
+      dtype: uint8
+    tactile_left_rgb:
+      key: observation.images.tactile_left
+      shape: [240, 320, 3]
+      dtype: uint8
+    tactile_right_rgb:
+      key: observation.images.tactile_right
+      shape: [240, 320, 3]
+      dtype: uint8
+
+action:
+  default_type: ee_delta_gripper
+
+  ee_delta_gripper:
+    required: true
+    dim: 7
+    dtype: float32
+    fields:
+      - delta_xyz[3]
+      - delta_rpy[3]
+      - gripper_cmd[1]
+
+  joint_delta_gripper:
+    required: false
+    dim: 8
+    dtype: float32
+    fields:
+      - joint_delta[7]
+      - gripper_cmd[1]
+
+  ee_pose_gripper:
+    required: false
+    dim: 8
+    dtype: float32
+    compatibility: upstream_m6_recorder_import
+    fields:
+      - target_position_xyz[3]
+      - target_orientation_xyzw[4]
+      - gripper_cmd[1]
+
+timestamps:
+  timestamp:
+    required: true
+    dtype: float64
+  frame_index:
+    required: true
+    dtype: int64
+  episode_index:
+    required: true
+    dtype: int64
+
+task:
+  key: task
+  required: true
+  dtype: string
+
+compatibility:
+  upstream_ros2_arm_teleoperation_suite:
+    current_state_layout: observation.state[7] plus observation.gripper[1]
+    adapted_state_layout: observation.state[8]
+    current_action_layout: ee_pose_gripper[8]
+    target_training_action_layout: ee_delta_gripper[7]
+  downstream_ros2_moveit_pybullet_bridge:
+    first_handoff: neutral_jsonl
+    replay_action_type: ee_delta_gripper
+    runtime_owner: bridge

@@ -9,6 +9,7 @@
 | [dev/quickstart.md](dev/quickstart.md) | 安装、常用命令、Demo 入口 |
 | [dev/architecture.md](dev/architecture.md) | 目录结构、模块职责、Phase 命名对照 |
 | [dev/data_schema.md](dev/data_schema.md) | Episode 目录结构与字段 |
+| [dev/upstream_downstream_contracts.md](dev/upstream_downstream_contracts.md) | Panda 上游数据、仓库内训练输出、bridge replay handoff 契约 |
 | [dev/collection_pipeline.md](dev/collection_pipeline.md) | 采集链路、控制模式、规划器 |
 | [../AGENTS.md](../AGENTS.md) | Task / Motion / Evaluator 智能体职责 |
 
@@ -20,6 +21,8 @@
 | [planning/hal_ik_roadmap.md](planning/hal_ik_roadmap.md) | Phase 1：HAL + IK + 笛卡尔 |
 | [planning/rrt_roadmap.md](planning/rrt_roadmap.md) | Phase 2：双向 RRT + 碰撞检测 |
 | [planning/day1_grasp_spec.md](planning/day1_grasp_spec.md) | **三天冲刺 Day 1**：物理抓取 + 评测升级 |
+| [planning/panda_training_lab_spec.md](planning/panda_training_lab_spec.md) | **Panda 数据与训练实验室 SPEC**：本仓库内训练、统一 schema、评估与 replay 导出 |
+| [planning/panda_training_data_chain_roadmap.md](planning/panda_training_data_chain_roadmap.md) | **Panda 训练数据链路路线图**：分阶段任务、验收命令、上下游适配顺序 |
 | [planning/design_10day.md](planning/design_10day.md) | 10 天增强栈总览 |
 | [planning/portfolio_roadmap.md](planning/portfolio_roadmap.md) | 广撒网 4 周投递路线 |
 
@@ -30,7 +33,9 @@
 | [reference/knowledge_base.md](reference/knowledge_base.md) | 具身机械臂概念知识库 |
 | [reference/learning_capability_alignment.md](reference/learning_capability_alignment.md) | **能力对齐学习手册**（AI 辅助开发后自检、阶段学习、岗位路径） |
 | [reference/pybullet_audit.md](reference/pybullet_audit.md) | Phase 1 PyBullet 控制审计 |
+| [TRAINING_TO_SIM2REAL.md](TRAINING_TO_SIM2REAL.md) | Panda 训练模块与 Sim2Real bridge 的仓库边界 |
 | [reference/migration_ros2_moveit.md](reference/migration_ros2_moveit.md) | HAL → ROS2 / MoveIt 迁移 |
+| [reference/integration_with_bridge.md](reference/integration_with_bridge.md) | 与 **ros2-moveit-pybullet-bridge** 的 Panda replay / PolicyRunner 边界 |
 
 ## 作品集 / 面试
 
