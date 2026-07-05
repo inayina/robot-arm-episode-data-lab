@@ -49,6 +49,16 @@ python3 training/scripts/train_act_smoke.py \
   --output training/reports/panda_act_smoke
 ```
 
+Run PyTorch MLP Behavioral Cloning training (requires PyTorch):
+
+```bash
+python3 training/scripts/train_mlp_policy.py \
+  --dataset data/exports/panda_demo_delta_release \
+  --schema configs/robot_schemas/panda.yaml \
+  --output training/reports/panda_mlp_bc \
+  --epochs 100
+```
+
 Run offline evaluation:
 
 ```bash

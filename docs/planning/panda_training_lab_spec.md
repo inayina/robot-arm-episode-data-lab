@@ -220,7 +220,8 @@ python training/scripts/train_act_smoke.py \
 training/reports/panda_act_smoke/
 ├── metrics.json
 ├── config_resolved.yaml
-└── checkpoint.pt
+├── normalization.json
+└── checkpoint.npz
 ```
 
 `metrics.json` 示例：
@@ -268,7 +269,7 @@ training/scripts/evaluate_policy.py
 ```bash
 python training/scripts/evaluate_policy.py \
   --dataset data/exports/panda_demo \
-  --checkpoint training/reports/panda_act_smoke/checkpoint.pt \
+  --checkpoint training/reports/panda_act_smoke/checkpoint.npz \
   --schema configs/robot_schemas/panda.yaml \
   --output training/reports/panda_act_smoke/eval.json
 ```
@@ -386,9 +387,10 @@ training/
 `train_act_smoke.py` 可以在无 GPU 环境下跑通，并输出：
 
 ```text
-checkpoint.pt
+checkpoint.npz
 metrics.json
 config_resolved.yaml
+normalization.json
 ```
 
 ### AC5：Offline evaluation

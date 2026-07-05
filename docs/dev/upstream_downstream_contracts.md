@@ -63,9 +63,10 @@ Planned smoke training output:
 
 ```text
 training/reports/panda_act_smoke/
-├── metrics.json
+├── checkpoint.npz
 ├── config_resolved.yaml
-└── checkpoint.pt
+├── metrics.json
+└── normalization.json
 ```
 
 Training configs should point to a declared dataset/schema pair, not to an ad

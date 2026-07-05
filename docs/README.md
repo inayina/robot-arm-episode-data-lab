@@ -6,6 +6,11 @@
 
 | 文档 | 用途 |
 |------|------|
+| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | **P0** 中游仓库职责、输入输出、边界 |
+| [DATA_FLOW.md](DATA_FLOW.md) | **P0** raw episode → schema → release → training → handoff 数据流 |
+| [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) | **P0** 最小 baseline training / eval / replay pipeline |
+| [DEMO_GUIDE.md](DEMO_GUIDE.md) | **P0** 10 分钟可复现 mock Panda 闭环 |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | **P0** schema / action / checkpoint / handoff 排障 |
 | [dev/quickstart.md](dev/quickstart.md) | 安装、常用命令、Demo 入口 |
 | [dev/architecture.md](dev/architecture.md) | 目录结构、模块职责、Phase 命名对照 |
 | [dev/data_schema.md](dev/data_schema.md) | Episode 目录结构与字段 |
@@ -23,6 +28,7 @@
 | [planning/day1_grasp_spec.md](planning/day1_grasp_spec.md) | **三天冲刺 Day 1**：物理抓取 + 评测升级 |
 | [planning/panda_training_lab_spec.md](planning/panda_training_lab_spec.md) | **Panda 数据与训练实验室 SPEC**：本仓库内训练、统一 schema、评估与 replay 导出 |
 | [planning/panda_training_data_chain_roadmap.md](planning/panda_training_data_chain_roadmap.md) | **Panda 训练数据链路路线图**：分阶段任务、验收命令、上下游适配顺序 |
+| [planning/three_repo_documentation_plan.md](planning/three_repo_documentation_plan.md) | **三仓库文档收口计划**：上游 MuJoCo、中游 schema、下游 PyBullet 的 README / overview / demo / 面试文档补齐 |
 | [planning/design_10day.md](planning/design_10day.md) | 10 天增强栈总览 |
 | [planning/portfolio_roadmap.md](planning/portfolio_roadmap.md) | 广撒网 4 周投递路线 |
 
@@ -33,6 +39,8 @@
 | [reference/knowledge_base.md](reference/knowledge_base.md) | 具身机械臂概念知识库 |
 | [reference/learning_capability_alignment.md](reference/learning_capability_alignment.md) | **能力对齐学习手册**（AI 辅助开发后自检、阶段学习、岗位路径） |
 | [reference/pybullet_audit.md](reference/pybullet_audit.md) | Phase 1 PyBullet 控制审计 |
+| [THREE_REPO_ARCHITECTURE.md](THREE_REPO_ARCHITECTURE.md) | 三仓库总体架构图：上游 MuJoCo、中游数据闭环、下游 PyBullet 评估 |
+| [SIM_BACKENDS_AND_TRANSFER.md](SIM_BACKENDS_AND_TRANSFER.md) | 跨仿真后端边界：上游 MuJoCo、中游统一 schema、下游 PyBullet 与 Sim2Real-readiness |
 | [TRAINING_TO_SIM2REAL.md](TRAINING_TO_SIM2REAL.md) | Panda 训练模块与 Sim2Real bridge 的仓库边界 |
 | [reference/migration_ros2_moveit.md](reference/migration_ros2_moveit.md) | HAL → ROS2 / MoveIt 迁移 |
 | [reference/integration_with_bridge.md](reference/integration_with_bridge.md) | 与 **ros2-moveit-pybullet-bridge** 的 Panda replay / PolicyRunner 边界 |
