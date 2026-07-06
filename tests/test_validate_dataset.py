@@ -112,6 +112,15 @@ def test_export_lerobot_style_writes_v21_layout(tmp_path: Path) -> None:
     info = json.loads((output_dir / "meta" / "info.json").read_text(encoding="utf-8"))
     assert info["codebase_version"] == "v2.1"
     assert "observation.state" in info["features"]
+    assert info["features"]["observation.state"]["names"] == [
+        "lbr_iiwa_joint_1",
+        "lbr_iiwa_joint_2",
+        "lbr_iiwa_joint_3",
+        "lbr_iiwa_joint_4",
+        "lbr_iiwa_joint_5",
+        "lbr_iiwa_joint_6",
+        "lbr_iiwa_joint_7",
+    ]
 
     table = pq.read_table(output_dir / "data" / "chunk-000" / "episode_000000.parquet")
     assert table.num_rows == 4

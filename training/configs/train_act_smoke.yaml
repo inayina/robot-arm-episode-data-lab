@@ -1,0 +1,9 @@
+dataset: data/exports/panda_demo
+schema: configs/robot_schemas/panda.yaml
+output: training/reports/panda_act_smoke
+seed: 7
+val_ratio: 0.2
+policy:
+  type: linear_smoke
+  input_key: observation.state
+  action_key: action

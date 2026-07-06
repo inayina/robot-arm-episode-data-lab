@@ -203,7 +203,7 @@ class Ros2Robot(RobotControl):
 
 ## 10. 相关文档
 
-- [interview_walkthrough.md](interview_walkthrough.md) — 面试讲稿
-- [data_schema.md](data_schema.md) — episode 字段说明
-- [AGENTS.md](../AGENTS.md) — 智能体职责划分
-- [portfolio_roadmap_broad.md](portfolio_roadmap_broad.md) — 广撒网路线图
+- [interview_walkthrough.md](../portfolio/interview_walkthrough.md) — 面试讲稿
+- [data_schema.md](../dev/data_schema.md) — episode 字段说明
+- [AGENTS.md](../../AGENTS.md) — 智能体职责划分
+- [portfolio_roadmap.md](../planning/portfolio_roadmap.md) — 广撒网路线图

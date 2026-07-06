@@ -4,8 +4,8 @@
 
 文档索引：[docs/README.md](../README.md) · 设计总览：[design_10day.md](../planning/design_10day.md)
 
-> **单线进度（截至今日）**：数据闭环、HAL/IK、FSM 评测、RRT、**物理 constraint 抓取**、批量/LeRobot 脚本与 CI 已就绪；
-> **再开发 2 天**（Day 2–3 展示与投递收尾）按下方冲刺清单完成即可对外展示。
+> **当前定位**：机械臂具身数据闭环中游已具备 legacy PyBullet 采集、Panda schema、dataset inspection / release、baseline training、offline evaluation 与 bridge handoff 文档链路；
+> 当前仍属于 software simulation / Sim-to-Sim readiness，不宣称真实机械臂 Sim2Real 已完成。
 
 ## 已完成
 
