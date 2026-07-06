@@ -198,8 +198,8 @@ def build_status_sections() -> list[StatusSection]:
                 ),
                 StatusItem(
                     "10 天设计 / RRT 路线图",
-                    exists("docs/planning/design_10day.md")
-                    and exists("docs/planning/rrt_roadmap.md"),
+                    exists("docs/legacy_pybullet/design_10day.md")
+                    and exists("docs/legacy_pybullet/rrt_roadmap.md"),
                     "`design_10day.md`, `rrt_roadmap.md`",
                 ),
             ],
@@ -303,6 +303,24 @@ def render_readme_intro() -> str:
         "三仓库总体架构见 [docs/THREE_REPO_ARCHITECTURE.md](docs/THREE_REPO_ARCHITECTURE.md)；跨仿真后端边界见 [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md)，训练到下游评估的 handoff 见 [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md)。",
         "",
     ]
+    mainline_asset_specs = (
+        ("Panda P0 主线媒体证据", "Panda P0 data loop", "assets/diagrams/panda_p0_data_loop.png"),
+        (None, "Panda baseline training pipeline", "assets/diagrams/panda_training_pipeline.png"),
+        (None, "Panda P0 demo terminal evidence", "assets/screenshots/panda_p0_demo_terminal.png"),
+        (None, "Bridge handoff bundle", "assets/screenshots/bridge_handoff_bundle.png"),
+        (None, "Data cleaning and LeRobot export flow", "assets/diagrams/data_cleaning_lerobot_flow.png"),
+        (None, "Training methods matrix", "assets/diagrams/training_methods_matrix.png"),
+    )
+    wrote_mainline_heading = False
+    for heading, alt, relative_path in mainline_asset_specs:
+        if not exists(relative_path):
+            continue
+        if heading and not wrote_mainline_heading:
+            lines.extend([f"### {heading}", ""])
+            wrote_mainline_heading = True
+        lines.extend([f"![{alt}]({relative_path})", ""])
+
+    wrote_legacy_heading = False
     for alt, relative_path in (
         ("关节轨迹回放", "assets/gifs/demo_replay.gif"),
         ("Pick-Lift 任务回放", "assets/gifs/demo_pick_success.gif"),
@@ -310,6 +328,9 @@ def render_readme_intro() -> str:
         ("Gripper URDF 实验回放", "assets/gifs/demo_gripper_urdf.gif"),
     ):
         if exists(relative_path):
+            if not wrote_legacy_heading:
+                lines.extend(["### Legacy PyBullet / KUKA visual evidence", ""])
+                wrote_legacy_heading = True
             lines.extend([f"![{alt}]({relative_path})", ""])
     if exists("assets/videos/demo_overview.mp4"):
         lines.extend(
@@ -334,7 +355,7 @@ def render_readme_intro() -> str:
         ]
     )
     diagram_specs = (
-        ("架构与数据流", "系统分层架构", "assets/diagrams/architecture.png"),
+        ("Legacy PyBullet / KUKA diagrams", "系统分层架构", "assets/diagrams/architecture.png"),
         (None, "pick_and_lift 数据流", "assets/diagrams/data_flow_pick_lift.png"),
         (None, "Episode 目录与 step 对齐", "assets/diagrams/episode_structure.png"),
     )
@@ -347,7 +368,7 @@ def render_readme_intro() -> str:
             wrote_diagram_heading = True
         lines.extend([f"![{alt}]({relative_path})", ""])
     screenshot_specs = (
-        ("LeRobot 导出（v2.1）", "LeRobot 导出目录", "assets/screenshots/lerobot_export_tree.png"),
+        ("Legacy LeRobot export evidence", "LeRobot 导出目录", "assets/screenshots/lerobot_export_tree.png"),
         (None, "meta/info.json 字段", "assets/screenshots/lerobot_meta_info.png"),
         (None, "parquet episode 列结构", "assets/screenshots/lerobot_parquet_schema.png"),
     )
@@ -361,7 +382,7 @@ def render_readme_intro() -> str:
         lines.extend([f"![{alt}]({relative_path})", ""])
     lines.extend(
         [
-            "单线进度与 **3 天冲刺清单** 见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。",
+            "项目状态与收口清单见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。",
             INTRO_END,
         ]
     )
@@ -371,7 +392,43 @@ def render_readme_intro() -> str:
 def render_readme_footer() -> str:
     lines = [
         FOOTER_START,
-        "## 快速开始：legacy PyBullet episode sample",
+        "## 快速开始：Panda P0 data loop",
+        "",
+        "```bash",
+        "PANDA_DEMO_ROOT=\"$(mktemp -d /tmp/panda_p0_demo.XXXXXX)\"",
+        "python3 training/scripts/make_mock_panda_dataset.py --output \"$PANDA_DEMO_ROOT/raw\"",
+        "python3 training/scripts/inspect_dataset.py --dataset \"$PANDA_DEMO_ROOT/raw\" \\",
+        "  --schema configs/robot_schemas/panda.yaml",
+        "python3 training/scripts/prepare_dataset_release.py \\",
+        "  --input \"$PANDA_DEMO_ROOT/raw\" \\",
+        "  --output \"$PANDA_DEMO_ROOT/release\" \\",
+        "  --schema configs/robot_schemas/panda.yaml \\",
+        "  --release-id panda_p0_demo_v0",
+        "python3 training/scripts/train_act_smoke.py \\",
+        "  --dataset \"$PANDA_DEMO_ROOT/release\" \\",
+        "  --schema configs/robot_schemas/panda.yaml \\",
+        "  --output \"$PANDA_DEMO_ROOT/train\"",
+        "python3 training/scripts/evaluate_policy.py \\",
+        "  --dataset \"$PANDA_DEMO_ROOT/release\" \\",
+        "  --checkpoint \"$PANDA_DEMO_ROOT/train/checkpoint.npz\" \\",
+        "  --schema configs/robot_schemas/panda.yaml \\",
+        "  --output \"$PANDA_DEMO_ROOT/train/eval.json\"",
+        "python3 training/scripts/replay_policy.py \\",
+        "  --dataset \"$PANDA_DEMO_ROOT/release\" \\",
+        "  --checkpoint \"$PANDA_DEMO_ROOT/train/checkpoint.npz\" \\",
+        "  --schema configs/robot_schemas/panda.yaml \\",
+        "  --output \"$PANDA_DEMO_ROOT/train/predicted_actions.jsonl\"",
+        "python3 training/scripts/prepare_bridge_handoff.py \\",
+        "  --dataset \"$PANDA_DEMO_ROOT/release\" \\",
+        "  --replay \"$PANDA_DEMO_ROOT/train/predicted_actions.jsonl\" \\",
+        "  --schema configs/robot_schemas/panda.yaml \\",
+        "  --output \"$PANDA_DEMO_ROOT/train/bridge_handoff\" \\",
+        "  --handoff-id panda_p0_demo_bridge_v0",
+        "```",
+        "",
+        "完整说明见 [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) 和 [training/README_TRAINING.md](training/README_TRAINING.md)。",
+        "",
+        "## Legacy PyBullet episode sample",
         "",
         "```bash",
         "python -m pip install -r requirements.txt",
@@ -382,19 +439,7 @@ def render_readme_footer() -> str:
         "python scripts/validate_dataset.py dataset_sample/episode_pick_ci",
         "```",
         "",
-        "完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。",
-        "",
-        "## Panda schema / training smoke",
-        "",
-        "```bash",
-        "python3 training/scripts/make_mock_panda_dataset.py --output /tmp/panda_mock_dataset",
-        "python3 training/scripts/inspect_dataset.py --dataset /tmp/panda_mock_dataset \\",
-        "  --schema configs/robot_schemas/panda.yaml",
-        "python3 training/scripts/train_act_smoke.py --dataset /tmp/panda_mock_dataset \\",
-        "  --schema configs/robot_schemas/panda.yaml --output /tmp/panda_act_smoke",
-        "```",
-        "",
-        "完整训练链路见 [training/README_TRAINING.md](training/README_TRAINING.md)。",
+        "这部分是旧 KUKA / PyBullet 本地采集样例，用作历史演示和可复现 episode 证据；当前主线是 Panda schema / training / handoff。完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。",
         "",
         "## 文档导航",
         "",
@@ -404,6 +449,8 @@ def render_readme_footer() -> str:
         "| P0 项目总览 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) |",
         "| P0 数据流 | [docs/DATA_FLOW.md](docs/DATA_FLOW.md) |",
         "| P0 训练闭环 | [docs/TRAINING_PIPELINE.md](docs/TRAINING_PIPELINE.md) |",
+        "| 数据清洗 / LeRobot | [docs/DATA_CLEANING_AND_LEROBOT.md](docs/DATA_CLEANING_AND_LEROBOT.md) |",
+        "| 训练方式分层 | [docs/TRAINING_METHODS.md](docs/TRAINING_METHODS.md) |",
         "| P0 最小演示 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) |",
         "| P0 排障表 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |",
         "| 规划 / 路线图 | [docs/planning/](docs/planning/) |",
@@ -414,6 +461,7 @@ def render_readme_footer() -> str:
         "| 跨仿真后端边界 | [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md) |",
         "| 训练与下游 handoff | [training/README_TRAINING.md](training/README_TRAINING.md), [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md) |",
         "| 三仓库文档收口 | [docs/planning/three_repo_documentation_plan.md](docs/planning/three_repo_documentation_plan.md) |",
+        "| 媒体资产计划 | [docs/planning/media_asset_plan.md](docs/planning/media_asset_plan.md) |",
         "| 智能体规范 | [AGENTS.md](AGENTS.md) |",
         "",
         "## 能力概览",
@@ -438,65 +486,64 @@ def render_readme_footer() -> str:
 
 
 def write_project_status() -> str:
-    sections = build_status_sections()
-    completed = sections[:3]
-    sprint = sections[3:]
-
     lines = [
         "# Project Status",
         "",
         "本文档由 `scripts/update_project_docs.py` 自动生成。",
         "",
-        "文档索引：[docs/README.md](../README.md) · 设计总览：[design_10day.md](../planning/design_10day.md)",
+        "文档索引：[docs/README.md](../README.md) · 总体架构：[THREE_REPO_ARCHITECTURE.md](../THREE_REPO_ARCHITECTURE.md) · 最小演示：[DEMO_GUIDE.md](../DEMO_GUIDE.md)",
         "",
         "> **当前定位**：机械臂具身数据闭环中游已具备 legacy PyBullet 采集、Panda schema、dataset inspection / release、baseline training、offline evaluation 与 bridge handoff 文档链路；",
         "> 当前仍属于 software simulation / Sim-to-Sim readiness，不宣称真实机械臂 Sim2Real 已完成。",
         "",
+        "## P0 主线状态",
+        "",
+        "| 项目项 | 状态 | 证据 |",
+        "|---|---|---|",
+        f"| Panda canonical schema | {checkbox(exists('configs/robot_schemas/panda.yaml'))} | `configs/robot_schemas/panda.yaml` |",
+        f"| Dataset inspection / release | {checkbox(exists('training/scripts/inspect_dataset.py') and exists('training/scripts/prepare_dataset_release.py'))} | `training/scripts/inspect_dataset.py`, `training/scripts/prepare_dataset_release.py` |",
+        f"| Baseline training / eval / replay | {checkbox(exists('training/scripts/train_act_smoke.py') and exists('training/scripts/evaluate_policy.py') and exists('training/scripts/replay_policy.py'))} | `checkpoint.npz`, `metrics.json`, `eval.json`, `predicted_actions.jsonl` |",
+        f"| Bridge handoff bundle | {checkbox(exists('training/scripts/prepare_bridge_handoff.py'))} | `bridge_handoff/` contract for downstream bridge |",
+        f"| P0 文档入口 | {checkbox(exists('docs/PROJECT_OVERVIEW.md') and exists('docs/DATA_FLOW.md') and exists('docs/TRAINING_PIPELINE.md') and exists('docs/DATA_CLEANING_AND_LEROBOT.md') and exists('docs/TRAINING_METHODS.md') and exists('docs/DEMO_GUIDE.md') and exists('docs/TROUBLESHOOTING.md'))} | overview / data flow / cleaning / training methods / demo / troubleshooting |",
+        f"| 三仓库架构与跨后端说明 | {checkbox(exists('docs/THREE_REPO_ARCHITECTURE.md') and exists('docs/SIM_BACKENDS_AND_TRANSFER.md'))} | upstream MuJoCo, middle schema, downstream PyBullet |",
+        "",
+        "## Legacy PyBullet / KUKA 保留范围",
+        "",
+        "| 能力 | 当前定位 | 证据 |",
+        "|---|---|---|",
+        "| PyBullet pick-lift collection | 历史可复现 episode 样例，不再作为 README 主线 | `scripts/collect_episode.py`, `scripts/validate_dataset.py` |",
+        "| HAL / IK / RRT / grasp evaluator | 控制与仿真基础能力证据 | `core/hal.py`, `core/ik.py`, `core/rrt.py`, `agents/evaluator.py` |",
+        "| LeRobot-style export | legacy dataset export evidence | `scripts/export_lerobot_style.py`, `scripts/export_to_lerobot.py` |",
+        "| 旧规划文档 | reference / historical planning | `docs/legacy_pybullet/` |",
+        "",
+        "## 当前不做",
+        "",
+        "- 不做灵巧手。",
+        "- 不扩复杂模型或大规模训练。",
+        "- 不精修前端界面。",
+        "- 不把 Sim-to-Sim / readiness 包装成真实机械臂 Sim2Real。",
+        "- 不继续无限扩功能；优先保证 schema、数据流、训练输入输出、handoff 和面试表达一致。",
+        "",
+        "## 验收命令",
+        "",
+        "```bash",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q",
+        "PANDA_DEMO_ROOT=\"$(mktemp -d /tmp/panda_demo.XXXXXX)\"",
+        "python3 training/scripts/make_mock_panda_dataset.py --output \"$PANDA_DEMO_ROOT/raw\"",
+        "python3 training/scripts/inspect_dataset.py --dataset \"$PANDA_DEMO_ROOT/raw\" --schema configs/robot_schemas/panda.yaml",
+        "```",
+        "",
+        "更完整的 P0 demo 命令见 [DEMO_GUIDE.md](../DEMO_GUIDE.md)。",
+        "",
+        "## 更新方式",
+        "",
+        "```bash",
+        "python scripts/update_project_docs.py",
+        "```",
+        "",
+        "如已启用 `.githooks/pre-commit`，提交前会自动刷新",
+        "`README.md` 与 `docs/portfolio/project_status.md`。",
     ]
-
-    lines.extend(["## 已完成", ""])
-    for section in completed:
-        lines.append(f"### {section.title.removeprefix('已完成 · ')}")
-        lines.append("")
-        lines.extend(
-            f"- [{checkbox(item.done)}] {item.label}：{item.evidence}"
-            for item in section.items
-        )
-        lines.append("")
-
-    lines.extend(
-        [
-            "## 三天冲刺 → 成型作品集",
-            "",
-            "对齐 `design_10day.md` Day 5–10 与投递展示要求；完成下列全部 `[ ]` 即可对外展示。",
-            "",
-        ]
-    )
-    for section in sprint:
-        lines.extend(
-            [
-                f"### {section.title}",
-                "",
-            ]
-        )
-        lines.extend(
-            f"- [{checkbox(item.done)}] {item.label}：{item.evidence}"
-            for item in section.items
-        )
-        lines.append("")
-
-    lines.extend(
-        [
-            "## 更新方式",
-            "",
-            "```bash",
-            "python scripts/update_project_docs.py",
-            "```",
-            "",
-            "如已启用 `.githooks/pre-commit`，提交前会自动刷新",
-            "`README.md` 与 `docs/portfolio/project_status.md`。",
-        ]
-    )
     content = "\n".join(lines) + "\n"
     path = ROOT / PROJECT_STATUS_PATH
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 # Day 1 开发 Spec：抓取可信度（物理抓取 + 评测升级）
 
-本文档是 **三天冲刺 · Day 1** 的可执行开发规格，对齐：
+本文档是 legacy PyBullet/KUKA 抓取可信度阶段的可执行开发规格，对齐：
 
 - [project_status.md](../portfolio/project_status.md) — 「Day 1 · 抓取可信度」
 - [design_10day.md](design_10day.md) — Phase 3（Day 5–6）夹爪控制与物理抓取验证
@@ -175,7 +175,7 @@ robot-arm-episode-data-lab/
 ├── tests/
 │   └── test_grasp.py         # 新增：headless 抓取集成测试
 └── docs/
-    ├── planning/day1_grasp_spec.md   # 本文档
+    ├── legacy_pybullet/day1_grasp_spec.md   # 本文档
     └── dev/data_schema.md            # 可选：grasp_mode 字段
 ```
 

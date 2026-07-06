@@ -98,4 +98,4 @@ pick-lift 相关 YAML 字段（可选）：
 - 模块怎么拆： [architecture.md](architecture.md)
 - 数据格式： [data_schema.md](data_schema.md)
 - 采集模式与规划器： [collection_pipeline.md](collection_pipeline.md)
-- Day 1 抓取 spec： [../planning/day1_grasp_spec.md](../planning/day1_grasp_spec.md)
+- legacy grasp spec： [../legacy_pybullet/day1_grasp_spec.md](../legacy_pybullet/day1_grasp_spec.md)

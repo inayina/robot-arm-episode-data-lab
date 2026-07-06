@@ -28,6 +28,22 @@ flowchart LR
 
 三仓库总体架构见 [docs/THREE_REPO_ARCHITECTURE.md](docs/THREE_REPO_ARCHITECTURE.md)；跨仿真后端边界见 [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md)，训练到下游评估的 handoff 见 [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md)。
 
+### Panda P0 主线媒体证据
+
+![Panda P0 data loop](assets/diagrams/panda_p0_data_loop.png)
+
+![Panda baseline training pipeline](assets/diagrams/panda_training_pipeline.png)
+
+![Panda P0 demo terminal evidence](assets/screenshots/panda_p0_demo_terminal.png)
+
+![Bridge handoff bundle](assets/screenshots/bridge_handoff_bundle.png)
+
+![Data cleaning and LeRobot export flow](assets/diagrams/data_cleaning_lerobot_flow.png)
+
+![Training methods matrix](assets/diagrams/training_methods_matrix.png)
+
+### Legacy PyBullet / KUKA visual evidence
+
 ![关节轨迹回放](assets/gifs/demo_replay.gif)
 
 ![Pick-Lift 任务回放](assets/gifs/demo_pick_success.gif)
@@ -44,7 +60,7 @@ flowchart LR
 
 **文档入口 → [docs/README.md](docs/README.md)**（开发先看 [docs/dev/quickstart.md](docs/dev/quickstart.md)）
 
-### 架构与数据流
+### Legacy PyBullet / KUKA diagrams
 
 ![系统分层架构](assets/diagrams/architecture.png)
 
@@ -52,7 +68,7 @@ flowchart LR
 
 ![Episode 目录与 step 对齐](assets/diagrams/episode_structure.png)
 
-### LeRobot 导出（v2.1）
+### Legacy LeRobot export evidence
 
 ![LeRobot 导出目录](assets/screenshots/lerobot_export_tree.png)
 
@@ -60,11 +76,47 @@ flowchart LR
 
 ![parquet episode 列结构](assets/screenshots/lerobot_parquet_schema.png)
 
-单线进度与 **3 天冲刺清单** 见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。
+项目状态与收口清单见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。
 <!-- README_INTRO_END -->
 
 <!-- README_FOOTER_START -->
-## 快速开始：legacy PyBullet episode sample
+## 快速开始：Panda P0 data loop
+
+```bash
+PANDA_DEMO_ROOT="$(mktemp -d /tmp/panda_p0_demo.XXXXXX)"
+python3 training/scripts/make_mock_panda_dataset.py --output "$PANDA_DEMO_ROOT/raw"
+python3 training/scripts/inspect_dataset.py --dataset "$PANDA_DEMO_ROOT/raw" \
+  --schema configs/robot_schemas/panda.yaml
+python3 training/scripts/prepare_dataset_release.py \
+  --input "$PANDA_DEMO_ROOT/raw" \
+  --output "$PANDA_DEMO_ROOT/release" \
+  --schema configs/robot_schemas/panda.yaml \
+  --release-id panda_p0_demo_v0
+python3 training/scripts/train_act_smoke.py \
+  --dataset "$PANDA_DEMO_ROOT/release" \
+  --schema configs/robot_schemas/panda.yaml \
+  --output "$PANDA_DEMO_ROOT/train"
+python3 training/scripts/evaluate_policy.py \
+  --dataset "$PANDA_DEMO_ROOT/release" \
+  --checkpoint "$PANDA_DEMO_ROOT/train/checkpoint.npz" \
+  --schema configs/robot_schemas/panda.yaml \
+  --output "$PANDA_DEMO_ROOT/train/eval.json"
+python3 training/scripts/replay_policy.py \
+  --dataset "$PANDA_DEMO_ROOT/release" \
+  --checkpoint "$PANDA_DEMO_ROOT/train/checkpoint.npz" \
+  --schema configs/robot_schemas/panda.yaml \
+  --output "$PANDA_DEMO_ROOT/train/predicted_actions.jsonl"
+python3 training/scripts/prepare_bridge_handoff.py \
+  --dataset "$PANDA_DEMO_ROOT/release" \
+  --replay "$PANDA_DEMO_ROOT/train/predicted_actions.jsonl" \
+  --schema configs/robot_schemas/panda.yaml \
+  --output "$PANDA_DEMO_ROOT/train/bridge_handoff" \
+  --handoff-id panda_p0_demo_bridge_v0
+```
+
+完整说明见 [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) 和 [training/README_TRAINING.md](training/README_TRAINING.md)。
+
+## Legacy PyBullet episode sample
 
 ```bash
 python -m pip install -r requirements.txt
@@ -75,19 +127,7 @@ python scripts/collect_episode.py --task pick_and_lift --num-steps 40 \
 python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 ```
 
-完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。
-
-## Panda schema / training smoke
-
-```bash
-python3 training/scripts/make_mock_panda_dataset.py --output /tmp/panda_mock_dataset
-python3 training/scripts/inspect_dataset.py --dataset /tmp/panda_mock_dataset \
-  --schema configs/robot_schemas/panda.yaml
-python3 training/scripts/train_act_smoke.py --dataset /tmp/panda_mock_dataset \
-  --schema configs/robot_schemas/panda.yaml --output /tmp/panda_act_smoke
-```
-
-完整训练链路见 [training/README_TRAINING.md](training/README_TRAINING.md)。
+这部分是旧 KUKA / PyBullet 本地采集样例，用作历史演示和可复现 episode 证据；当前主线是 Panda schema / training / handoff。完整命令见 [docs/dev/quickstart.md](docs/dev/quickstart.md)。
 
 ## 文档导航
 
@@ -97,6 +137,8 @@ python3 training/scripts/train_act_smoke.py --dataset /tmp/panda_mock_dataset \
 | P0 项目总览 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) |
 | P0 数据流 | [docs/DATA_FLOW.md](docs/DATA_FLOW.md) |
 | P0 训练闭环 | [docs/TRAINING_PIPELINE.md](docs/TRAINING_PIPELINE.md) |
+| 数据清洗 / LeRobot | [docs/DATA_CLEANING_AND_LEROBOT.md](docs/DATA_CLEANING_AND_LEROBOT.md) |
+| 训练方式分层 | [docs/TRAINING_METHODS.md](docs/TRAINING_METHODS.md) |
 | P0 最小演示 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) |
 | P0 排障表 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | 规划 / 路线图 | [docs/planning/](docs/planning/) |
@@ -107,6 +149,7 @@ python3 training/scripts/train_act_smoke.py --dataset /tmp/panda_mock_dataset \
 | 跨仿真后端边界 | [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md) |
 | 训练与下游 handoff | [training/README_TRAINING.md](training/README_TRAINING.md), [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md) |
 | 三仓库文档收口 | [docs/planning/three_repo_documentation_plan.md](docs/planning/three_repo_documentation_plan.md) |
+| 媒体资产计划 | [docs/planning/media_asset_plan.md](docs/planning/media_asset_plan.md) |
 | 智能体规范 | [AGENTS.md](AGENTS.md) |
 
 ## 能力概览

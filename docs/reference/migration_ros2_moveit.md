@@ -206,4 +206,4 @@ class Ros2Robot(RobotControl):
 - [interview_walkthrough.md](../portfolio/interview_walkthrough.md) — 面试讲稿
 - [data_schema.md](../dev/data_schema.md) — episode 字段说明
 - [AGENTS.md](../../AGENTS.md) — 智能体职责划分
-- [portfolio_roadmap.md](../planning/portfolio_roadmap.md) — 广撒网路线图
+- [portfolio_roadmap.md](../legacy_pybullet/portfolio_roadmap.md) — legacy 投递路线

@@ -164,7 +164,7 @@ python scripts/update_project_docs.py   # 观察 README 自动区块变化
 | IK 封装 | `core/ik.py` |
 | 直线插值 | `core/trajectory.py` → `interpolate_cartesian_line` |
 | Smoke demo | `scripts/run_cartesian_demo.py` |
-| 审计笔记 | [pybullet_audit.md](pybullet_audit.md) |
+| 审计笔记 | [pybullet_audit.md](../legacy_pybullet/pybullet_audit.md) |
 
 **必读代码路径**
 
@@ -463,8 +463,8 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
 | episode 里有什么 | [data_schema.md](../dev/data_schema.md) | `collect_episode.py` 落盘段 |
 | 采集怎么选 planner | [collection_pipeline.md](../dev/collection_pipeline.md) | `plan_segment_for_phase` |
 | 智能体分工 | [AGENTS.md](../../AGENTS.md) | `task_fsm`, `motion_planner`, `evaluator` |
-| RRT 实施顺序 | [rrt_roadmap.md](../planning/rrt_roadmap.md) | `core/rrt.py` |
-| 投递节奏 | [portfolio_roadmap.md](../planning/portfolio_roadmap.md) | `project_status.md` |
+| RRT 实施顺序 | [rrt_roadmap.md](../legacy_pybullet/rrt_roadmap.md) | `core/rrt.py` |
+| 投递节奏 | [portfolio_roadmap.md](../legacy_pybullet/portfolio_roadmap.md) | `project_status.md` |
 | 行业背景 | [knowledge_base.md](knowledge_base.md) | — |
 | 面试怎么讲 | [interview_walkthrough.md](../portfolio/interview_walkthrough.md) | — |
 
@@ -491,7 +491,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
 [ ] 完成动手实验清单 ≥ 3 项
 ```
 
-**广撒网最低可投递线**（与 [portfolio_roadmap.md](../planning/portfolio_roadmap.md) 一致）：上表前 10 项建议全部打勾；RRT 相关（7–9）为 motion planning 向加分项，数据向可 L1 但需能一句话解释。
+**legacy 广撒网最低可投递线**（与 [portfolio_roadmap.md](../legacy_pybullet/portfolio_roadmap.md) 一致）：上表前 10 项建议全部打勾；RRT 相关（7–9）为 motion planning 向加分项，数据向可 L1 但需能一句话解释。
 
 ---
 

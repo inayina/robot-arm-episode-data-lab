@@ -82,7 +82,7 @@ python scripts/validate_dataset.py dataset_sample/episode_000001
 
 完成记录：
 
-- 审计文档：`../reference/pybullet_audit.md`
+- 审计文档：`pybullet_audit.md`
 - 结论：`joint_positions`、`link_pose`、`apply_action` 的核心能力应进入
   `PyBulletRobot`；`resetJointState` 初始化片段应沉淀为
   `reset_joint_positions`；IK 后续由 `calculateInverseKinematics` 封装为

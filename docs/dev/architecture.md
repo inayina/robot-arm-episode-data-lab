@@ -78,10 +78,10 @@ CI 与 `batch_collect.py` 默认 `constraint`；`gripper_urdf` 见 `tests/test_g
 
 | 名称 | 文档 | 当前状态 |
 |------|------|----------|
-| 基线 V0/V1/V2 | [baseline_plan.md](../planning/baseline_plan.md) | 已完成 |
-| roadmap Phase 1 | [hal_ik_roadmap.md](../planning/hal_ik_roadmap.md) | 已完成 |
-| design 10-day Phase 2 | [rrt_roadmap.md](../planning/rrt_roadmap.md) | 已完成 |
-| 三天冲刺 Day 1 | [day1_grasp_spec.md](../planning/day1_grasp_spec.md) | constraint 抓取已完成；`gripper_urdf` 实验分支已有 |
-| portfolio Phase 2 | [portfolio_roadmap.md](../planning/portfolio_roadmap.md) | 批量 + LeRobot 脚本已有 |
+| 基线 V0/V1/V2 | [baseline_plan.md](../legacy_pybullet/baseline_plan.md) | 已完成 |
+| roadmap Phase 1 | [hal_ik_roadmap.md](../legacy_pybullet/hal_ik_roadmap.md) | 已完成 |
+| design 10-day Phase 2 | [rrt_roadmap.md](../legacy_pybullet/rrt_roadmap.md) | 已完成 |
+| legacy grasp credibility | [day1_grasp_spec.md](../legacy_pybullet/day1_grasp_spec.md) | constraint 抓取已完成；`gripper_urdf` 实验分支已有 |
+| portfolio Phase 2 | [portfolio_roadmap.md](../legacy_pybullet/portfolio_roadmap.md) | 批量 + LeRobot 脚本已有 |
 
 智能体协作约定见根目录 [AGENTS.md](../../AGENTS.md)。

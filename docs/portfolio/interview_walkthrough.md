@@ -1,201 +1,119 @@
-# 面试讲稿：机械臂 Episode 数据采集平台
+# 面试讲稿：机械臂具身数据闭环中游
 
-> 预计讲解时长：3–5 分钟。面向机器人软件 / 具身智能 / 数据工程岗位。
->
-> **讲稿前学习准备**：[learning_capability_alignment.md](../reference/learning_capability_alignment.md)（能力矩阵、阶段自检题、岗位路径）。
+> 预计讲解时长：3-5 分钟。面向机器人软件、具身智能数据工程、仿真系统集成岗位。
 
----
+## 1. 30 秒版本
 
-## 1. 30 秒电梯陈述（给 HR 或非技术面）
+我把三个机械臂仓库整理成一条上游-中游-下游的数据闭环：上游 `ros2-arm-teleoperation-suite` 用 MuJoCo / ROS 2 产生 teleop、action、state 和 observation；中游也就是这个仓库，负责把 raw episode 标准化成 Panda episode schema，并完成 validation、dataset release、baseline training、offline evaluation 和 replay handoff；下游 `ros2-moveit-pybullet-bridge` 用 MoveIt / PyBullet 做轨迹执行、抓取稳定性和 Sim2Real-readiness 风险评估。
 
-我做了一个 **PyBullet 机械臂仿真数据采集平台**：能自动执行 pick-lift 任务，同步保存图像、关节状态、动作和位姿，并自动打上成功/失败标签。项目带 **pytest + CI 数据门禁**，已批量采集 20+ 条 episode，并导出 **LeRobot 兼容格式**，适合作为求职作品集中的「仿真 + 数据闭环」样例。
+当前我不把它包装成完整商业系统，也不宣称已经完成真实机械臂 Sim2Real。重点展示的是系统集成、数据工程、仿真链路、最小训练闭环和风险评估意识。
 
----
+## 2. 2 分钟版本
 
-## 2. 要解决什么问题？（1 分钟）
+这个项目的核心问题是：机械臂交互数据从哪里来，如何变成可训练的数据集，训练或控制结果又如何进入下游执行验证。
 
-真实机器人数据采集成本高、迭代慢。求职作品需要先证明三件事：
+我把职责拆成三层：
 
-1. **能搭仿真环境**，快速产生可复现的演示数据；
-2. **数据结构规范**，图像、状态、动作、位姿按 step 严格对齐；
-3. **能说明扩展路径**，从仿真 demo 迁移到真机 / ROS / 模仿学习框架。
+| 层级 | 仓库 | 职责 |
+|---|---|---|
+| 上游 | `ros2-arm-teleoperation-suite` | MuJoCo / ROS 2 teleop、safety、Servo、`ros2_control`、recorder，产生 raw episode |
+| 中游 | `robot-arm-episode-data-lab` | schema、inspection、release、replay、baseline training、offline eval、handoff |
+| 下游 | `ros2-moveit-pybullet-bridge` | MoveIt / PyBullet 执行验证、抓取稳定性、接触参数和迁移风险分析 |
 
-本项目刻意把范围控制在「**最小但完整的数据闭环**」，而不是堆满 RRT、真机或训练代码。
+中游是我重点收口的仓库。它有统一的 `configs/robot_schemas/panda.yaml`，把 observation、action、state、metadata 的语义固定下来。比如 `observation.state` 是 7 个 Panda 关节加 gripper opening，默认训练 action 是 `ee_delta_gripper[7]`。这样上游 MuJoCo 和下游 PyBullet 的差异不会直接泄漏到训练脚本里。
 
----
+训练模块只做最小 baseline，不追求复杂模型效果。当前的 `linear_smoke` policy 是 `observation.state -> action`，输出 `checkpoint.npz`、`metrics.json`、`eval.json` 和 `predicted_actions.jsonl`。这些结果用于证明 dataset -> training -> evaluation -> handoff 的工程闭环，而不是说已经训练出了可上真机的抓取策略。
 
-## 3. 系统架构（1 分钟）
+下游 bridge 消费 replay JSONL 后，才去评估轨迹执行误差、坐标系转换、接触参数敏感性和抓取稳定性。当前没有真实机械臂验证，所以我会把它称为 Sim-to-Sim / Sim2Real-readiness，而不是 completed Sim2Real。
 
-![系统分层架构](../../assets/diagrams/architecture.png)
+## 3. 5 分钟系统讲解
 
-```mermaid
-flowchart TB
-    subgraph 应用层
-        CE[collect_episode.py]
-        BC[batch_collect.py]
-        VD[validate_dataset.py]
-        EX[export_lerobot_style.py]
-    end
+### 3.1 为什么按上游 / 中游 / 下游拆
 
-    subgraph 智能体层
-        FSM[task_fsm.py]
-        MP[motion_planner.py]
-        EV[evaluator.py]
-    end
+机械臂项目容易把运行时、数据、训练和评估混在一起。我的拆法是让每个仓库边界清楚：
 
-    subgraph 核心层
-        TR[trajectory.py]
-        IK[ik.py]
-        HAL[hal.py]
-        PBR[pybullet_robot.py]
-        GR[grasp.py]
-        GP[gripper.py]
-    end
+- 上游解决“交互和数据来源”：teleop input、safety monitor、MoveIt Servo、`ros2_control`、MuJoCo dynamics、sensor observation、recorder。
+- 中游解决“数据标准和最小训练闭环”：episode schema、validation、release、replay、baseline training、offline eval、handoff。
+- 下游解决“执行后是否可靠”：MoveIt planning、PyBullet execution、grasp evaluation、trajectory error、Sim2Real-readiness risk。
 
-    subgraph 数据层
-        EP[episode 目录]
-        LR[lerobot_export]
-    end
+### 3.2 中游数据结构
 
-    CE --> FSM
-    FSM --> MP
-    MP --> TR
-    MP --> IK
-    IK --> HAL
-    HAL --> PBR
-    CE --> GR
-    CE --> GP
-    GR --> EV
-    GP --> EV
-    EV --> CE
-    CE --> EP
-    BC --> CE
-    VD --> EP
-    EX --> LR
+中游最小 episode 包含：
+
+| 数据 | 字段 | 说明 |
+|---|---|---|
+| observation | `observation.state`, `observation.ee_pose`, optional images / ft / object pose | policy 输入和 replay 对齐证据 |
+| action | `action`, `action_type` | 默认 `ee_delta_gripper[7]` |
+| state | joint state, gripper state, ee pose | 执行误差和分布检查 |
+| metadata | robot, simulator, schema_id, release_id, task, frame index | 可复现和跨仓库追踪 |
+
+Validation 会检查 required 字段、shape、action type、timestamp、frame index 和 optional modality warnings。Optional image 缺失在 mock dataset 里是 warning，不是 fail。
+
+### 3.3 最小训练闭环
+
+P0 demo 的链路是：
+
+```text
+mock Panda dataset
+-> inspect_dataset
+-> prepare_dataset_release
+-> train_act_smoke
+-> evaluate_policy
+-> replay_policy
+-> prepare_bridge_handoff
 ```
 
-**分层原则**：
+我会主动说明：baseline training 是工程闭环，不是算法效果展示。适合讲的指标是 train/val loss、MAE/RMSE、action dim、state dim、schema id、release id、replay action count。不适合夸大成“学会抓取”或“能直接上真机”。
 
-| 层级 | 模块 | 职责 |
-|------|------|------|
-| HAL | `RobotControl` / `PyBulletRobot` | 隔离 PyBullet 细节，预留真机实现 |
-| 核心 | `trajectory` + `ik` | 笛卡尔插补与 IK，生成关节 action |
-| 智能体 | FSM + Evaluator | 编排 pick-lift 阶段，自动打 success 标签 |
-| 数据 | episode + LeRobot 导出 | 多模态对齐落盘，对接下游训练框架 |
+### 3.4 为什么 MuJoCo 和 PyBullet 不统一
 
----
+我不会把它解释成架构错误。当前是跨仿真后端的数据闭环：
 
-## 4. 关键设计决策（1 分钟）
+- MuJoCo 在上游更适合承载 ROS 2 teleop、控制栈、动力学和交互数据产生。
+- PyBullet 在下游更适合轻量脚本化执行验证、接触参数排查和固定场景抓取评估。
+- 中游通过 schema 屏蔽仿真器差异，训练脚本只依赖数据契约。
 
-### 4.1 为什么先做 HAL，而不是直接写 PyBullet 调用？
+两个后端的接触模型、摩擦、timestep、控制接口、坐标系和模型格式都可能不同，所以当前阶段是 Sim-to-Sim / Sim2Real-readiness。
 
-`collect_episode.py` 里原本散落着 `getJointState`、`setJointMotorControlArray` 等调用。抽成 `RobotControl` 后，上层只关心「读关节 / 读末端 / 下发目标 / 解 IK」，未来换 `RealRobot` 或 ROS2 驱动时不必改 FSM 和采集逻辑。
+### 3.5 下游抓取不稳定怎么排查
 
-### 4.2 为什么用 FSM + Evaluator，而不是一条硬编码轨迹？
+我会按表格排查：
 
-硬编码关节轨迹无法表达「任务是否成功」。`PickLiftTaskFSM` 把任务拆成 reach → approach → close_gripper → lift；`EvaluatorAgent` 在 episode 末判定 `success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值`，并写入 `failure_reason`（如 `grasp_failed`、`object_slipped`），让数据集自带监督信号，适合具身 AI / 数据工程叙事。
+| 问题 | 可能原因 | 验证方式 |
+|---|---|---|
+| 夹爪闭合但物体滑落 | 摩擦、接触阈值、夹爪几何不合适 | 固定初始位姿，多次 replay，记录 slip / lift |
+| 轨迹到位但抓不到 | 坐标系或 EE link 不一致 | 检查 base frame、tool frame、object pose |
+| 下游执行抖动 | action scale 或控制频率不匹配 | 对比 timestamp、control frequency、action norm |
+| 仿真成功但迁移风险高 | 接触模型和真实世界差异 | 报告 sensitivity，不宣称真实成功 |
 
-### 4.3 数据如何保证对齐？
+## 4. Demo 命令
 
-每个仿真 step 固定顺序：**下发 action → 推进仿真 → 写 states/actions/poses → 存 PNG**。`validate_dataset.py` 检查帧数、数组维度、metadata 一致性，CI 中对样例 episode 自动跑门禁。
-
----
-
-## 5. 一键复现命令（30 秒）
+主 demo 看 [DEMO_GUIDE.md](../DEMO_GUIDE.md)。最小入口：
 
 ```bash
-python -m pip install -r requirements.txt
-python scripts/validate_dataset.py dataset/v1
-python scripts/visualize_episode.py dataset_sample/episode_pick_001
+PANDA_DEMO_ROOT="$(mktemp -d /tmp/panda_p0_demo.XXXXXX)"
+python3 training/scripts/make_mock_panda_dataset.py --output "$PANDA_DEMO_ROOT/raw"
+python3 training/scripts/inspect_dataset.py --dataset "$PANDA_DEMO_ROOT/raw" --schema configs/robot_schemas/panda.yaml
+python3 training/scripts/prepare_dataset_release.py --input "$PANDA_DEMO_ROOT/raw" --output "$PANDA_DEMO_ROOT/release" --schema configs/robot_schemas/panda.yaml --release-id panda_p0_demo_v0
+python3 training/scripts/train_act_smoke.py --dataset "$PANDA_DEMO_ROOT/release" --schema configs/robot_schemas/panda.yaml --output "$PANDA_DEMO_ROOT/train"
 ```
 
-批量采集与 LeRobot 导出：
+Legacy PyBullet / KUKA demo 仍保留，但只作为历史可复现样例，不作为当前主线。
 
-```bash
-python scripts/batch_collect.py --output dataset/v1 --num-episodes 20 --seed 42
-python scripts/export_lerobot_style.py dataset/v1 --output dataset/v1/lerobot_export
-```
+## 5. 常见追问
 
-![LeRobot 导出目录](../../assets/screenshots/lerobot_export_tree.png)
+**Q：为什么中游要放训练？**
+A：因为训练输入输出是验证 episode schema 是否可用的最好方式。这里的训练是 minimal baseline，用来证明 dataset -> training -> evaluation 的工程闭环，不是展示复杂模型能力。
 
-![parquet episode 列结构](../../assets/screenshots/lerobot_parquet_schema.png)
+**Q：为什么不用复杂模型？**
+A：当前求职展示更需要可信的数据链路、schema、排障和评估边界。复杂模型会增加成本但不一定提升项目可信度。
 
----
+**Q：下游能不能算 Sim2Real？**
+A：不能说完成 Sim2Real。当前是 Sim-to-Sim / Sim2Real-readiness，用来检查执行误差、接触稳定性和迁移风险。真实机械臂还需要硬件接口、夹爪驱动、传感器、安全层、标定和长稳验证。
 
-## 6. 数据集与字段（30 秒）
+**Q：旧 PyBullet/KUKA 代码怎么办？**
+A：保留为 legacy sample。它证明我做过 HAL、IK、RRT、FSM、grasp evaluator 和 LeRobot-style export，但当前 README 主线已经切到 Panda schema / training / handoff。
 
-![Episode 目录与 step 对齐](../../assets/diagrams/episode_structure.png)
+## 6. 简历一句话
 
-每个 episode 目录结构见 `../dev/data_schema.md`。Phase 1.5 之后 metadata 额外包含：
-
-- `success` / `failure_reason` / `object_z_lift`
-- `language_instruction`（如 `"pick up the cube"`）
-- `gripper_states` / `task_phases`
-- `grasp_mode` / `grasp_established`（物理抓取：`constraint` 默认，或实验性 `gripper_urdf`）
-
-默认 `--grasp-mode constraint`（PyBullet fixed constraint）；`--grasp-mode gripper_urdf` 时 `state_dim`/`action_dim`=9（7 臂 + 2 指关节）。CI 与批量采集默认 constraint；`gripper_urdf` 由 `tests/test_gripper.py` 覆盖。
-
----
-
-## 7. 已知局限（30 秒，主动说加分）
-
-| 局限 | 说明 | 后续改进 |
-|------|------|----------|
-| 默认 constraint 非 finger 力闭合 | `grasp_mode=constraint` 用 `createConstraint` 固定 cube 与 EE | 已提供 `--grasp-mode gripper_urdf` 实验分支；真机走 gripper action + 力阈值 |
-| `gripper_urdf` 仍为 MVP | 简化平行夹爪 URDF，靠 contact 法向力 latch，成功率低于 constraint | 调摩擦/几何/力阈值；或工业 gripper 模型 |
-| RRT + 物理抓取 | `--planner rrt` 可跑完 episode，但绕障后抓取更易 `object_slipped` | 调 grasp 时机 / 夹爪几何 |
-| 仿真成功率 | cartesian 模式较稳；物理抓取失败会写入 `grasp_failed` / `object_slipped` | cube 位姿扰动、重采 batch |
-| 未接真机 / ROS | 仅有 HAL 抽象与迁移设计文档 | 见 `../reference/migration_ros2_moveit.md` |
-
-**面试话术**：「默认用 PyBullet fixed constraint；另有 `gripper_urdf` 实验模式做 finger 接触抓取。Evaluator 要求 `grasp_established` 且抬升达标才算 success，并区分 `grasp_failed` 与 `insufficient_lift`。真机侧替换为 gripper action + 力阈值，HAL 与 FSM 接口不变。」
-
----
-
-## 8. 按岗位强调的重点
-
-### 控制 / 运动规划
-
-- `RobotControl` HAL、`PyBulletRobot` 封装
-- 笛卡尔直线插补 + `calculateInverseKinematics`
-- FSM 分阶段目标位姿
-
-### 具身 AI / 数据工程
-
-- image-state-action episode 对齐
-- `success` 标签 + `language_instruction`
-- 批量采集 `batch_collect.py`
-- LeRobot v2.1 parquet 导出
-
-### 软件工程
-
-- pytest 单元测试 + GitHub Actions CI
-- `configs/default.yaml` 配置驱动
-- `validate_dataset.py` 数据门禁
-- 模块分层：`core/` / `agents/` / `scripts/`
-
-### ROS / 真机
-
-- HAL 与 `ros2_control` / MoveIt 映射设计（文档级）
-- 上层 FSM / 采集逻辑可复用，仅替换 HAL 实现
-
----
-
-## 9. 简历一句话（可直接粘贴）
-
-> 基于 PyBullet 实现 HAL 解耦的机械臂仿真采集平台：笛卡尔插补 + IK 生成 action，FSM 驱动 pick-lift 任务与自动 success 评测，批量采集 20+ 多模态 episode 并导出 LeRobot 格式；含 pytest/CI 与数据校验门禁。
-
----
-
-## 10. 常见追问与参考答案
-
-**Q：为什么不用 ROS2？**  
-A：作品集第一阶段优先 10 秒内跑通数据闭环；HAL 已预留接口，迁移路径写在 `migration_ros2_moveit.md`。
-
-**Q：success 怎么判定？**  
-A：`success = not aborted ∧ grasp_established ∧ object_z_lift ≥ 阈值`（默认约 3 cm）。未建立抓取为 `grasp_failed`，抓取后滑落为 `object_slipped`，有抓取但抬升不足为 `insufficient_lift`。
-
-**Q：LeRobot 导出能直接训练吗？**  
-A：导出为 v2.1 布局（parquet + `videos/.../observation.images.main/*.mp4` + meta/info.json），含 state/action/ee_pose/language_instruction；默认将固定相机 PNG 序列编码为 MP4。
-
-**Q：和真实 LeRobot 数据集差在哪？**  
-A：差在真实硬件噪声、多相机、更复杂任务分布；本项目重点是**格式兼容 + 采集管线可解释**。
+> 机械臂具身数据闭环中游项目：统一 Panda episode schema，完成 dataset inspection / release、baseline training、offline evaluation 与 replay handoff，并将上游 MuJoCo 交互数据和下游 PyBullet / MoveIt Sim2Real-readiness 评估解耦；展示系统集成、数据工程、仿真链路和工程评估能力。

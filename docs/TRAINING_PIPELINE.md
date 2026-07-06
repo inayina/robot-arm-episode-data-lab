@@ -1,6 +1,6 @@
 # Training Pipeline
 
-状态：P0 最小训练闭环文档。本文档只描述当前仓库内可复现的 baseline training，不宣称复杂模型效果。
+状态：P0 最小训练闭环文档。本文档描述当前仓库内可复现的 baseline training；训练方式分层见 [TRAINING_METHODS.md](TRAINING_METHODS.md)，数据清洗与 LeRobot/HF export 见 [DATA_CLEANING_AND_LEROBOT.md](DATA_CLEANING_AND_LEROBOT.md)。
 
 ## 1. Purpose
 
@@ -56,6 +56,12 @@ training/scripts/train_act_smoke.py
 - train / val split 是否可生成。
 - checkpoint 和 normalization 是否可保存。
 - 后续 evaluation / replay 是否能消费同一个 checkpoint。
+
+其他训练方式边界：
+
+- `train_mlp_policy.py` 是可选 PyTorch MLP BC 入口，不作为 P0 必须项。
+- ACT / Diffusion-style training 当前不在本仓库实现，只保留数据 export / schema contract。
+- 真机 rollout 不由本仓库负责。
 
 ## 4. Training Output
 
@@ -186,4 +192,3 @@ handoff 的验收标准：
 - action dim 与 schema 一致。
 - dataset inspection report 可追溯。
 - handoff manifest 说明它是下游验证输入，不是实机执行许可。
-

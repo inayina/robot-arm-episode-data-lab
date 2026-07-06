@@ -2,11 +2,19 @@
 
 This module is the in-repository Panda data, training, offline evaluation, and replay-export workspace.
 
+Concept docs:
+
+- `docs/DATA_CLEANING_AND_LEROBOT.md` - data cleaning, release, LeRobot/HF export boundaries.
+- `docs/TRAINING_METHODS.md` - inspection-only, linear smoke, MLP BC, and future training tiers.
+- `docs/TRAINING_PIPELINE.md` - P0 baseline training/eval/replay/handoff pipeline.
+
 Current scope:
 
 - Inspect datasets against `configs/robot_schemas/panda.yaml`.
 - Generate small mock Panda datasets for tests and smoke runs.
 - Keep optional modalities as warnings when absent.
+- Prepare dataset releases before training.
+- Export replay JSONL / bridge handoff bundles for downstream validation.
 - Keep ROS 2 runtime execution in upstream/downstream repositories.
 
 First smoke commands:
