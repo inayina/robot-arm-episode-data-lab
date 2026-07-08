@@ -1,0 +1,50 @@
+# Feedback from the middle data/training repo to upstream capture.
+schema_version: upstream_feedback_v0
+report_id: feedback_YYYYMMDD_short_name
+created_at: YYYY-MM-DDTHH:MM:SSZ
+source_repo: robot-arm-episode-data-lab
+target_repo: ros2-arm-teleoperation-suite
+middle_commit: unknown
+upstream_commit: unknown
+
+source_data:
+  upstream_episode_root: /path/to/upstream/data/episodes
+  adapted_dataset: /path/to/adapted_dataset
+  release_id: example_release_id
+  schema_id: panda_multi_task_v0
+  action_type: ee_pose_gripper  # or ee_delta_gripper
+
+inspection_summary:
+  status: pass  # pass | fail | watch
+  episodes: 0
+  frames: 0
+  missing_required_fields: []
+  shape_mismatches: []
+  unsafe_rows:
+    success_false: 0
+    safety_estop_true: 0
+    drive_fault_true: 0
+  language_instruction_issues: []
+
+training_or_eval_summary:
+  run_id: optional_run_id
+  policy_type: act_smoke
+  metric_headline: optional_short_summary
+  failure_modes: []
+
+requested_upstream_changes:
+  - area: recorder  # recorder | batch_generator | mujoco_sim | validation | docs
+    issue: Describe the observed issue.
+    suggested_change: Describe the requested upstream change.
+    acceptance_gate: Describe the upstream validation command or metric.
+
+safe_attachments:
+  reports: []
+  tiny_fixtures: []
+  plots: []
+
+do_not_attach:
+  - full dataset release
+  - checkpoint binaries
+  - training cache directories
+  - derived full state/action datasets

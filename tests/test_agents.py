@@ -4,10 +4,11 @@ import numpy as np
 import pytest
 
 from agents.evaluator import EvaluatorAgent, StepObservation
-from agents.task_fsm import PickLiftTaskFSM, TaskPhase
+from agents.task_fsm import PickLiftTaskFSM, PickPlaceTaskFSM, TaskPhase
 
 
 def test_pick_lift_fsm_allocates_exact_step_budget() -> None:
+    """PickLiftTaskFSM keeps the legacy four active phases."""
     fsm = PickLiftTaskFSM(np.array([0.63, 0.0, 0.025], dtype=np.float32))
     segments = fsm.allocate_phase_steps(80)
 
@@ -18,6 +19,80 @@ def test_pick_lift_fsm_allocates_exact_step_budget() -> None:
         TaskPhase.CLOSE_GRIPPER,
         TaskPhase.LIFT,
     ]
+
+
+def test_pick_lift_fsm_requires_minimum_steps() -> None:
+    fsm = PickLiftTaskFSM(np.zeros(3, dtype=np.float32))
+    with pytest.raises(ValueError, match="num_steps must be at least"):
+        fsm.allocate_phase_steps(3)
+
+
+# ─── PickPlaceTaskFSM 新功能测试 ────────────────────────────────────────────────
+
+def test_pick_place_fsm_full_phase_sequence() -> None:
+    """PickPlaceTaskFSM includes the full seven active phases."""
+    obj_pos = np.array([0.45, 0.0, 0.025], dtype=np.float32)
+    bin_pos = np.array([0.40, -0.2, 0.02], dtype=np.float32)
+    fsm = PickPlaceTaskFSM(
+        obj_pos,
+        bin_position=bin_pos,
+        language_instruction="pick up the red box and place it in the left bin",
+    )
+
+    segments = fsm.allocate_phase_steps(100)
+    assert sum(s.num_steps for s in segments) == 100
+    assert [s.phase for s in segments] == [
+        TaskPhase.REACH,
+        TaskPhase.APPROACH,
+        TaskPhase.CLOSE_GRIPPER,
+        TaskPhase.LIFT,
+        TaskPhase.TRANSPORT,
+        TaskPhase.PLACE,
+        TaskPhase.RELEASE,
+    ]
+
+
+def test_pick_place_fsm_requires_minimum_steps() -> None:
+    fsm = PickPlaceTaskFSM(np.zeros(3, dtype=np.float32))
+    with pytest.raises(ValueError, match="num_steps must be at least"):
+        fsm.allocate_phase_steps(6)
+
+
+def test_pick_place_fsm_transport_target_uses_bin_xy() -> None:
+    """TRANSPORT 阶段目标的 XY 坐标应与 bin_position 对齐。"""
+    obj_pos = np.array([0.45, 0.0, 0.025], dtype=np.float32)
+    bin_pos = np.array([0.40, -0.2, 0.02], dtype=np.float32)
+    fsm = PickPlaceTaskFSM(obj_pos, bin_position=bin_pos)
+
+    transport_target = fsm.target_for_phase(TaskPhase.TRANSPORT)
+    assert transport_target.gripper_open is False
+    np.testing.assert_allclose(transport_target.position[:2], bin_pos[:2], atol=1e-5)
+
+
+def test_pick_place_fsm_release_opens_gripper() -> None:
+    """RELEASE 阶段夹爪应当张开。"""
+    fsm = PickPlaceTaskFSM(np.array([0.45, 0.0, 0.025], dtype=np.float32))
+    release_target = fsm.target_for_phase(TaskPhase.RELEASE)
+    assert release_target.gripper_open is True
+
+
+def test_pick_place_fsm_language_instruction_stored() -> None:
+    """language_instruction 参数应正确存储在 FSM 属性上。"""
+    instr = "pick up the blue cylinder and place it in the right bin"
+    fsm = PickPlaceTaskFSM(
+        np.zeros(3, dtype=np.float32),
+        language_instruction=instr,
+    )
+    assert fsm.language_instruction == instr
+
+
+def test_pick_place_fsm_default_bin_position_derived_from_object() -> None:
+    """未指定 bin_position 时，应自动生成默认放置点。"""
+    obj_pos = np.array([0.45, 0.0, 0.025], dtype=np.float32)
+    fsm = PickPlaceTaskFSM(obj_pos)
+    transport_target = fsm.target_for_phase(TaskPhase.TRANSPORT)
+    # 默认 bin 在物体 Y+0.2 处
+    assert transport_target.position[1] == pytest.approx(0.2, abs=1e-4)
 
 
 def test_pick_lift_fsm_targets_move_from_hover_to_lift() -> None:
@@ -36,10 +111,7 @@ def test_pick_lift_fsm_targets_move_from_hover_to_lift() -> None:
     np.testing.assert_allclose(reach.position[:2], cube[:2])
 
 
-def test_pick_lift_fsm_requires_minimum_steps() -> None:
-    fsm = PickLiftTaskFSM(np.zeros(3, dtype=np.float32))
-    with pytest.raises(ValueError, match="num_steps must be at least"):
-        fsm.allocate_phase_steps(3)
+
 
 
 def test_evaluator_marks_success_when_object_is_lifted() -> None:

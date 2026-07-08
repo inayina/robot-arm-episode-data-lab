@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Train a tiny CPU-only linear Panda policy for interface smoke tests."""
+"""[线性回归基准 Baseline] 用于接口冒烟测试的轻量 CPU-only 线性策略。
+
+注意：本脚本名称含 "act" 仅为历史原因，实际使用的是岭回归线性策略，
+并非真正的 ACT（Action Chunking Transformer）。
+
+如需训练真实语言条件 ACT 模型，请使用（需要 lerobot conda 环境）：
+    conda run -n lerobot python training/scripts/train_act_lerobot.py \\
+        --dataset <数据集目录> \\
+        --schema configs/robot_schemas/panda_multi_task.yaml \\
+        --output /tmp/act_run \\
+        --epochs 50
+
+本脚本的用途：
+    - CI 快速冒烟测试（无需 GPU / torch）
+    - 验证数据集读取、schema 校验、checkpoint 格式等接口是否正确
+    - 提供 val_loss 基准线供对比
+"""
 
 from __future__ import annotations
 

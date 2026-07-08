@@ -1,0 +1,22 @@
+releases:
+- release_id: panda_closed_loop_20260708_120013
+  handoff_id: panda_closed_loop_20260708_120013_bridge
+  upstream_raw: /tmp/three_repo_closed_loop_20260708_120013_21970/mock_raw
+  release_path: /tmp/three_repo_closed_loop_20260708_120013_21970/release
+  handoff_path: /tmp/three_repo_closed_loop_20260708_120013_21970/train/bridge_handoff
+  created_at: '20260708_120013'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260708_120013_21970
+- release_id: panda_closed_loop_20260708_232522
+  handoff_id: panda_closed_loop_20260708_232522_bridge
+  upstream_raw: /tmp/ros2_arm_batch_preflight_20260708_231944_75083/episode_000000/train
+  release_path: /tmp/three_repo_closed_loop_20260708_232522_77649/release
+  handoff_path: /tmp/three_repo_closed_loop_20260708_232522_77649/train/bridge_handoff
+  created_at: '20260708_232522'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260708_232522_77649
+- release_id: panda_closed_loop_20260708_232650
+  handoff_id: panda_closed_loop_20260708_232650_bridge
+  upstream_raw: /tmp/ros2_arm_batch_preflight_20260708_231944_75083/episode_000000/train
+  release_path: /tmp/three_repo_closed_loop_20260708_232650_78326/release
+  handoff_path: /tmp/three_repo_closed_loop_20260708_232650_78326/train/bridge_handoff
+  created_at: '20260708_232650'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260708_232650_78326

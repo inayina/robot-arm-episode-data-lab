@@ -55,5 +55,11 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: pytest -q
 
+      - name: Panda closed loop smoke (mock upstream)
+        env:
+          CLOSED_LOOP_USE_MOCK: "1"
+          CLOSED_LOOP_OUTPUT_ROOT: /tmp/panda_closed_loop_ci
+        run: ./scripts/run_three_repo_closed_loop.sh
+
       - name: Verify generated docs
         run: python scripts/update_project_docs.py --check

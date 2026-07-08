@@ -22,8 +22,8 @@ flowchart LR
 
     A -->|"raw episode<br/>teleop input / action / state / observation"| B
     B -->|"validated dataset<br/>policy output / replay JSONL / handoff bundle"| C
-    C -.->|"execution risk<br/>grasp stability / frame error / contact sensitivity"| B
-    B -.->|"schema feedback<br/>required fields / action semantics"| A
+    C -.->|"execution risk feedback<br/>planning / limits / frame error"| B
+    B -.->|"quality feedback<br/>success rate / schema / collection tuning"| A
 ```
 
 这张图的重点不是“统一成一个大系统”，而是明确三个仓库的职责边界：上游产生交互数据，中游把数据变成可验证、可训练、可交付的标准格式，下游检查训练或控制结果进入执行环境后的风险。
@@ -99,7 +99,9 @@ MuJoCo 和 PyBullet 在这里不是互相替代关系，而是分工关系：
 1. 我把项目拆成上游、中游、下游，是为了让机械臂数据链路职责清楚，而不是把所有东西堆进一个仓库。
 2. 上游用 MuJoCo 承担 ROS 2 teleop、safety、Servo、`ros2_control`、传感器观测和 raw episode 产生。
 3. 中游用统一 schema 做 validation、release、replay、最小 baseline training 和 handoff，重点展示我理解 dataset -> training -> evaluation 的工程闭环。
-4. 下游用 PyBullet / MoveIt 做执行验证、抓取稳定性排查和 Sim2Real-readiness 风险分析；当前没有真实机械臂验证，所以我会坦诚说这是 Sim-to-Sim / readiness，而不是 completed Sim2Real。
+4. 下游用 PyBullet / MoveIt 做执行验证、抓取稳定性排查和 Sim2Real-readiness 风险分析；中游/下游只把轻量报告、配置建议、接口契约和 tiny fixtures 回流给上游，不把完整 dataset、checkpoint 或大 replay 日志搬回采集仓。当前没有真实机械臂验证，所以我会坦诚说这是 Sim-to-Sim / readiness，而不是 completed Sim2Real。
+
+详细交接 gate、handoff manifest 和 feedback 模板见 [INTER_REPO_CONTRACTS.md](INTER_REPO_CONTRACTS.md)。
 
 ## 7. 当前不夸大的部分
 
@@ -108,4 +110,3 @@ MuJoCo 和 PyBullet 在这里不是互相替代关系，而是分工关系：
 - 不说 baseline training 已经得到高质量抓取策略。
 - 不说 MuJoCo 和 PyBullet 的物理结果可以直接等价。
 - 不建议现在继续扩灵巧手、复杂模型或前端界面。
-

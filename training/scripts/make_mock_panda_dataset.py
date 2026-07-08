@@ -61,8 +61,10 @@ def make_rows(
 
     rows: list[dict[str, Any]] = []
     fps = 30.0
+    include_language = "language_instruction" in schema
     for episode_index in range(episodes):
         base_state = rng.normal(0.0, 0.05, size=state_dim)
+        instruction = _language_instruction_for_episode(episode_index)
         for frame_index in range(frames_per_episode):
             t = frame_index / fps
             state = base_state + rng.normal(0.0, 0.005, size=state_dim)
@@ -80,6 +82,9 @@ def make_rows(
                 "episode_index": episode_index,
                 "task": "mock_panda_pick",
             }
+            if include_language:
+                row["task"] = "mock_panda_sorting"
+                row["language_instruction"] = instruction
             rows.append(row)
     return rows
 
@@ -88,6 +93,15 @@ def _unit_pose(dim: int, *, z: float) -> list[float]:
     if dim != 7:
         raise ValueError(f"expected pose dim 7, got {dim}")
     return [0.4, 0.0, float(z), 0.0, 0.0, 0.0, 1.0]
+
+
+def _language_instruction_for_episode(episode_index: int) -> str:
+    instructions = (
+        "pick up the red box and place it in the left bin",
+        "pick up the blue cylinder and place it in the right bin",
+        "pick up the green sphere and place it in the left bin",
+    )
+    return instructions[episode_index % len(instructions)]
 
 
 def write_dataset(
@@ -115,6 +129,10 @@ def write_dataset(
         "source": "mock_generator",
         "frames": "frames.jsonl",
     }
+    if "language_instruction" in schema:
+        manifest["has_language_instruction"] = all(
+            str(row.get("language_instruction", "")).strip() for row in rows
+        )
     (output / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True),
         encoding="utf-8",

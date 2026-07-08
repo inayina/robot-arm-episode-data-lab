@@ -17,6 +17,16 @@ data/exports/
 !data/exports/README.md
 training/reports/*
 !training/reports/.gitkeep
+checkpoints/
+runs/
+wandb/
+rollouts/
+replay_logs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
 dataset_sample/**/metadata.json
 dataset_sample/**/images/
 dataset_sample/**/*.npy
@@ -24,3 +34,7 @@ dataset_sample/**/replay.gif
 dataset_sample/**/image.png
 dataset_sample/**/joint_state.npy
 !dataset_sample/.gitkeep
+
+# Temporary benchmark and simulation logs
+log_tmp_bm/
+

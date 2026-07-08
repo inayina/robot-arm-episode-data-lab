@@ -17,6 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from training.adapters.upstream_m6 import filter_scope_for_gate
+
 DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda.yaml"
 
 
@@ -37,6 +39,8 @@ class InspectionReport:
     action_type: str
     episodes: int
     frames: int
+    upstream_gate: str | None = None
+    filter_scope: str = "schema_and_training"
     required: list[FieldResult] = field(default_factory=list)
     optional: list[FieldResult] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -54,6 +58,8 @@ class InspectionReport:
             "action_type": self.action_type,
             "episodes": self.episodes,
             "frames": self.frames,
+            "upstream_gate": self.upstream_gate,
+            "filter_scope": self.filter_scope,
             "required": [vars(result) for result in self.required],
             "optional": [vars(result) for result in self.optional],
             "errors": self.errors,
@@ -141,6 +147,9 @@ def inspect_dataset(dataset: Path, schema: dict[str, Any]) -> InspectionReport:
     manifest = load_manifest(dataset)
     rows = load_rows(dataset)
     action_type = str(manifest.get("action_type", schema["action"]["default_type"]))
+    upstream_gate = manifest.get("upstream_gate")
+    if upstream_gate is not None:
+        upstream_gate = str(upstream_gate)
     report = InspectionReport(
         dataset=str(dataset),
         robot=str(manifest.get("robot", schema["robot"])),
@@ -148,6 +157,8 @@ def inspect_dataset(dataset: Path, schema: dict[str, Any]) -> InspectionReport:
         action_type=action_type,
         episodes=count_episodes(rows),
         frames=len(rows),
+        upstream_gate=upstream_gate,
+        filter_scope=str(manifest.get("filter_scope", filter_scope_for_gate(upstream_gate))),
     )
 
     if not rows:
@@ -185,7 +196,78 @@ def inspect_dataset(dataset: Path, schema: dict[str, Any]) -> InspectionReport:
             report.warnings.append(f"{result.key}: {result.message}")
         elif result.status == "FAIL":
             report.errors.append(f"{result.key}: {result.message}")
+
+    # Multi-task: validate language_instruction if manifest declares it present.
+    _check_language_instruction(rows, manifest, report)
+    _check_training_filter_fields(rows, report, manifest)
+
     return report
+
+
+def _check_language_instruction(
+    rows: list[dict[str, Any]],
+    manifest: dict[str, Any],
+    report: InspectionReport,
+) -> None:
+    """Validate language_instruction field when has_language_instruction is declared."""
+    has_lang = bool(manifest.get("has_language_instruction", False))
+    if not has_lang:
+        return
+
+    missing = [i for i, row in enumerate(rows) if "language_instruction" not in row]
+    if missing:
+        report.errors.append(
+            f"language_instruction: missing in {len(missing)} frames "
+            f"(manifest declares has_language_instruction=true)"
+        )
+        return
+
+    empty = [
+        i for i, row in enumerate(rows)
+        if str(row.get("language_instruction", "")).strip() == ""
+    ]
+    if empty:
+        report.warnings.append(
+            f"language_instruction: empty string in {len(empty)} frames; "
+            "language-conditioned training may produce degraded results"
+        )
+
+
+def _check_training_filter_fields(
+    rows: list[dict[str, Any]],
+    report: InspectionReport,
+    manifest: dict[str, Any],
+) -> None:
+    """Apply training-release filters. Physical validation stays upstream when gate says so."""
+    filter_scope = str(manifest.get("filter_scope", report.filter_scope))
+    if filter_scope == "training_split_only":
+        report.warnings.append(
+            "filter_scope=training_split_only: upstream physical gate already applied; "
+            "midstream checks success/safety flags for training split only"
+        )
+    elif manifest.get("source") == "ros2-arm-teleoperation-suite" and not manifest.get("upstream_gate"):
+        report.warnings.append(
+            "upstream_gate missing on ros2-arm-teleoperation-suite dataset; "
+            "treat success labels as recorder stop-trigger provenance only"
+        )
+
+    false_success = [
+        i for i, row in enumerate(rows)
+        if "success" in row and not bool(row["success"])
+    ]
+    if false_success:
+        report.errors.append(
+            f"success: {len(false_success)} frame(s) are marked success=false; "
+            "default training releases require successful demonstrations only"
+        )
+
+    for key in ("safety_estop", "drive_fault"):
+        flagged = [i for i, row in enumerate(rows) if key in row and bool(row[key])]
+        if flagged:
+            report.errors.append(
+                f"{key}: {len(flagged)} frame(s) are true; "
+                "default training releases exclude safety/drive fault frames"
+            )
 
 
 def count_episodes(rows: Iterable[dict[str, Any]]) -> int:

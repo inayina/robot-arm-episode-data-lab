@@ -1,0 +1,46 @@
+# Summary expected from downstream bridge after consuming a handoff bundle.
+schema_version: downstream_replay_summary_v0
+summary_id: replay_YYYYMMDD_short_name
+created_at: YYYY-MM-DDTHH:MM:SSZ
+source_repo: ros2-moveit-pybullet-bridge
+target_repo: robot-arm-episode-data-lab
+downstream_commit: unknown
+middle_commit: unknown
+
+handoff:
+  handoff_id: example_handoff_id
+  release_id: example_release_id
+  policy_id: example_policy_id
+  schema_id: panda_ee_delta_gripper_v0
+  action_type: ee_delta_gripper
+  action_dim: 7
+
+gate_result:
+  status: pass  # pass | fail | watch
+  loaded_manifest: false
+  loaded_replay_jsonl: false
+  replayed_steps: 0
+  rejected_reason: null
+
+runtime_metrics:
+  control_rate_hz: null
+  max_tracking_error_rad: null
+  mean_tracking_error_rad: null
+  action_limit_violations: 0
+  planning_failures: 0
+  e_stop_or_hold_events: 0
+
+middle_repo_feedback:
+  schema_or_manifest_issues: []
+  action_distribution_issues: []
+  normalization_issues: []
+  suggested_training_or_export_changes: []
+
+upstream_feedback_candidates:
+  collection_quality_issues: []
+  recorder_field_issues: []
+  sim_or_gripper_behavior_issues: []
+
+safe_attachments:
+  small_reports: []
+  tiny_replay_excerpt: []

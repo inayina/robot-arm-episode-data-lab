@@ -103,6 +103,18 @@ def build_release_manifest(
     description: str,
 ) -> dict[str, Any]:
     action_type = str(inspection_report["action_type"])
+    has_language_instruction = bool(source_manifest.get("has_language_instruction", False))
+    training_contract = {
+        "state_key": "observation.state",
+        "state_dim": int(schema["observation"]["state"]["dim"]),
+        "action_key": "action",
+        "action_dim": int(schema["action"][action_type]["dim"]),
+        "task_key": schema["task"]["key"],
+    }
+    if has_language_instruction:
+        training_contract["language_instruction_key"] = str(
+            schema.get("language_instruction", {}).get("key", "language_instruction")
+        )
     return {
         "dataset_format": "panda_release_v0",
         "release_id": release_id,
@@ -114,6 +126,7 @@ def build_release_manifest(
         "action_type": action_type,
         "num_episodes": int(inspection_report["episodes"]),
         "num_frames": int(inspection_report["frames"]),
+        "has_language_instruction": has_language_instruction,
         "frames": copied_frames,
         "inspection": {
             "status": inspection_report["status"],
@@ -129,17 +142,24 @@ def build_release_manifest(
             "source_path": source_manifest.get("source_path"),
         },
         "filter_rules": {
+            "require_success_true": True,
             "exclude_safety_estop": True,
             "exclude_drive_fault": True,
             "optional_modalities_may_be_missing": True,
+            "filter_scope": str(
+                source_manifest.get(
+                    "filter_scope",
+                    "training_split_only"
+                    if source_manifest.get("physical_validation_applied")
+                    else "schema_and_training",
+                )
+            ),
+            "upstream_gate": source_manifest.get("upstream_gate"),
+            "physical_validation_applied": bool(
+                source_manifest.get("physical_validation_applied", False)
+            ),
         },
-        "training_contract": {
-            "state_key": "observation.state",
-            "state_dim": int(schema["observation"]["state"]["dim"]),
-            "action_key": "action",
-            "action_dim": int(schema["action"][action_type]["dim"]),
-            "task_key": schema["task"]["key"],
-        },
+        "training_contract": training_contract,
     }
 
 

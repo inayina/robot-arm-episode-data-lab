@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from training.adapters.upstream_m6 import adapt_rows, write_adapted_dataset
+from training.adapters.upstream_m6 import adapt_rows, resolve_upstream_gate, write_adapted_dataset
 from training.scripts.inspect_dataset import inspect_dataset, load_rows
 
 DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda.yaml"
@@ -51,6 +51,7 @@ def main() -> int:
         schema,
         derive_ee_delta_action=args.derive_ee_delta_action,
     )
+    upstream_gate = resolve_upstream_gate(args.input)
     write_adapted_dataset(
         args.output,
         adapted_rows,
@@ -58,11 +59,14 @@ def main() -> int:
         action_type=action_type,
         source=args.input,
         derive_ee_delta_action=args.derive_ee_delta_action,
+        upstream_gate=upstream_gate,
     )
 
     print(f"Adapted upstream Panda dataset: {args.output}")
     print(f"Frames: {len(adapted_rows)}")
     print(f"Action type: {action_type}")
+    if upstream_gate:
+        print(f"Upstream gate: {upstream_gate}")
     if args.inspect:
         report = inspect_dataset(args.output, schema)
         print(f"Inspection: {'PASS' if report.passed else 'FAIL'}")

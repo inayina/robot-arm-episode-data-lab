@@ -1,0 +1,14 @@
+# 训练专用依赖（lerobot conda 环境）
+# 不要将这些包加入 requirements.txt（CI 用 .venv 不需要 torch）
+#
+# pip install -r requirements-train.txt
+# （建议在 lerobot conda 环境中执行）
+
+torch>=2.0
+torchvision>=0.15
+transformers>=4.40
+tokenizers>=0.19
+datasets>=5.0
+huggingface_hub>=0.23
+einops>=0.8
+safetensors>=0.4

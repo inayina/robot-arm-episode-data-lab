@@ -40,8 +40,18 @@ legacy PyBullet / KUKA 数据仍可保留为历史样例，但不能直接混入
 | Action semantics | `action_type` 是否声明清楚 | 不允许静默截断 |
 | Optional modalities | images / tactile / ft / object pose | 缺失记录 WARN |
 | Episode indexing | `episode_index`, `frame_index` 是否可统计 | 不可解析即 FAIL |
-| Metadata | `schema_id`, `robot`, `release_id`, `source` | release manifest 中保留 |
+| Metadata | `schema_id`, `robot`, `release_id`, `source`, `upstream_gate` | release manifest 中保留 |
 | Safety/filter policy | e-stop、drive fault、异常 episode | release manifest 中记录过滤规则 |
+
+### 3.1 上游 / 中游清洗边界
+
+| 层级 | 负责 | 不负责 |
+|---|---|---|
+| 上游 `batch_generator` + grasp monitor | 物理抓取/抬升/放置判定；失败 episode `discard`；accepted episode 写入 `success=true` | schema 适配、training split、release manifest |
+| 上游 `lerobot_recorder` | 在 `episode_*/meta.json` 写入 `upstream_gate`（如 `batch_generator` / `teleop`） | 训练侧过滤规则 |
+| 中游 adapter / inspection | schema/shape/action 语义校验；`success` / `safety_estop` / `drive_fault` 训练 split 过滤 | 重新做 lift_delta / object_pose 物理判定 |
+
+当 manifest 中 `filter_scope=training_split_only` 且 `upstream_gate=batch_generator` 时，中游 inspection 只确认字段与训练 split 标签，不再重复物理语义检查。
 
 典型 fail-fast 场景：
 

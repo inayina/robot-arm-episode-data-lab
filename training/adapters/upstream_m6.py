@@ -11,6 +11,8 @@ import numpy as np
 
 UPSTREAM_ACTION_TYPE = "ee_pose_gripper"
 DERIVED_ACTION_TYPE = "ee_delta_gripper"
+PHYSICAL_VALIDATION_GATES = frozenset({"batch_generator"})
+TRAINING_FILTER_ONLY_GATES = PHYSICAL_VALIDATION_GATES
 
 
 def adapt_rows(
@@ -26,6 +28,8 @@ def adapt_rows(
     output_action_type = DERIVED_ACTION_TYPE if derive_ee_delta_action else UPSTREAM_ACTION_TYPE
     adapted: list[dict[str, Any]] = []
     for row in rows:
+        # Resolve language instruction: prefer dedicated key, fall back to task field.
+        lang_instr = str(row.get("language_instruction", row.get("task", "")))
         adapted_row = {
             "observation.state": adapt_state(row, schema),
             "observation.ee_pose": vector(row, "observation.ee_pose", 7),
@@ -37,7 +41,10 @@ def adapt_rows(
             "timestamp": float(row["timestamp"]),
             "frame_index": int(row["frame_index"]),
             "episode_index": int(row["episode_index"]),
-            "task": str(row.get("task", row.get("language_instruction", ""))),
+            # task: backward-compatible free-text label
+            "task": str(row.get("task", lang_instr)),
+            # language_instruction: independent key for language-conditioned training
+            "language_instruction": lang_instr,
         }
         copy_optional(row, adapted_row, "observation.object_pose")
         copy_optional(row, adapted_row, "observation.ft")
@@ -46,6 +53,7 @@ def adapt_rows(
         copy_optional(row, adapted_row, "observation.images.tactile_left")
         copy_optional(row, adapted_row, "observation.images.tactile_right")
         copy_optional(row, adapted_row, "observation.depth.scene")
+        copy_optional(row, adapted_row, "success")
         copy_optional(row, adapted_row, "safety_estop")
         copy_optional(row, adapted_row, "drive_fault")
         adapted.append(adapted_row)
@@ -115,6 +123,47 @@ def copy_optional(source: dict[str, Any], target: dict[str, Any], key: str) -> N
         target[key] = value
 
 
+def resolve_upstream_gate(source: Path) -> str | None:
+    """Read episode-level upstream_gate markers from HuggingFace episode meta.json files."""
+    meta_paths = _collect_meta_json_paths(source)
+    gates: set[str] = set()
+    for meta_path in meta_paths:
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        gate = payload.get("upstream_gate")
+        if not gate and isinstance(payload.get("metadata"), dict):
+            gate = payload["metadata"].get("upstream_gate")
+        if gate:
+            gates.add(str(gate))
+    if not gates:
+        return None
+    if len(gates) == 1:
+        return next(iter(gates))
+    return "mixed"
+
+
+def physical_validation_applied(upstream_gate: str | None) -> bool:
+    return upstream_gate in PHYSICAL_VALIDATION_GATES
+
+
+def _collect_meta_json_paths(source: Path) -> list[Path]:
+    if not source.is_dir():
+        return []
+    if source.name == "train" and (source.parent / "meta.json").is_file():
+        return [source.parent / "meta.json"]
+    if (source / "meta.json").is_file():
+        return [source / "meta.json"]
+    return sorted(source.glob("episode_*/meta.json"))
+
+
+def filter_scope_for_gate(upstream_gate: str | None) -> str:
+    if upstream_gate in TRAINING_FILTER_ONLY_GATES:
+        return "training_split_only"
+    return "schema_and_training"
+
+
 def write_adapted_dataset(
     output: Path,
     rows: list[dict[str, Any]],
@@ -123,12 +172,16 @@ def write_adapted_dataset(
     action_type: str,
     source: Path,
     derive_ee_delta_action: bool,
+    upstream_gate: str | None = None,
 ) -> None:
     output.mkdir(parents=True, exist_ok=True)
     with (output / "frames.jsonl").open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row, sort_keys=True) + "\n")
 
+    has_lang = any("language_instruction" in row for row in rows)
+    has_success = any("success" in row for row in rows)
+    resolved_gate = upstream_gate if upstream_gate is not None else resolve_upstream_gate(source)
     manifest = {
         "dataset_format": "panda_jsonl_v0",
         "schema_id": schema["schema_id"],
@@ -140,6 +193,11 @@ def write_adapted_dataset(
         "source_path": str(source),
         "source_action_type": UPSTREAM_ACTION_TYPE,
         "derive_ee_delta_action": bool(derive_ee_delta_action),
+        "has_language_instruction": has_lang,
+        "has_success_labels": has_success,
+        "upstream_gate": resolved_gate,
+        "physical_validation_applied": physical_validation_applied(resolved_gate),
+        "filter_scope": filter_scope_for_gate(resolved_gate),
         "frames": "frames.jsonl",
     }
     (output / "manifest.json").write_text(

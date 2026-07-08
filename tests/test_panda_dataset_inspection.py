@@ -11,10 +11,15 @@ from training.scripts.make_mock_panda_dataset import make_rows, write_dataset
 
 
 SCHEMA_PATH = Path("configs/robot_schemas/panda.yaml")
+MULTI_TASK_SCHEMA_PATH = Path("configs/robot_schemas/panda_multi_task.yaml")
 
 
 def load_schema() -> dict:
     return yaml.safe_load(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def load_multi_task_schema() -> dict:
+    return yaml.safe_load(MULTI_TASK_SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
 def write_mock_dataset(path: Path) -> Path:
@@ -91,6 +96,76 @@ def test_inspect_dataset_fails_when_robot_manifest_mismatches_schema(tmp_path: P
 
     assert not report.passed
     assert any("does not match schema robot" in error for error in report.errors)
+
+
+def test_mock_multi_task_dataset_includes_language_instruction(tmp_path: Path) -> None:
+    schema = load_multi_task_schema()
+    rows = make_rows(
+        schema,
+        episodes=2,
+        frames_per_episode=3,
+        seed=7,
+        action_type=schema["action"]["default_type"],
+    )
+    write_dataset(
+        tmp_path / "panda_multi_task_mock",
+        schema,
+        rows,
+        action_type=schema["action"]["default_type"],
+        seed=7,
+    )
+
+    manifest = json.loads(
+        (tmp_path / "panda_multi_task_mock" / "manifest.json").read_text(encoding="utf-8")
+    )
+    report = inspect_dataset(tmp_path / "panda_multi_task_mock", schema)
+
+    assert manifest["has_language_instruction"] is True
+    assert report.passed
+    assert {row["language_instruction"] for row in rows} == {
+        "pick up the red box and place it in the left bin",
+        "pick up the blue cylinder and place it in the right bin",
+    }
+
+
+def test_inspect_dataset_rejects_failed_success_labels(tmp_path: Path) -> None:
+    dataset = write_mock_dataset(tmp_path / "failed_success")
+    frames_path = dataset / "frames.jsonl"
+    rows = [json.loads(line) for line in frames_path.read_text(encoding="utf-8").splitlines()]
+    for row in rows:
+        row["success"] = True
+    rows[0]["success"] = False
+    frames_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    report = inspect_dataset(dataset, load_schema())
+
+    assert not report.passed
+    assert any("success" in error and "success=false" in error for error in report.errors)
+
+
+def test_inspect_dataset_rejects_safety_or_drive_fault_frames(tmp_path: Path) -> None:
+    dataset = write_mock_dataset(tmp_path / "faulted")
+    frames_path = dataset / "frames.jsonl"
+    rows = [json.loads(line) for line in frames_path.read_text(encoding="utf-8").splitlines()]
+    for row in rows:
+        row["success"] = True
+        row["safety_estop"] = False
+        row["drive_fault"] = False
+    rows[0]["safety_estop"] = True
+    rows[1]["drive_fault"] = True
+    frames_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    report = inspect_dataset(dataset, load_schema())
+
+    assert not report.passed
+    assert any("safety_estop" in error for error in report.errors)
+    assert any("drive_fault" in error for error in report.errors)
 
 
 def field_status(results, key: str) -> str:

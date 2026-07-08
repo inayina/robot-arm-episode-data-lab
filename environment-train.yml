@@ -1,0 +1,40 @@
+# lerobot conda 训练环境配置
+# 复现方法：conda env create -f environment-train.yml
+#
+# 用途：运行 training/scripts/train_act_lerobot.py
+# 注意：CI 测试（pytest）不需要此环境，使用项目 .venv 即可
+
+name: lerobot
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  # PyTorch (CPU-only，如有 CUDA 请改为对应版本)
+  - pytorch::pytorch>=2.0
+  - pytorch::torchvision>=0.15
+
+  - pip:
+    # lerobot（本地 editable 安装，路径视实际情况调整）
+    # - "-e /home/ina/dev/lerobot"
+    # 或从 PyPI / GitHub 安装：
+    - "lerobot @ git+https://github.com/huggingface/lerobot.git"
+
+    # 文本编码器依赖（CLIP backend）
+    - "transformers>=4.40"
+    - "tokenizers>=0.19"
+
+    # 数据集工具
+    - "datasets>=5.0"
+    - "huggingface_hub>=0.23"
+
+    # 通用科学计算
+    - "numpy>=1.24"
+    - "einops>=0.8"
+    - "PyYAML>=6.0"
+    - "safetensors>=0.4"
