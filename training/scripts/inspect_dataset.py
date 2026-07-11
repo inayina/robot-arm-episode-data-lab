@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,6 +17,18 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+from training.io.upstream_episode import (
+    FORMAT_V21,
+    dataset_root,
+    detect_episode_format,
+    discover_episode_train_dirs,
+    ffprobe_frame_count,
+    list_episode_indices,
+    load_upstream_episode_rows,
+    video_episode_path,
+    video_specs_from_meta,
+)
 
 from training.adapters.upstream_m6 import filter_scope_for_gate
 
@@ -92,7 +105,63 @@ def load_rows(dataset: Path) -> list[dict[str, Any]]:
         return load_jsonl_rows(dataset / "frames.jsonl")
     if (dataset / "frames.npz").exists():
         return load_npz_rows(dataset / "frames.npz")
+    episode_train_dirs = discover_episode_train_dirs(dataset)
+    if episode_train_dirs or detect_episode_format(dataset) == FORMAT_V21:
+        return load_upstream_episode_rows(dataset, decode_videos=False)
     return load_huggingface_rows(dataset)
+
+
+def _check_video_or_tensor_images(
+    dataset: Path,
+    rows: list[dict[str, Any]],
+    schema: dict[str, Any],
+    report: InspectionReport,
+) -> None:
+    train_dirs = discover_episode_train_dirs(dataset)
+    train_dir = train_dirs[0] if train_dirs else dataset
+    video_specs = (
+        video_specs_from_meta(train_dir)
+        if detect_episode_format(train_dir) == FORMAT_V21
+        else {}
+    )
+
+    for image_spec in schema["observation"]["images"].values():
+        if not isinstance(image_spec, dict) or "key" not in image_spec:
+            continue
+        key = str(image_spec["key"])
+        expected = tuple(image_spec["shape"])
+        if rows and key in rows[0]:
+            add_optional(report, rows, key, expected)
+            continue
+        if key not in video_specs:
+            report.warnings.append(f"{key}: missing in {len(rows)} frames")
+            continue
+        observed = tuple(video_specs[key])
+        if observed != expected:
+            report.errors.append(f"{key}: video shape {observed} != schema {expected}")
+            continue
+        video_file = video_episode_path(dataset_root(train_dir), key, int(rows[0]["episode_index"]))
+        if not video_file.is_file():
+            report.errors.append(f"{key}: missing mp4 at {video_file}")
+            continue
+        try:
+            frame_count = ffprobe_frame_count(video_file)
+        except (RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+            report.errors.append(f"{key}: invalid mp4 ({exc})")
+            continue
+        if frame_count != len(rows):
+            report.errors.append(
+                f"{key}: mp4 frames ({frame_count}) != dataset rows ({len(rows)})"
+            )
+        else:
+            report.optional.append(
+                FieldResult(
+                    key=key,
+                    status="OK",
+                    expected=str(list(expected)),
+                    observed=f"video {list(observed)} x {frame_count} frames",
+                )
+            )
 
 
 def load_jsonl_rows(path: Path) -> list[dict[str, Any]]:
@@ -184,9 +253,7 @@ def inspect_dataset(dataset: Path, schema: dict[str, Any]) -> InspectionReport:
 
     add_optional(report, rows, "observation.object_pose", int(schema["observation"]["object_pose"]["dim"]))
     add_optional(report, rows, "observation.ft", int(schema["observation"]["ft"]["dim"]))
-    for image_spec in schema["observation"]["images"].values():
-        if isinstance(image_spec, dict) and "key" in image_spec:
-            add_optional(report, rows, str(image_spec["key"]), tuple(image_spec["shape"]))
+    _check_video_or_tensor_images(dataset, rows, schema, report)
 
     for result in report.required:
         if result.status == "FAIL":

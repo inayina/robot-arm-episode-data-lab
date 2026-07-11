@@ -63,14 +63,6 @@ observation:
       key: observation.images.wrist
       shape: [240, 320, 3]
       dtype: uint8
-    tactile_left_rgb:
-      key: observation.images.tactile_left
-      shape: [240, 320, 3]
-      dtype: uint8
-    tactile_right_rgb:
-      key: observation.images.tactile_right
-      shape: [240, 320, 3]
-      dtype: uint8
 
 action:
   default_type: ee_delta_gripper

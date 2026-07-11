@@ -66,5 +66,9 @@
 更新进度快照：
 
 ```bash
-python scripts/update_project_docs.py
+手动维护 README 与本文档后，运行：
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
+```
 ```

@@ -16,6 +16,8 @@ Current scope:
 - Prepare dataset releases before training.
 - Export replay JSONL / bridge handoff bundles for downstream validation.
 - Keep ROS 2 runtime execution in upstream/downstream repositories.
+- Generate low-dimensional EDA for timestamp cadence, joint steps, velocity,
+  reversals, and state/action distributions.
 
 First smoke commands:
 
@@ -48,6 +50,14 @@ python3 training/scripts/prepare_dataset_release.py \
   --release-id panda_demo_delta_v0
 ```
 
+Run state-only EDA before training:
+
+```bash
+python3 training/scripts/eda_low_dim_dataset.py \
+  --dataset data/exports/panda_demo_delta_release \
+  --output training/reports/panda_low_dim_eda.json
+```
+
 Run CPU-only smoke training:
 
 ```bash
@@ -64,8 +74,13 @@ python3 training/scripts/train_mlp_policy.py \
   --dataset data/exports/panda_demo_delta_release \
   --schema configs/robot_schemas/panda.yaml \
   --output training/reports/panda_mlp_bc \
-  --epochs 100
+  --epochs 100 \
+  --test-ratio 0.2
 ```
+
+MLP BC uses an episode-level 80/20 development/test split, never a frame-level
+split. Normalization statistics are computed from development episodes only;
+the final test split is not used for early stopping or model selection.
 
 Run offline evaluation:
 

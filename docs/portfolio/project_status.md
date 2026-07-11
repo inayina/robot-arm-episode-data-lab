@@ -1,6 +1,6 @@
 # Project Status
 
-本文档由 `scripts/update_project_docs.py` 自动生成。
+项目状态与收口清单（手动维护）。
 
 文档索引：[docs/README.md](../README.md) · 总体架构：[THREE_REPO_ARCHITECTURE.md](../THREE_REPO_ARCHITECTURE.md) · 最小演示：[DEMO_GUIDE.md](../DEMO_GUIDE.md)
 
@@ -48,9 +48,4 @@ python3 training/scripts/inspect_dataset.py --dataset "$PANDA_DEMO_ROOT/raw" --s
 
 ## 更新方式
 
-```bash
-python scripts/update_project_docs.py
-```
-
-如已启用 `.githooks/pre-commit`，提交前会自动刷新
-`README.md` 与 `docs/portfolio/project_status.md`。
+本文档与根目录 `README.md` 需随功能变更手动同步。

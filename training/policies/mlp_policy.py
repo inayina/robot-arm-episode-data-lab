@@ -35,7 +35,6 @@ if HAS_TORCH:
             in_dim = state_dim
             for h_dim in hidden_dims:
                 layers.append(nn.Linear(in_dim, h_dim))
-                layers.append(nn.LayerNorm(h_dim))
                 layers.append(nn.ReLU())
                 if dropout > 0.0:
                     layers.append(nn.Dropout(dropout))

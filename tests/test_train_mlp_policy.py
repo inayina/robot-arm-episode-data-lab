@@ -22,7 +22,7 @@ def write_release(path: Path, *, action_type: str = "ee_delta_gripper") -> Path:
     source = path / "source"
     rows = make_rows(
         schema,
-        episodes=2,
+        episodes=5,
         frames_per_episode=5,
         seed=7,
         action_type=action_type,
@@ -55,15 +55,22 @@ def test_train_mlp_policy_executes_successfully(tmp_path: Path) -> None:
         "--epochs", "2",
         "--batch-size", "4",
         "--lr", "0.01"
+        , "--device", "cpu"
     ]
     try:
         exit_code = mlp_train_main()
         assert exit_code == 0
         assert (output / "mlp_policy.pth").exists()
         assert (output / "mlp_metrics.json").exists()
+        assert (output / "scalers.npz").exists()
+        assert (output / "split_manifest.json").exists()
         metrics = json.loads((output / "mlp_metrics.json").read_text(encoding="utf-8"))
         assert metrics["policy_type"] == "mlp_bc"
         assert metrics["state_dim"] == 8
         assert metrics["action_dim"] == 7
+        split = metrics["split_episodes"]
+        assert split["train"]
+        assert split["test"]
+        assert not (set(split["train"]) & set(split["test"]))
     finally:
         sys.argv = orig_argv

@@ -20,3 +20,45 @@ releases:
   handoff_path: /tmp/three_repo_closed_loop_20260708_232650_78326/train/bridge_handoff
   created_at: '20260708_232650'
   closed_loop_output: /tmp/three_repo_closed_loop_20260708_232650_78326
+- release_id: panda_closed_loop_20260709_155629
+  handoff_id: panda_closed_loop_20260709_155629_bridge
+  upstream_raw: /tmp/three_repo_closed_loop_20260709_155629_5588/mock_raw
+  release_path: /tmp/three_repo_closed_loop_20260709_155629_5588/release
+  handoff_path: /tmp/three_repo_closed_loop_20260709_155629_5588/train/bridge_handoff
+  created_at: '20260709_155629'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260709_155629_5588
+- release_id: panda_closed_loop_20260709_161058
+  handoff_id: panda_closed_loop_20260709_161058_bridge
+  upstream_raw: /tmp/ros2_arm_batch_preflight_20260709_160922_15027/episode_000000/train
+  release_path: /tmp/three_repo_closed_loop_20260709_161058_16036/release
+  handoff_path: /tmp/three_repo_closed_loop_20260709_161058_16036/train/bridge_handoff
+  created_at: '20260709_161058'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260709_161058_16036
+- release_id: panda_closed_loop_20260709_163240
+  handoff_id: panda_closed_loop_20260709_163240_bridge
+  upstream_raw: /tmp/panda_closed_loop_ci/mock_raw
+  release_path: /tmp/panda_closed_loop_ci/release
+  handoff_path: /tmp/panda_closed_loop_ci/train/bridge_handoff
+  created_at: '20260709_163240'
+  closed_loop_output: /tmp/panda_closed_loop_ci
+- release_id: panda_closed_loop_20260709_163337
+  handoff_id: panda_closed_loop_20260709_163337_bridge
+  upstream_raw: /tmp/panda_closed_loop_ci2/mock_raw
+  release_path: /tmp/panda_closed_loop_ci2/release
+  handoff_path: /tmp/panda_closed_loop_ci2/train/bridge_handoff
+  created_at: '20260709_163337'
+  closed_loop_output: /tmp/panda_closed_loop_ci2
+- release_id: panda_closed_loop_20260709_170113
+  handoff_id: panda_closed_loop_20260709_170113_bridge
+  upstream_raw: /home/ina/dev/ros2-arm-teleoperation-suite/data/episodes
+  release_path: /tmp/three_repo_closed_loop_20260709_170113_60855/release
+  handoff_path: /tmp/three_repo_closed_loop_20260709_170113_60855/train/bridge_handoff
+  created_at: '20260709_170113'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260709_170113_60855
+- release_id: panda_closed_loop_20260709_170230
+  handoff_id: panda_closed_loop_20260709_170230_bridge
+  upstream_raw: /home/ina/dev/ros2-arm-teleoperation-suite/data/episodes
+  release_path: /tmp/three_repo_closed_loop_20260709_170230_62021/release
+  handoff_path: /tmp/three_repo_closed_loop_20260709_170230_62021/train/bridge_handoff
+  created_at: '20260709_170230'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260709_170230_62021

@@ -39,6 +39,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from training.encoders.text_encoder import build_encoder
+from training.device import cpu_state_dict, resolve_device
 from training.scripts.inspect_dataset import load_manifest, load_rows
 
 DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda_multi_task.yaml"
@@ -57,7 +58,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--text-encoder", choices=["clip", "mean_hash"], default="clip")
-    p.add_argument("--device", default="cpu")
+    p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     return p.parse_args()
 
 
@@ -224,6 +225,9 @@ def train(
     except ImportError as exc:
         raise RuntimeError("Activate the lerobot conda environment.") from exc
 
+    resolved_device, device_info = resolve_device(device)
+    device = str(resolved_device)
+    print(f"[Train] Device: {device_info}")
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -302,7 +306,7 @@ def train(
 
     # 保存 checkpoint
     checkpoint_path = output / "checkpoint.pt"
-    torch.save(policy.state_dict(), checkpoint_path)
+    torch.save(cpu_state_dict(policy), checkpoint_path)
     print(f"[Train] Saved checkpoint → {checkpoint_path}")
 
     metrics = {
@@ -324,6 +328,7 @@ def train(
         "lr": lr,
         "final_loss": history[-1]["loss"] if history else None,
         "training_history": history,
+        "device": device_info,
     }
     (output / "metrics.json").write_text(
         json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8"

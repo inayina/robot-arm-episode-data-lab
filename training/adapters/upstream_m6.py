@@ -151,6 +151,8 @@ def physical_validation_applied(upstream_gate: str | None) -> bool:
 def _collect_meta_json_paths(source: Path) -> list[Path]:
     if not source.is_dir():
         return []
+    if (source / "meta" / "info.json").is_file():
+        return sorted(source.glob("episode_*/meta.json"))
     if source.name == "train" and (source.parent / "meta.json").is_file():
         return [source.parent / "meta.json"]
     if (source / "meta.json").is_file():

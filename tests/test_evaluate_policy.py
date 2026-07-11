@@ -30,7 +30,7 @@ def train_fixture(tmp_path: Path) -> tuple[Path, Path, dict]:
         action_type=schema["action"]["default_type"],
     )
     for row in rows:
-        row["success"] = row["episode_index"] == 0
+        row["success"] = True
     write_dataset(
         source,
         schema,

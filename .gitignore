@@ -12,9 +12,9 @@ venv/
 dataset/
 dataset/v1/
 dataset/lerobot_export/
-data/exports/
-!data/exports/
-!data/exports/README.md
+data/*
+!data/registry/
+evidence/
 training/reports/*
 !training/reports/.gitkeep
 checkpoints/
