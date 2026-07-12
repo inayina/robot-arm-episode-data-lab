@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EDA_JSON = REPO_ROOT / "training/reports/panda_30_low_dim_eda.json"
 METRICS_JSON = REPO_ROOT / "training/reports/panda_mlp_bc/mlp_metrics.json"
+LINEAR_SAME_SPLIT_JSON = REPO_ROOT / "docs/portfolio/linear_same_split_metrics.json"
 OUTPUT_DIR = REPO_ROOT / "assets/diagrams"
 
 
@@ -109,14 +110,13 @@ def plot_joint_steps(eda_data):
     print(f"Saved: {out_path}")
 
 
-def plot_loss_comparison(metrics_data):
+def plot_loss_comparison(metrics_data, linear_metrics):
     """Plot Linear Regression vs MLP BC Train & Test Loss comparison."""
     mlp_train = metrics_data.get("train_loss", 0.0491)
     mlp_test = metrics_data.get("test_loss", 0.2350)
-    
-    # Normalized MSE calculated directly from the same 30-episode splits
-    linear_train = 0.5524
-    linear_test = 0.5541
+
+    linear_train = linear_metrics["train_normalized_mse"]
+    linear_test = linear_metrics["test_normalized_mse"]
 
     fig, ax = plt.subplots(figsize=(8, 5.5))
     ax.grid(True, linestyle="--", alpha=0.7, zorder=0)
@@ -150,7 +150,7 @@ def plot_loss_comparison(metrics_data):
     ax.set_ylabel("Normalized Mean Squared Error (MSE)")
     ax.set_xticks(x)
     ax.set_xticklabels(models)
-    ax.set_ylim(0, 0.68)
+    ax.set_ylim(0, max(max(train_losses), max(test_losses)) * 1.18)
     ax.legend(frameon=True, facecolor="white", edgecolor="#cbd5e1", loc="upper right")
 
     plt.tight_layout()
@@ -173,13 +173,16 @@ def main():
     else:
         print(f"EDA JSON not found: {EDA_JSON}")
 
-    if METRICS_JSON.exists():
+    if METRICS_JSON.exists() and LINEAR_SAME_SPLIT_JSON.exists():
         print(f"Loading Metrics JSON: {METRICS_JSON}")
         with open(METRICS_JSON, "r", encoding="utf-8") as f:
             metrics_data = json.load(f)
-        plot_loss_comparison(metrics_data)
+        print(f"Loading Linear Same-Split JSON: {LINEAR_SAME_SPLIT_JSON}")
+        with open(LINEAR_SAME_SPLIT_JSON, "r", encoding="utf-8") as f:
+            linear_metrics = json.load(f)
+        plot_loss_comparison(metrics_data, linear_metrics)
     else:
-        print(f"Metrics JSON not found: {METRICS_JSON}")
+        print(f"Metrics JSON not found: {METRICS_JSON} or {LINEAR_SAME_SPLIT_JSON}")
 
 
 if __name__ == "__main__":

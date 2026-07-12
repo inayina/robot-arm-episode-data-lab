@@ -8,6 +8,7 @@ import pyarrow.parquet as pq
 import pytest
 from PIL import Image
 
+from core.video_encode import ffmpeg_available
 from scripts.export_lerobot_style import export_dataset
 from scripts.validate_dataset import collect_dataset_summary, collect_errors, discover_episode_dirs
 
@@ -84,6 +85,7 @@ def test_discover_episode_dirs_supports_dataset_root(tmp_path: Path) -> None:
     assert len(discovered) == 2
 
 
+@pytest.mark.skipif(not ffmpeg_available(), reason="ffmpeg not available")
 def test_export_lerobot_style_writes_v21_layout(tmp_path: Path) -> None:
     dataset_dir = tmp_path / "dataset"
     write_episode(

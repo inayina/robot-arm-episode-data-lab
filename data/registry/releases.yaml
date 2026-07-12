@@ -69,3 +69,10 @@ releases:
   handoff_path: /tmp/three_repo_closed_loop_20260712_133056_88705/train/bridge_handoff
   created_at: '20260712_133056'
   closed_loop_output: /tmp/three_repo_closed_loop_20260712_133056_88705
+- release_id: panda_closed_loop_20260712_214747
+  handoff_id: panda_closed_loop_20260712_214747_bridge
+  upstream_raw: /home/ina/dev/ros2-arm-teleoperation-suite/data/episodes_mlp/
+  release_path: /tmp/three_repo_closed_loop_20260712_214747_6664/release
+  handoff_path: /tmp/three_repo_closed_loop_20260712_214747_6664/train/bridge_handoff
+  created_at: '20260712_214747'
+  closed_loop_output: /tmp/three_repo_closed_loop_20260712_214747_6664
