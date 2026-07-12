@@ -59,4 +59,5 @@ jobs:
         env:
           CLOSED_LOOP_USE_MOCK: "1"
           CLOSED_LOOP_OUTPUT_ROOT: /tmp/panda_closed_loop_ci
+          PYTHON: python
         run: ./scripts/run_three_repo_closed_loop.sh

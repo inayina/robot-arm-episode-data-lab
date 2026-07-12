@@ -11,7 +11,7 @@ This repository is the data, training, and offline evaluation lab. It is not a R
 
 Read these files before changing the Panda pipeline:
 
-- `docs/planning/panda_training_data_chain_roadmap.md`
+- `docs/archive/planning/panda_training_data_chain_roadmap.md`
 - `configs/robot_schemas/panda.yaml`
 - `docs/dev/upstream_downstream_contracts.md`
 - `docs/reference/integration_with_bridge.md`

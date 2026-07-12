@@ -35,7 +35,7 @@ docs/DATA_CLEANING_AND_LEROBOT.md
 
 历史设计文档已归档到 [docs/legacy_pybullet/README.md](../docs/legacy_pybullet/README.md)。
 
-规划类文档（非 P0 执行入口）见 [docs/planning/](../docs/planning/)。
+已完成的规划类文档见 [docs/archive/README.md](../docs/archive/README.md)。
 
 ## 边界提醒
 

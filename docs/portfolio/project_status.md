@@ -2,7 +2,7 @@
 
 项目状态与收口清单（手动维护）。
 
-文档索引：[docs/README.md](../README.md) · 总体架构：[THREE_REPO_ARCHITECTURE.md](../THREE_REPO_ARCHITECTURE.md) · 最小演示：[DEMO_GUIDE.md](../DEMO_GUIDE.md)
+文档索引：[docs/README.md](../README.md) · 总体架构：[THREE_REPO_ARCHITECTURE.md](../THREE_REPO_ARCHITECTURE.md) · 最小演示：[DEMO_GUIDE.md](../DEMO_GUIDE.md) · 简历与话术：[resume_description.md](resume_description.md)
 
 > **当前定位**：机械臂具身数据闭环中游已具备 legacy PyBullet 采集、Panda schema、dataset inspection / release、baseline training、offline evaluation 与 bridge handoff 文档链路；
 > 当前仍属于 software simulation / Sim-to-Sim readiness，不宣称真实机械臂 Sim2Real 已完成。

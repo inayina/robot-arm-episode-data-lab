@@ -1,5 +1,7 @@
 # Three-Repo Documentation Closure Plan
 
+> **归档**：三仓文档收口已完成；当前入口为 `THREE_REPO_ARCHITECTURE.md`、`CLOSED_LOOP_RUNBOOK.md` 与 canonical experiment。
+
 状态：项目管理文档收口计划。本文档用于指导三个机械臂仓库在面试 / 作品集投递前补齐必要文档。它不是功能开发计划，也不要求立刻统一仿真器、重构代码或扩展复杂模型。
 
 ## 0. 总体原则

@@ -160,10 +160,10 @@ derived `state[8]` / `ee_delta_gripper[7]` datasets back into the upstream repo.
 - No GPU-only training dependency in the first pass.
 
 Related planning document:
-[panda_training_lab_spec.md](../planning/panda_training_lab_spec.md).
+[panda_training_lab_spec.md](../archive/planning/panda_training_lab_spec.md).
 
 Detailed implementation roadmap:
-[panda_training_data_chain_roadmap.md](../planning/panda_training_data_chain_roadmap.md).
+[panda_training_data_chain_roadmap.md](../archive/planning/panda_training_data_chain_roadmap.md).
 
 Three-repo contract index:
 [INTER_REPO_CONTRACTS.md](../INTER_REPO_CONTRACTS.md).

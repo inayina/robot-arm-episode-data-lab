@@ -1,5 +1,7 @@
 # Media Asset Plan
 
+> **归档**：当前媒体主线已由 canonical experiment 与 Panda HOC 取代；本文仅保留规划历史。
+
 状态：作品集媒体资产补充计划。目标是让 README 首屏和面试材料的视觉证据对齐当前 Panda / P0 中游主线，而不是继续以 legacy PyBullet/KUKA GIF 为主。
 
 ## 1. 当前问题

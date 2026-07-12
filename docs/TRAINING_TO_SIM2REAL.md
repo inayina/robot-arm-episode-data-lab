@@ -49,6 +49,6 @@ training/reports/panda_act_smoke/predicted_actions.jsonl
 
 ## Planning Source
 
-完整改造计划见 [planning/panda_training_lab_spec.md](planning/panda_training_lab_spec.md)。
+历史改造计划见 [archive/planning/panda_training_lab_spec.md](archive/planning/panda_training_lab_spec.md)。
 分阶段开发、验收命令和上下游适配顺序见
-[planning/panda_training_data_chain_roadmap.md](planning/panda_training_data_chain_roadmap.md)。
+[archive/planning/panda_training_data_chain_roadmap.md](archive/planning/panda_training_data_chain_roadmap.md)。

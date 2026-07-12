@@ -1,306 +1,391 @@
 #!/usr/bin/env python3
-"""Closed-Loop Data Flow & Troubleshooting RAG Assistant.
+"""Lightweight, local multi-repository RAG command line assistant."""
 
-Performs local semantic retrieval across all markdown documentation files
-in the repository to help developers troubleshoot and review system data contracts.
+from __future__ import annotations
 
-Optional environment variables:
-- OLLAMA_HOST: e.g. "http://localhost:11434" (default, if running)
-- OPENAI_API_KEY: to use OpenAI GPT models
-- GEMINI_API_KEY: to use Google Gemini models
-"""
-
+import argparse
+import ast
+import json
+import math
 import os
 import re
-import sys
-import json
 import urllib.request
-import urllib.error
+from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
 
+
+DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "rag_sources.yaml"
+
+
+@dataclass
+class Source:
+    name: str
+    path: Path
+
+
+@dataclass
 class DocumentChunk:
-    def __init__(self, filepath: Path, header_chain: list[str], content: str, start_line: int, end_line: int):
-        self.filepath = filepath
-        self.header_chain = header_chain
-        self.header_title = " > ".join(header_chain) if header_chain else "General"
-        self.content = content.strip()
-        self.start_line = start_line
-        self.end_line = end_line
+    repository: str
+    repository_root: Path
+    filepath: Path
+    symbol: str
+    content: str
+    start_line: int
+    end_line: int
 
-    def __repr__(self):
-        return f"<Chunk {self.filepath.name} L{self.start_line}-{self.end_line}: {self.header_title}>"
+    @property
+    def header_title(self) -> str:  # compatibility with the original script
+        return self.symbol
 
-
-def parse_markdown_file(filepath: Path) -> list[DocumentChunk]:
-    """Parses a markdown file and splits it into chunks based on headers."""
-    chunks = []
-    current_headers = []
-    current_content = []
-    start_line = 1
-    
-    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-        lines = f.readlines()
-
-    for idx, line in enumerate(lines, 1):
-        # Match headers (e.g., # Header, ## Header, ### Header)
-        match = re.match(r"^(#{1,6})\s+(.*)$", line)
-        if match:
-            # Save previous chunk if it has content
-            if current_content:
-                chunks.append(
-                    DocumentChunk(
-                        filepath=filepath,
-                        header_chain=list(current_headers),
-                        content="".join(current_content),
-                        start_line=start_line,
-                        end_line=idx - 1
-                    )
-                )
-                current_content = []
-
-            # Update header chain based on level
-            level = len(match.group(1))
-            title = match.group(2).strip()
-            
-            # Keep header chain up to current level
-            current_headers = current_headers[:level - 1]
-            while len(current_headers) < level - 1:
-                current_headers.append("")
-            current_headers.append(title)
-            
-            start_line = idx
-        
-        current_content.append(line)
-
-    # Save the last chunk
-    if current_content:
-        chunks.append(
-            DocumentChunk(
-                filepath=filepath,
-                header_chain=list(current_headers),
-                content="".join(current_content),
-                start_line=start_line,
-                end_line=len(lines)
-            )
-        )
-        
-    return chunks
+    @property
+    def relative_path(self) -> str:
+        return self.filepath.relative_to(self.repository_root).as_posix()
 
 
-def load_all_documents(repo_dir: Path) -> list[DocumentChunk]:
-    """Recursively scans repository for markdown files and parses them."""
-    all_chunks = []
-    # Scan root files and docs directory
-    targets = [repo_dir / "AGENTS.md", repo_dir / "README.md", repo_dir / "docs"]
-    
-    for target in targets:
-        if not target.exists():
-            continue
-        if target.is_file() and target.suffix == ".md":
-            all_chunks.extend(parse_markdown_file(target))
-        elif target.is_dir():
-            for md_file in target.rglob("*.md"):
-                # Skip virtual environments or hidden folders
-                if any(p in md_file.parts for p in (".venv", ".git", "__pycache__", "node_modules")):
+def load_config(path: Path = DEFAULT_CONFIG) -> dict:
+    """Load and minimally validate a RAG source configuration."""
+    path = path.resolve()
+    with path.open(encoding="utf-8") as stream:
+        config = yaml.safe_load(stream) or {}
+    if not isinstance(config.get("repositories"), list) or not config.get("include"):
+        raise ValueError("rag config requires non-empty 'repositories' and 'include'")
+    config["_base_dir"] = path.parent.parent
+    return config
+
+
+def configured_sources(config: dict) -> list[Source]:
+    base = Path(config["_base_dir"])
+    sources = []
+    for item in config["repositories"]:
+        if isinstance(item, str):
+            candidates = [item]
+            name = None
+        else:
+            env_path = os.getenv(item.get("path_env", "")) if item.get("path_env") else None
+            candidates = [env_path, item["path"], *item.get("fallback_paths", [])]
+            name = item.get("name")
+        for raw in filter(None, candidates):
+            candidate = Path(raw).expanduser()
+            root = (candidate if candidate.is_absolute() else base / candidate).resolve()
+            if root.is_dir():
+                sources.append(Source(name or root.name, root))
+                break
+    return sources
+
+
+def _is_binary(path: Path) -> bool:
+    try:
+        return b"\0" in path.read_bytes()[:4096]
+    except OSError:
+        return True
+
+
+def iter_source_files(source: Source, config: dict):
+    excluded = set(config.get("exclude_dirs", []))
+    maximum = int(config.get("max_file_size_bytes", 1_000_000))
+    seen: set[Path] = set()
+    for pattern in config["include"]:
+        for path in source.path.glob(pattern):
+            if path in seen or not path.is_file():
+                continue
+            relative = path.relative_to(source.path)
+            if any(part in excluded for part in relative.parts):
+                continue
+            try:
+                if path.stat().st_size > maximum or _is_binary(path):
                     continue
-                all_chunks.extend(parse_markdown_file(md_file))
-                
-    return all_chunks
+            except OSError:
+                continue
+            seen.add(path)
+            yield path
+
+
+def _chunk(source: Source, path: Path, symbol: str, lines: list[str], start: int, end: int):
+    content = "".join(lines[start - 1:end]).strip()
+    return DocumentChunk(source.name, source.path, path, symbol, content, start, end)
+
+
+def parse_markdown_file(path: Path, source: Source | None = None) -> list[DocumentChunk]:
+    source = source or Source(path.parent.name, path.parent)
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines(keepends=True)
+    headers: list[str] = []
+    starts = [1]
+    symbols = ["General"]
+    for number, line in enumerate(lines, 1):
+        match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        if match:
+            if number != 1 or starts != [1]:
+                starts.append(number)
+            elif number == 1:
+                starts[0] = 1
+            level = len(match.group(1))
+            headers = headers[: level - 1] + [match.group(2)]
+            title = " > ".join(filter(None, headers))
+            if number == 1 and symbols == ["General"]:
+                symbols[0] = title
+            else:
+                symbols.append(title)
+    ends = [n - 1 for n in starts[1:]] + [len(lines)]
+    return [_chunk(source, path, symbol, lines, start, end)
+            for symbol, start, end in zip(symbols, starts, ends) if end >= start]
+
+
+def parse_python_file(path: Path, source: Source) -> list[DocumentChunk]:
+    """Parse a Python file into per-symbol DocumentChunks.
+
+    Top-level classes and functions are always emitted as their own chunks.
+    Methods *inside* classes are also emitted individually (labelled
+    ``ClassName.method_name``) so that large classes do not dilute the BM25
+    score of their individual methods.  This is the key fix that allows
+    private helpers like ``_pybullet_ik`` (which contains the Jacobian SVD
+    singularity check) to surface as top-1 results for queries such as
+    ``SVD singularity Jacobian``.
+    """
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    lines = text.splitlines(keepends=True)
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return [_chunk(source, path, "module", lines, 1, len(lines))]
+
+    chunks = []
+    top_nodes = [n for n in tree.body if isinstance(n, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))]
+    first = top_nodes[0].lineno if top_nodes else len(lines) + 1
+    if first > 1 and "".join(lines[: first - 1]).strip():
+        chunks.append(_chunk(source, path, "module", lines, 1, first - 1))
+
+    for node in top_nodes:
+        if isinstance(node, ast.ClassDef):
+            # Emit the class header (up to first method) as its own chunk
+            method_nodes = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+            class_end = (method_nodes[0].lineno - 1) if method_nodes else getattr(node, "end_lineno", node.lineno)
+            chunks.append(_chunk(source, path, f"class {node.name}", lines, node.lineno, class_end))
+            # Emit each method as a separate chunk labelled ClassName.method_name
+            for method in method_nodes:
+                label = f"method {node.name}.{method.name}"
+                chunks.append(_chunk(source, path, label, lines, method.lineno,
+                                     getattr(method, "end_lineno", method.lineno)))
+        else:
+            kind = "function"
+            chunks.append(_chunk(source, path, f"{kind} {node.name}", lines, node.lineno,
+                                 getattr(node, "end_lineno", node.lineno)))
+
+    return chunks or [_chunk(source, path, "module", lines, 1, len(lines))]
+
+
+
+def parse_file(path: Path, source: Source) -> list[DocumentChunk]:
+    if path.suffix.lower() == ".md":
+        return parse_markdown_file(path, source)
+    if path.suffix.lower() == ".py":
+        return parse_python_file(path, source)
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines(keepends=True)
+    size = 80
+    return [_chunk(source, path, "configuration", lines, start, min(start + size - 1, len(lines)))
+            for start in range(1, len(lines) + 1, size)]
+
+
+def load_all_documents(config_or_repo: dict | Path) -> list[DocumentChunk]:
+    """Load configured sources; accepting a Path preserves the old public API."""
+    if isinstance(config_or_repo, Path):
+        config = load_config()
+        config["repositories"] = [{"name": config_or_repo.name, "path": "."}]
+        config["_base_dir"] = config_or_repo.resolve()
+    else:
+        config = config_or_repo
+    return [chunk for source in configured_sources(config)
+            for path in iter_source_files(source, config)
+            for chunk in parse_file(path, source)]
 
 
 def tokenize(text: str) -> list[str]:
-    """Simple tokenizer that splits words, lowercases, and filters out stopwords."""
-    words = re.findall(r"\b\w{2,}\b", text.lower())
-    stopwords = {
-        "the", "a", "an", "and", "or", "but", "if", "then", "of", "to", "in", 
-        "on", "at", "for", "with", "by", "about", "this", "that", "these", "those",
-        "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do",
-        "的", "了", "和", "是", "就", "都", "在", "于", "及", "对", "以", "与", "或", "而"
-    }
-    return [w for w in words if w not in stopwords]
+    """Tokenise text into sub-word tokens.
+
+    * CJK characters are kept as single tokens so Chinese queries work without
+      an external tokeniser library.
+    * CamelCase identifiers (e.g. ``PandaActionAdapter``) are split at
+      upper-case boundaries so a query for ``hold`` or ``panda`` still matches
+      the class-level chunk even though the class name is written in PascalCase.
+    """
+    # First, split CamelCase / PascalCase into constituent words.
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    text = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", text)
+    # Then extract normal alphanumeric tokens and individual CJK characters.
+    return re.findall(r"[a-zA-Z_][a-zA-Z0-9_]{1,}|[\u4e00-\u9fff]", text.lower())
 
 
-def retrieve_chunks(query: str, chunks: list[DocumentChunk], top_k: int = 3) -> list[tuple[float, DocumentChunk]]:
-    """Retrieves top_k chunks using a pure-Python TF-IDF/BM25 scoring model."""
+def retrieve_chunks(query: str, chunks: list[DocumentChunk], top_k: int = 5):
+    """BM25-based retrieval with symbol and source-file boosting.
+
+    Improvements over the previous bare TF-IDF implementation:
+
+    1. **BM25 term-frequency saturation** (k1=1.5, b=0.75): long source files
+       are no longer penalised relative to short test helpers because BM25
+       applies a tunable length normalisation rather than a hard division.
+    2. **Symbol exact-match 3× boost**: tokens that appear in the chunk's
+       symbol name (class / function / section heading) get triple weight,
+       up from the previous 2×, so ``class PandaActionAdapter`` ranks above
+       a short test function that merely *calls* the class.
+    3. **Source-file 1.2× boost**: implementation files (``.py`` files outside
+       ``test*/``) receive a mild confidence premium over unit tests when the
+       query is about *what something does* rather than *how it is tested*.
+    """
     query_tokens = tokenize(query)
-    if not query_tokens:
+    if not query_tokens or not chunks:
         return []
 
-    # Calculate Document Frequency (DF) for IDF calculation
-    df = {}
-    for chunk in chunks:
-        tokens = set(tokenize(chunk.header_title + " " + chunk.content))
-        for token in tokens:
-            df[token] = df.get(token, 0) + 1
+    # BM25 hyper-parameters (Robertson & Zaragoza, 2009 defaults)
+    k1 = 1.5
+    b = 0.75
 
-    num_docs = len(chunks)
+    document_tokens = [tokenize(f"{c.symbol} {c.relative_path} {c.content}") for c in chunks]
+    avg_dl = sum(len(t) for t in document_tokens) / max(len(document_tokens), 1)
+
+    df = {token: sum(token in set(tokens) for tokens in document_tokens) for token in set(query_tokens)}
+    N = len(chunks)
+
     scores = []
-
-    for chunk in chunks:
-        chunk_text = chunk.header_title + " " + chunk.content
-        chunk_tokens = tokenize(chunk_text)
-        chunk_words_set = set(chunk_tokens)
-        
-        score = 0.0
+    for chunk, tokens in zip(chunks, document_tokens):
+        if not tokens:
+            continue
+        dl = len(tokens)
+        symbol_tokens = set(tokenize(chunk.symbol))
+        bm25_score = 0.0
         for token in query_tokens:
-            if token in chunk_words_set:
-                # Term Frequency in chunk
-                tf = chunk_tokens.count(token) / len(chunk_tokens)
-                # Inverse Document Frequency (with smoothing)
-                idf = math_log((num_docs + 1) / (df.get(token, 0) + 0.5))
-                # Extra boost if query matches headers
-                header_boost = 2.0 if any(token in h.lower() for h in chunk.header_chain) else 1.0
-                score += tf * idf * header_boost
-                
-        if score > 0:
-            scores.append((score, chunk))
+            tf = tokens.count(token)
+            if tf == 0:
+                continue
+            # BM25 TF with length normalisation
+            tf_norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avg_dl))
+            idf = math.log((N - df[token] + 0.5) / (df[token] + 0.5) + 1)
+            # Symbol name exact-match earns a 3× boost
+            symbol_boost = 3.0 if token in symbol_tokens else 1.0
+            bm25_score += tf_norm * idf * symbol_boost
 
-    scores.sort(key=lambda x: x[0], reverse=True)
-    return scores[:top_k]
+        if bm25_score <= 0:
+            continue
+
+        # Source-file premium: implementation files outrank test files slightly
+        relative = str(chunk.relative_path)
+        is_test = relative.startswith("test") or "/test" in relative
+        is_source_py = chunk.filepath.suffix == ".py" and not is_test
+        source_boost = 1.2 if is_source_py else 1.0
+
+        scores.append((bm25_score * source_boost, chunk))
+
+    return sorted(scores, key=lambda item: item[0], reverse=True)[:top_k]
 
 
-def math_log(x: float) -> float:
-    """Manual natural log implementation to avoid importing math if not needed."""
-    # Simple Taylor series approximation or float implementation
-    import math
-    return math.log(x)
+def _prompt(query: str, chunks: list[DocumentChunk]) -> str:
+    def evidence_kind(chunk: DocumentChunk) -> str:
+        if chunk.relative_path.startswith("tests/"):
+            return "测试代码（最高优先级）"
+        if chunk.filepath.suffix == ".py":
+            return "项目代码"
+        return "文档或配置声明"
+
+    context = "\n\n".join(
+        f"[{evidence_kind(c)}; {c.repository}/{c.relative_path}:L{c.start_line}-L{c.end_line}; {c.symbol}]\n{c.content}"
+        for c in chunks)
+    return f"""你是项目证据助手。仅根据给定证据回答问题。必须按以下类别明确标注每项陈述：
+[项目代码确认已实现]、[文档声明但代码未确认]、[根据证据作出的推断]、[通用背景知识]。
+测试和代码优先于文档；发现冲突时明确指出双方及优先依据。不得用行业惯例补全项目事实。
+若证据不能回答，必须原样写出“当前项目证据不足”。不要把文档声明描述成已经实现。
+
+证据：
+{context}
+
+问题：{query}
+回答："""
 
 
 def query_ollama(prompt: str, host: str) -> str:
-    """Helper to query local Ollama server if active."""
-    url = f"{host.rstrip('/')}/api/generate"
-    data = json.dumps({
-        "model": "llama3", # default model, fallback to any if needed
-        "prompt": prompt,
-        "stream": False
-    }).encode("utf-8")
-    
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as res:
-            resp = json.loads(res.read().decode("utf-8"))
-            return resp.get("response", "").strip()
-    except Exception as e:
-        return f"Ollama connection error: {e}"
+    request = urllib.request.Request(f"{host.rstrip('/')}/api/generate",
+        data=json.dumps({"model": os.getenv("OLLAMA_MODEL", "llama3"), "prompt": prompt, "stream": False}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read())["response"].strip()
 
 
 def query_openai(prompt: str, api_key: str) -> str:
-    """Helper to query OpenAI API."""
-    url = "https://api.openai.com/v1/chat/completions"
-    data = json.dumps({
-        "model": "gpt-4o-mini",
-        "messages": [
-            {"role": "system", "content": "You are a professional robotics deployment assistant. Synthesize the provided context to answer the question precisely."},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.2
-    }).encode("utf-8")
-    
-    req = urllib.request.Request(
-        url, data=data, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }, method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as res:
-            resp = json.loads(res.read().decode("utf-8"))
-            return resp["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        return f"OpenAI API error: {e}"
+    request = urllib.request.Request("https://api.openai.com/v1/chat/completions",
+        data=json.dumps({"model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"), "messages": [{"role": "user", "content": prompt}], "temperature": 0}).encode(),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}, method="POST")
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read())["choices"][0]["message"]["content"].strip()
 
 
 def run_llm_qa(query: str, matched_chunks: list[DocumentChunk]) -> str | None:
-    """Attempts to synthesize an answer using LLM API if keys/servers are configured."""
-    context = "\n\n".join([
-        f"--- CONTEXT FROM: {c.filepath.name} (L{c.start_line}-L{c.end_line}) ---\nHeader: {c.header_title}\n{c.content}"
-        for c in matched_chunks
-    ])
-    
-    prompt = f"""Use the following retrieved context segments to answer the user's question. 
-If the context does not contain the answer, explain what context is missing.
-Keep your response concise, professional, and in Chinese.
-
-[Context]
-{context}
-
-[Question]
-{query}
-
-[Answer]"""
-
-    # 1. Try OpenAI
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    if openai_key:
-        return query_openai(prompt, openai_key)
-        
-    # 2. Try Ollama (default local server)
-    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-    # Check if local Ollama port is open
+    if not matched_chunks:
+        return "当前项目证据不足"
+    prompt = _prompt(query, matched_chunks)
     try:
-        with urllib.request.urlopen(ollama_host, timeout=1):
+        if os.getenv("OPENAI_API_KEY"):
+            return query_openai(prompt, os.environ["OPENAI_API_KEY"])
+        ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        # Preserve the original zero-configuration local Ollama behavior, with a
+        # short probe so a missing daemon does not make the CLI feel sluggish.
+        with urllib.request.urlopen(ollama_host, timeout=.3):
             return query_ollama(prompt, ollama_host)
-    except Exception:
-        pass
-        
+    except Exception as error:
+        return f"LLM 调用失败：{error}"
     return None
 
 
-def main():
-    repo_dir = Path(__file__).resolve().parents[1]
-    print("=" * 60)
-    print("🤖 三仓数据流与闭环调试 RAG 智能助手 🤖")
-    print(f"正在扫描并向量化项目文档 (Repo: {repo_dir.name})...")
-    
-    chunks = load_all_documents(repo_dir)
-    print(f"成功载入 {len(chunks)} 个文档段落。")
-    print("=" * 60)
-    print("提示：输入您想了解的数据契约、控制层或者故障排查问题（如 'PandaActionAdapter' 或 'Gate'）")
-    print("按 'q' 键退出系统。\n")
+def answer_query(query: str, chunks: list[DocumentChunk], top_k: int = 5) -> None:
+    results = retrieve_chunks(query, chunks, top_k)
+    if not results:
+        print("当前项目证据不足")
+        return
+    print("检索证据：")
+    for rank, (score, chunk) in enumerate(results, 1):
+        snippet = re.sub(r"\s+", " ", chunk.content).strip()[:350]
+        print(f"\n[{rank}] 仓库: {chunk.repository}")
+        print(f"路径: {chunk.relative_path}")
+        print(f"行号: L{chunk.start_line}-L{chunk.end_line}")
+        print(f"章节/符号: {chunk.symbol}")
+        print(f"内容片段: {snippet}")
+        print(f"检索分数: {score:.6f}")
+    print("\nLLM 回答：")
+    answer = run_llm_qa(query, [chunk for _, chunk in results])
+    print(answer or "未配置 LLM；以上为本地检索证据。项目事实请仅依据这些证据判断。")
 
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--query", help="执行一次查询后退出")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="来源配置 YAML")
+    parser.add_argument("--top-k", type=int, default=5, help="返回证据条数")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        config = load_config(args.config)
+        chunks = load_all_documents(config)
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        print(f"配置或扫描失败：{error}")
+        return 2
+    if args.query is not None:
+        answer_query(args.query.strip(), chunks, args.top_k)
+        return 0
+    print("三仓项目 RAG 助手（输入 q 退出）")
     while True:
         try:
-            query = input("👉 请输入您的问题: ").strip()
-        except (KeyboardInterrupt, EOFError):
+            query = input("请输入您的问题: ").strip()
+        except (EOFError, KeyboardInterrupt):
             print("\n再见！")
             break
-
-        if not query:
-            continue
-        if query.lower() in ("q", "quit", "exit"):
+        if query.lower() in {"q", "quit", "exit"}:
             print("再见！")
             break
-
-        # Semantic Retrieve
-        results = retrieve_chunks(query, chunks, top_k=3)
-        if not results:
-            print("\n❌ 未找到相关文档匹配项，请尝试更换关键词。\n")
-            continue
-
-        print("\n🔍 【匹配到的参考段落】:")
-        matched_chunks = []
-        for rank, (score, chunk) in enumerate(results, 1):
-            matched_chunks.append(chunk)
-            file_link = f"file://{chunk.filepath.resolve()}#L{chunk.start_line}-L{chunk.end_line}"
-            print(f"\n[{rank}] 评分: {score:.3f} | 章节: {chunk.header_title}")
-            print(f"    📄 来源链接: [{chunk.filepath.name}]({file_link})")
-            # Print a snippet of the content
-            snippet = chunk.content[:250].replace("\n", "\n    ")
-            print(f"    内容预览:\n    {snippet}...")
-
-        # Optional LLM Synthesis
-        print("\n🤖 【智能生成解答】:")
-        answer = run_llm_qa(query, matched_chunks)
-        if answer:
-            print(answer)
-        else:
-            print("    [提示] 本地未检测到运行中的 Ollama 服务，且未配置 OPENAI_API_KEY。")
-            print("    已为您定位到上述最相关的参考文档，您可以直接点击链接进行查阅。")
-        print("\n" + "=" * 60 + "\n")
+        if query:
+            answer_query(query, chunks, args.top_k)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

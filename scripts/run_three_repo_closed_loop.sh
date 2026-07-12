@@ -19,6 +19,7 @@
 
 set -euo pipefail
 
+PYTHON="${PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UPSTREAM_REPO="${UPSTREAM_REPO:-/home/ina/dev/ros2-arm-teleoperation-suite}"
 BRIDGE_REPO="${BRIDGE_REPO:-/home/ina/ros2_ws/src/ros2-moveit-pybullet-bridge}"
@@ -48,7 +49,7 @@ mkdir -p "${OUT_ROOT}" "${EVIDENCE}"
 
 if [[ "${USE_MOCK}" == "1" ]]; then
   log "G1: generating mock upstream raw at ${OUT_ROOT}/mock_raw"
-  python3 "${REPO_ROOT}/training/scripts/make_mock_panda_dataset.py" \
+  "${PYTHON}" "${REPO_ROOT}/training/scripts/make_mock_panda_dataset.py" \
     --output "${OUT_ROOT}/mock_raw"
   RAW_INPUT="${OUT_ROOT}/mock_raw"
 fi
@@ -77,7 +78,7 @@ if [[ "${USE_MOCK}" == "1" ]]; then
   log "G0 skipped (mock upstream uses midstream layout, not upstream episode_*/train)"
 elif [[ -f "${UPSTREAM_REPO}/scripts/validate_dataset.py" ]]; then
   set +e
-  python3 "${UPSTREAM_REPO}/scripts/validate_dataset.py" \
+  "${PYTHON}" "${UPSTREAM_REPO}/scripts/validate_dataset.py" \
     "${RAW_INPUT}" --min-frames 5 --json > "${G0_VALIDATE}"
   G0_RC=$?
   set -e
@@ -90,20 +91,20 @@ else
 fi
 
 log "G1-1 adapt upstream raw: ${RAW_INPUT}"
-python3 "${REPO_ROOT}/training/scripts/adapt_upstream_panda_dataset.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/adapt_upstream_panda_dataset.py" \
   --input "${RAW_INPUT}" \
   --output "${ADAPTED}" \
   --schema "${SCHEMA}" \
   --derive-ee-delta-action
 
 log "G1-2 inspect adapted dataset"
-python3 "${REPO_ROOT}/training/scripts/inspect_dataset.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/inspect_dataset.py" \
   --dataset "${ADAPTED}" \
   --schema "${SCHEMA}" \
   --json-output "${ADAPTED}/inspection_report.json"
 
 log "G1-3 prepare release ${RELEASE_ID}"
-python3 "${REPO_ROOT}/training/scripts/prepare_dataset_release.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/prepare_dataset_release.py" \
   --input "${ADAPTED}" \
   --output "${RELEASE}" \
   --schema "${SCHEMA}" \
@@ -111,20 +112,20 @@ python3 "${REPO_ROOT}/training/scripts/prepare_dataset_release.py" \
   --description "three-repo closed loop ${STAMP}"
 
 log "G1-4 smoke train"
-python3 "${REPO_ROOT}/training/scripts/train_act_smoke.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/train_act_smoke.py" \
   --dataset "${RELEASE}" \
   --schema "${SCHEMA}" \
   --output "${TRAIN}"
 
 log "G1-5 replay export"
-python3 "${REPO_ROOT}/training/scripts/replay_policy.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/replay_policy.py" \
   --dataset "${RELEASE}" \
   --checkpoint "${TRAIN}/checkpoint.npz" \
   --schema "${SCHEMA}" \
   --output "${TRAIN}/predicted_actions.jsonl"
 
 log "G1-6 bridge handoff"
-python3 "${REPO_ROOT}/training/scripts/prepare_bridge_handoff.py" \
+"${PYTHON}" "${REPO_ROOT}/training/scripts/prepare_bridge_handoff.py" \
   --dataset "${RELEASE}" \
   --replay "${TRAIN}/predicted_actions.jsonl" \
   --schema "${SCHEMA}" \
@@ -176,7 +177,7 @@ cp "${HANDOFF}/handoff_manifest.json" "${G3_MIDDLE}/handoff_manifest.json" 2>/de
 cp "${TRAIN}/metrics.json" "${G3_MIDDLE}/metrics.json" 2>/dev/null || true
 cp "${ADAPTED}/inspection_report.json" "${G3_MIDDLE}/inspection_report.json" 2>/dev/null || true
 
-python3 - <<PY
+"${PYTHON}" - <<PY
 import json
 from pathlib import Path
 
@@ -232,7 +233,7 @@ if [[ "${WITH_DOWNSTREAM}" == "1" ]]; then
   set -u
   BENCH_OUT="${OUT_ROOT}/downstream_benchmark"
   mkdir -p "${BENCH_OUT}"
-  python3 "${BRIDGE_REPO}/scripts/benchmark_system.py" \
+  "${PYTHON}" "${BRIDGE_REPO}/scripts/benchmark_system.py" \
     --strategy panda_jsonl_replay \
     --panda-handoff-path "${HANDOFF}" \
     --episodes 1 \
@@ -242,7 +243,7 @@ if [[ "${WITH_DOWNSTREAM}" == "1" ]]; then
   cp "${BENCH_OUT}/benchmark_summary.json" "${G3_DOWNSTREAM}/benchmark_summary.json" 2>/dev/null || true
 fi
 
-python3 - <<PY
+"${PYTHON}" - <<PY
 import json
 from pathlib import Path
 

@@ -45,6 +45,12 @@ flowchart LR
 
 三仓库总体架构见 [docs/THREE_REPO_ARCHITECTURE.md](docs/THREE_REPO_ARCHITECTURE.md)；跨仿真后端边界见 [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md)，训练到下游评估的 handoff 见 [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md)。
 
+### 当前唯一主实验（2026-07-11）
+
+作品集结果统一引用 [Panda 30-Episode Canonical Experiment](docs/portfolio/CANONICAL_EXPERIMENT.md)：
+30/30 episodes、71,737 frames、MLP BC、`panda_30_mlp_bridge_v0` handoff、下游
+`panda_jsonl_replay + pybullet_ik` 正常与故障注入 benchmark。历史 smoke 和旧 E2E 数字不与本次结论混用。
+
 ### Panda P0 主线媒体证据
 
 ![Panda P0 data loop](assets/diagrams/panda_p0_data_loop.png)
@@ -105,7 +111,7 @@ flowchart LR
 
 ![parquet episode 列结构](assets/screenshots/lerobot_parquet_schema.png)
 
-项目状态与收口清单见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)。
+项目状态与收口清单见 [docs/portfolio/project_status.md](docs/portfolio/project_status.md)，个人简历描述与面试话术见 [docs/portfolio/resume_description.md](docs/portfolio/resume_description.md)。
 
 ## 快速开始：Panda P0 data loop
 
@@ -180,16 +186,16 @@ python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 | 训练方式分层 | [docs/TRAINING_METHODS.md](docs/TRAINING_METHODS.md) |
 | P0 最小演示 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) |
 | P0 排障表 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
-| 规划 / 路线图 | [docs/planning/](docs/planning/) |
+| 历史规划归档 | [docs/archive/README.md](docs/archive/README.md) |
 | 概念参考 | [docs/reference/](docs/reference/) |
 | **能力学习与自检** | [docs/reference/learning_capability_alignment.md](docs/reference/learning_capability_alignment.md) |
 | 面试材料 | [docs/portfolio/](docs/portfolio/) |
+| 当前主实验 | [docs/portfolio/CANONICAL_EXPERIMENT.md](docs/portfolio/CANONICAL_EXPERIMENT.md) |
 | 项目演进路线图 | [docs/portfolio/PROJECT_SCALING_ROADMAP.md](docs/portfolio/PROJECT_SCALING_ROADMAP.md) |
 | 三仓库总体架构 | [docs/THREE_REPO_ARCHITECTURE.md](docs/THREE_REPO_ARCHITECTURE.md) |
 | 跨仿真后端边界 | [docs/SIM_BACKENDS_AND_TRANSFER.md](docs/SIM_BACKENDS_AND_TRANSFER.md) |
 | 训练与下游 handoff | [training/README_TRAINING.md](training/README_TRAINING.md), [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md) |
-| 三仓库文档收口 | [docs/planning/three_repo_documentation_plan.md](docs/planning/three_repo_documentation_plan.md) |
-| 媒体资产计划 | [docs/planning/media_asset_plan.md](docs/planning/media_asset_plan.md) |
+| 历史规划归档 | [docs/archive/README.md](docs/archive/README.md) |
 | 智能体规范 | [AGENTS.md](AGENTS.md) |
 
 ## 能力概览

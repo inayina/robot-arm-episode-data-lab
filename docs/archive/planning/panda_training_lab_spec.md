@@ -1,5 +1,7 @@
 # SPEC: 改造 `robot-arm-episode-data-lab`，加入训练与统一 Panda 数据接口
 
+> **归档**：本 SPEC 已被当前 `training/` 实现与 Panda schema 取代，仅用于设计追溯。
+
 状态：规划 SPEC。本文档用于记录当前改造方向；代码实现按后续任务分步落地。
 
 ## 背景

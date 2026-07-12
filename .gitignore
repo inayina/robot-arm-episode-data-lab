@@ -14,7 +14,9 @@ dataset/v1/
 dataset/lerobot_export/
 data/*
 !data/registry/
-evidence/
+evidence/*
+!evidence/canonical_20260711/
+!evidence/canonical_20260711/**
 training/reports/*
 !training/reports/.gitkeep
 checkpoints/
@@ -37,4 +39,3 @@ dataset_sample/**/joint_state.npy
 
 # Temporary benchmark and simulation logs
 log_tmp_bm/
-

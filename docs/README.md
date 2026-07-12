@@ -1,5 +1,8 @@
 # 文档索引
 
+作品集当前唯一主实验：[portfolio/CANONICAL_EXPERIMENT.md](portfolio/CANONICAL_EXPERIMENT.md)，
+机器可读证据：[../evidence/canonical_20260711/](../evidence/canonical_20260711/README.md)。
+
 面试和作品集展示优先看 **P0 文档**；本地 legacy PyBullet/KUKA 采集样例再看 **[开发指南](dev/quickstart.md)** 和 **[架构与模块地图](dev/architecture.md)**。
 
 ## 日常开发（优先看这里）
@@ -23,14 +26,11 @@
 | [CLOSED_LOOP_RUNBOOK.md](CLOSED_LOOP_RUNBOOK.md) | **P0** 三仓 G0–G3 闭环跑手册 |
 | [../AGENTS.md](../AGENTS.md) | **P0** 三仓 Agent 规范 V2.1 |
 
-## 规划与路线图
+## 历史规划与路线图
 
 | 文档 | 用途 |
 |------|------|
-| [planning/panda_training_lab_spec.md](planning/panda_training_lab_spec.md) | **Panda 数据与训练实验室 SPEC**：本仓库内训练、统一 schema、评估与 replay 导出 |
-| [planning/panda_training_data_chain_roadmap.md](planning/panda_training_data_chain_roadmap.md) | **Panda 训练数据链路路线图**：分阶段任务、验收命令、上下游适配顺序 |
-| [planning/three_repo_documentation_plan.md](planning/three_repo_documentation_plan.md) | **三仓库文档收口计划**：上游 MuJoCo、中游 schema、下游 PyBullet 的 README / overview / demo / 面试文档补齐 |
-| [planning/media_asset_plan.md](planning/media_asset_plan.md) | **媒体资产补充计划**：Panda P0 主线图、运行证据、handoff 资产规划 |
+| [archive/README.md](archive/README.md) | 已完成 SPEC、路线图与媒体计划的统一归档索引 |
 | [legacy_pybullet/README.md](legacy_pybullet/README.md) | legacy PyBullet/KUKA 文档归档 |
 
 ## 参考
@@ -52,6 +52,7 @@
 | 文档 | 用途 |
 |------|------|
 | [portfolio/interview_walkthrough.md](portfolio/interview_walkthrough.md) | 3–5 分钟面试讲稿 |
+| [portfolio/resume_description.md](portfolio/resume_description.md) | 在线简历描述与面试核心 Q&A |
 | [portfolio/project_status.md](portfolio/project_status.md) | 自动生成的进度快照 |
 | [portfolio/DATA_AND_ANALYSIS_PATHS.md](portfolio/DATA_AND_ANALYSIS_PATHS.md) | 中游 KUKA legacy 与 Panda 主线两条数据/分析路径说明 |
 | [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计、训练策略分层、下游评估架构与冗余说明 |

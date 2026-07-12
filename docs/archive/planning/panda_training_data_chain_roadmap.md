@@ -1,5 +1,7 @@
 # Panda Training Data Chain Roadmap
 
+> **归档**：路线图主要任务已经落地；当前执行入口以 `docs/TRAINING_PIPELINE.md` 和 canonical experiment 为准。
+
 状态：开发路线图。本文档把 `panda_training_lab_spec.md` 拆成可以逐步提交、测试和对外解释的工程任务。
 
 ## 0. 当前判断

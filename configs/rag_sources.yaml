@@ -1,0 +1,45 @@
+repositories:
+  - name: ros2-arm-teleoperation-suite
+    path: ../ros2-arm-teleoperation-suite
+    path_env: ROS2_ARM_TELEOP_REPO
+    fallback_paths:
+      - /home/ina/dev/ros2-arm-teleoperation-suite
+  - name: robot-arm-episode-data-lab
+    path: .
+  - name: ros2-moveit-pybullet-bridge
+    path: ../ros2-moveit-pybullet-bridge
+    path_env: ROS2_MOVEIT_PYBULLET_BRIDGE_REPO
+    fallback_paths:
+      - /home/ina/ros2_ws/src/ros2-moveit-pybullet-bridge
+
+include:
+  - README.md
+  - AGENTS.md
+  - docs/**/*.md
+  - scripts/**/*.py
+  - training/**/*.py
+  - configs/**/*.yaml
+  - tests/**/*.py
+  - src/**/*.py
+  - pybullet_bridge/**/*.py
+  - hoc_console/**/*.py
+  - dist_monitor/**/*.py
+  - risk_engine/**/*.py
+  - manipulation_actions/**/*.py
+  - "**/*.launch.py"
+  - "**/msg/*.msg"
+  - "**/srv/*.srv"
+  - "**/action/*.action"
+
+exclude_dirs:
+  - .git
+  - .venv
+  - build
+  - install
+  - log
+  - node_modules
+  - dataset
+  - checkpoints
+  - __pycache__
+
+max_file_size_bytes: 1000000

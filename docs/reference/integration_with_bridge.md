@@ -53,7 +53,7 @@ bridge_handoff/
 
 ## 相关文档
 
-- [panda_training_lab_spec.md](../planning/panda_training_lab_spec.md) - 本仓库内训练与统一 Panda schema 改造 SPEC
-- [panda_training_data_chain_roadmap.md](../planning/panda_training_data_chain_roadmap.md) - 分阶段开发路线图与验收命令
+- [panda_training_lab_spec.md](../archive/planning/panda_training_lab_spec.md) - 已归档的训练与统一 Panda schema 改造 SPEC
+- [panda_training_data_chain_roadmap.md](../archive/planning/panda_training_data_chain_roadmap.md) - 已归档的分阶段开发路线图
 - [TRAINING_TO_SIM2REAL.md](../TRAINING_TO_SIM2REAL.md) - 三个仓库之间的边界
 - [upstream_downstream_contracts.md](../dev/upstream_downstream_contracts.md) - 上下游数据与 replay 契约
