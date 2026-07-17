@@ -143,6 +143,12 @@ action_type: ee_delta_gripper
 调用方式：
 
 ```bash
+python3 -m project_knowledge.cli query --mode auto --no-llm --query "<用户原始问题>"
+```
+
+兼容入口仍可使用：
+
+```bash
 python3 scripts/rag_assistant.py --query "<用户原始问题>"
 ```
 
@@ -150,6 +156,13 @@ python3 scripts/rag_assistant.py --query "<用户原始问题>"
 
 ```bash
 bin/ask-project "<用户原始问题>"
+```
+
+只读知识源审计与 Git 影响分析：
+
+```bash
+python3 -m project_knowledge.cli audit --json-out /tmp/project-audit.json --markdown-out /tmp/project-audit.md
+python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 ```
 
 ### 8.3 检索范围
@@ -218,6 +231,15 @@ bin/ask-project "<用户原始问题>"
 
 禁止通过行业惯例补全项目现状。
 
+#### 8.4.1 面试知识库固化机制
+
+当用户提问关于运动控制、总线通信、安全限位、DDS优化或节点编排等底层原理性/系统架构性问题，以及高频 Linux/ROS 2 系统级调试与日志诊断命令时，Agent 在完成解答后，必须主动将该问题以 FAQ 形式追加到下游仓库的面试知识库文档中：[docs/portfolio/INTERVIEW_PREP.md](file:///home/ina/ros2_ws/src/ros2-moveit-pybullet-bridge/docs/portfolio/INTERVIEW_PREP.md)。
+
+固化要求：
+1. FAQ 必须条理清晰，至少包含“核心原理解析/常用命令”与“对应项目代码事实”。
+2. 涉及到的具体代码、配置文件路径，必须使用包含 `file://` 协议的绝对路径超链接，确保用户可以直接点击跳转代码行。
+3. FAQ 的内容口径必须与 AGENTS.md 中的项目现状（8.6）严格一致，区分“已实现”和“设计规划”。
+
 ### 8.5 修改代码前的要求
 
 修改涉及三仓接口、schema、action 语义、release、handoff 或训练流程的代码前，必须：
@@ -248,3 +270,103 @@ bin/ask-project "<用户原始问题>"
 - 文档中出现的规划功能已经全部实现。
 
 Legacy PyBullet/KUKA 实现不得与 Panda 主线混用。
+
+### 8.7 调试与测试运行的物理收尾规则
+
+Agent 在使用 `run_command` 工具调试、执行 ROS 2 节点、MuJoCo 仿真器或录制任务时，必须严格遵守以下“物理收尾”铁律，防止后台僵尸进程残留造成系统过载或下一次冲突：
+
+1. **生命周期必须显式受限**：
+   严禁运行无时限的常驻后台命令。对于拉起仿真或录制的测试任务，必须带有自动退出的参数（例如 `auto_record_seconds`）或者在 Bash 中加上强制超时前缀（如 `timeout 60s ros2 launch ...`）。
+2. **退出前的物理扫尾责任（Nuke On Done）**：
+   在向用户汇报测试结果、或者结束当前 Turn 之前，**Agent 必须主动发起一次强杀命令**，强行把刚刚拉起的所有相关后台进程杀死并确认退干净。推荐清理指令：
+   ```bash
+   pkill -9 -f "teleop_bringup" || true
+   pkill -9 -f "mujoco_sim" || true
+   pkill -9 -f "lerobot_recorder" || true
+   pkill -9 -f "servo_node" || true
+   pkill -9 -f "ros2_control" || true
+   ```
+3. **禁止将“清理工作”推卸给用户**。
+
+---
+
+## 9. 三仓联合开发拓扑与核心指令集
+
+为了防止多仓联合开发时接口混乱、定位不清，以下梳理了完整的数据流拓扑与开发常用指令集。
+
+### 9.1 数据流生命周期拓扑 (Embodied Data Loop)
+
+```mermaid
+graph TD
+    A["[上游采集] ros2-arm-teleoperation-suite"] -->|1. 专家示教原始数据| B["episode_*/train/ (含有 meta.json)"]
+    B -->|2. 中游数据适配| C["[中游训练] robot-arm-episode-data-lab"]
+    C -->|3. 适配 schema 转换| D["adapted/ (转换为 frames.jsonl)"]
+    D -->|4. 数据清洗 Release| E["release/ (生成 release manifest)"]
+    E -->|5. 模型训练| F["train/ (ACT 训练生成 checkpoints)"]
+    F -->|6. 打包交接 Handoff| G["bridge_handoff/ ( predicted_actions.jsonl)"]
+    G -->|7. 下游评估载入| H["[下游回放] ros2-moveit-pybullet-bridge"]
+    H -->|8. PyBullet 回放仿真| I["benchmark_summary.json (评估成功率/时延)"]
+```
+
+### 9.2 开发核心指令集速查 (Developer Cheat Sheet)
+
+#### 9.2.1 上游：编译与数据采集
+* **路径**：`~/dev/ros2-arm-teleoperation-suite` （系统 Python 环境编译）
+* **一键编译**：
+  ```bash
+  colcon build --symlink-install --packages-select lerobot_recorder teleop_bringup mujoco_sim
+  ```
+* **一键启动多模态采集（带优化参数，限制 CPU 负荷）**：
+  ```bash
+  source install/setup.bash
+  ros2 launch teleop_bringup full_system.launch.py \
+    record:=true \
+    capture_mode:=portfolio \
+    camera_rate:=10.0 \
+    camera_width:=320 \
+    camera_height:=240 \
+    sync_slop:=0.2 \
+    auto_record_seconds:=15.0 \
+    auto_record_delay_s:=22.0
+  ```
+
+#### 9.2.2 中游：数据转换与模型训练
+* **路径**：`~/robot-sim-lab/robot-arm-episode-data-lab` （Conda 虚拟环境运行）
+* **一键运行三仓闭环数据流水线（Adapted -> Release -> Smoke Train -> Handoff）**：
+  ```bash
+  # 运行离线数据闭环，生成 handoff 压缩包
+  ./scripts/run_three_repo_closed_loop.sh
+  ```
+* **手动运行数据集适配器**：
+  ```bash
+  python3 training/scripts/adapt_upstream_panda_dataset.py \
+    --input ./data/episodes \
+    --output ./data/adapted \
+    --schema ./configs/robot_schemas/panda.yaml
+  ```
+
+#### 9.2.3 下游：Handoff 部署与回放评估
+* **路径**：`~/ros2_ws` （系统 ROS 2 环境编译）
+* **一键编译下游桥梁**：
+  ```bash
+  colcon build --symlink-install --packages-select pybullet_bridge
+  ```
+* **一键跑通 Handoff 回放评估 Benchmark**：
+  ```bash
+  source install/setup.bash
+  python3 src/ros2-moveit-pybullet-bridge/scripts/benchmark_system.py \
+    --strategy panda_jsonl_replay \
+    --panda-handoff-path /tmp/three_repo_closed_loop_xxx/train/bridge_handoff \
+    --episodes 1 \
+    --duration-sec 10.0 \
+    --launch-stack
+  ```
+* **运行物理清理（防后台残留冲突，本仓 Agent 必须主动调用）**：
+  ```bash
+  pkill -9 -f "teleop_bringup" || true
+  pkill -9 -f "mujoco_sim" || true
+  pkill -9 -f "lerobot_recorder" || true
+  pkill -9 -f "servo_node" || true
+  pkill -9 -f "ros2_control" || true
+  ```
+

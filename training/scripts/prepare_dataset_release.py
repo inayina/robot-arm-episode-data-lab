@@ -57,6 +57,7 @@ def prepare_release(
 
     source_manifest = load_manifest(source)
     copied_frames = copy_frame_payload(source, output)
+    copied_videos = copy_visual_payload(source, output, source_manifest)
     inspection_report = report.to_dict()
     (output / "inspection_report.json").write_text(
         json.dumps(inspection_report, indent=2, sort_keys=True),
@@ -69,6 +70,7 @@ def prepare_release(
         source_manifest=source_manifest,
         inspection_report=inspection_report,
         copied_frames=copied_frames,
+        copied_videos=copied_videos,
         release_id=release_id,
         description=description,
     )
@@ -92,6 +94,30 @@ def copy_frame_payload(source: Path, output: Path) -> str:
     )
 
 
+def copy_visual_payload(
+    source: Path,
+    output: Path,
+    source_manifest: dict[str, Any],
+) -> dict[str, dict[str, str]]:
+    copied: dict[str, dict[str, str]] = {}
+    for key, episode_map in (source_manifest.get("video_files") or {}).items():
+        if key != "observation.images.scene":
+            continue
+        copied[key] = {}
+        for episode_index, relative in episode_map.items():
+            source_video = source / str(relative)
+            if not source_video.is_file():
+                raise FileNotFoundError(f"missing visual payload: {source_video}")
+            target_relative = (
+                Path("videos") / "observation.images.scene" / source_video.name
+            )
+            target = output / target_relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_video, target)
+            copied[key][str(episode_index)] = target_relative.as_posix()
+    return copied
+
+
 def build_release_manifest(
     *,
     source: Path,
@@ -99,6 +125,7 @@ def build_release_manifest(
     source_manifest: dict[str, Any],
     inspection_report: dict[str, Any],
     copied_frames: str,
+    copied_videos: dict[str, dict[str, str]],
     release_id: str,
     description: str,
 ) -> dict[str, Any]:
@@ -115,6 +142,14 @@ def build_release_manifest(
         training_contract["language_instruction_key"] = str(
             schema.get("language_instruction", {}).get("key", "language_instruction")
         )
+    if source_manifest.get("visual_required_for_training"):
+        training_contract.update({
+            "visual_key": "observation.images.scene",
+            "visual_shape": list(
+                schema["observation"]["images"]["scene_rgb"]["shape"]),
+            "video_fps": float(source_manifest["video_fps"]),
+            "conditioning": "none",
+        })
     return {
         "dataset_format": "panda_release_v0",
         "release_id": release_id,
@@ -128,6 +163,16 @@ def build_release_manifest(
         "num_frames": int(inspection_report["frames"]),
         "has_language_instruction": has_language_instruction,
         "frames": copied_frames,
+        "visual_keys": list(source_manifest.get("visual_keys") or []),
+        "visual_required_for_training": bool(
+            source_manifest.get("visual_required_for_training", False)
+        ),
+        "video_fps": source_manifest.get("video_fps"),
+        "video_files": copied_videos,
+        "source_action_semantics": source_manifest.get("source_action_semantics"),
+        "action_semantics_verified": bool(
+            source_manifest.get("action_semantics_verified", False)
+        ),
         "inspection": {
             "status": inspection_report["status"],
             "warnings": inspection_report["warnings"],
@@ -138,6 +183,7 @@ def build_release_manifest(
             "dataset_format": source_manifest.get("dataset_format", "unknown"),
             "schema_id": source_manifest.get("schema_id"),
             "action_type": source_manifest.get("action_type", action_type),
+            "action_semantics": source_manifest.get("source_action_semantics"),
             "source": source_manifest.get("source"),
             "source_path": source_manifest.get("source_path"),
         },

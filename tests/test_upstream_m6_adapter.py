@@ -9,6 +9,7 @@ import yaml
 from training.adapters.upstream_m6 import (
     adapt_rows,
     resolve_upstream_gate,
+    require_verified_action_semantics,
     write_adapted_dataset,
 )
 from training.scripts.inspect_dataset import inspect_dataset
@@ -113,6 +114,25 @@ def test_resolve_upstream_gate_reads_episode_meta_json(tmp_path: Path) -> None:
 
     assert resolve_upstream_gate(tmp_path) == "batch_generator"
     assert resolve_upstream_gate(train_dir) == "batch_generator"
+
+
+def test_action_semantics_fail_closed_for_legacy_episode(tmp_path: Path) -> None:
+    episode = tmp_path / "episode_000000"
+    episode.mkdir()
+    (episode / "meta.json").write_text(
+        json.dumps({"action_type": "ee_pose_gripper"}), encoding="utf-8")
+    with pytest.raises(ValueError, match="legacy episodes must remain quarantined"):
+        require_verified_action_semantics(tmp_path)
+
+
+def test_action_semantics_accepts_command_v1(tmp_path: Path) -> None:
+    episode = tmp_path / "episode_000000"
+    episode.mkdir()
+    (episode / "meta.json").write_text(
+        json.dumps({"action_semantics": "ee_pose_gripper_cmd_v1"}),
+        encoding="utf-8",
+    )
+    assert require_verified_action_semantics(tmp_path) == "ee_pose_gripper_cmd_v1"
 
 
 def test_adapted_manifest_records_upstream_gate_and_filter_scope(tmp_path: Path) -> None:

@@ -21,7 +21,7 @@ L4: Diffusion Policy ── 引入多模态行为分布的去噪扩散策略 (10
 ### 1.1 为什么第一阶段坚持使用 `linear_smoke` 策略？
 在面试中，面对面试官关于“为什么你的模型用的是线性回归，而不是大模型”的提问，你的标准高分回答如下：
 * **工程第一原则**：在涉及上游 MuJoCo 仿真、中游 LeRobot 适配、下游 PyBullet 验证的多仓大型分布式系统中，第一步绝不能直接上大深度模型。大模型的训练缓慢、Bug 多且难以调试，会掩盖底层的**坐标系偏差、控制频率不匹配和总线丢包问题**。
-* **极简闭环验证**：`linear_smoke`（[linear_policy.py](file:///home/ina/robot-sim-lab/robot-arm-episode-data-lab/training/policies/linear_policy.py)）是一个 NumPy 实现的纯线性策略，执行时间不到 1 秒。它能在零算力成本下，快速验证 `raw episode -> adapter -> training -> handoff -> PyBullet replay` 的全链路控制数据流是否完全畅通，属于典型的**“工程除噪（Engineering De-noising）”**。
+* **极简闭环验证**：`linear_smoke`（[linear_policy.py](../../training/policies/linear_policy.py)）是一个 NumPy 实现的纯线性策略，执行时间不到 1 秒。它能在零算力成本下，快速验证 `raw episode -> adapter -> training -> handoff -> PyBullet replay` 的全链路控制数据流是否完全畅通，属于典型的**“工程除噪（Engineering De-noising）”**。
 
 ---
 
@@ -34,7 +34,7 @@ L4: Diffusion Policy ── 引入多模态行为分布的去噪扩散策略 (10
 * **正确的做法（本项目设计）**：必须以 **Episode（独立回放轨迹）** 为最小划分单元。
   * 假定采集了 100 条抓取轨迹，我们将 `episode_000` 到 `episode_079`（80%）划入训练集，`episode_080` 到 `episode_099`（20%）划入测试/验证集。
   * 这样能保证测试集中的轨迹对于神经网络而言是**完全陌生、从未见过**的，从而能真实评估策略在遭遇初始位姿偏差时的泛化校正能力。
-* **实施位置**：这一划分逻辑将实现在中游的 [inspect_dataset.py](file:///home/ina/robot-sim-lab/robot-arm-episode-data-lab/training/scripts/inspect_dataset.py) 与 `prepare_dataset_release.py` 中，通过在导出的 `manifest.json` 中标记每个 episode 的 `split = "train" | "val"` 来实现。
+* **实施位置**：这一划分逻辑位于中游的 [inspect_dataset.py](../../training/scripts/inspect_dataset.py) 与 `prepare_dataset_release.py` 中，通过在导出的 `manifest.json` 中标记每个 episode 的 `split = "train" | "val"` 来实现。
 
 ---
 

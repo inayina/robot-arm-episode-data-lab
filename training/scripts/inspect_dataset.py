@@ -117,6 +117,10 @@ def _check_video_or_tensor_images(
     schema: dict[str, Any],
     report: InspectionReport,
 ) -> None:
+    manifest = load_manifest(dataset)
+    if manifest.get("visual_required_for_training"):
+        _check_manifest_videos(dataset, rows, schema, manifest, report)
+        return
     train_dirs = discover_episode_train_dirs(dataset)
     train_dir = train_dirs[0] if train_dirs else dataset
     video_specs = (
@@ -164,6 +168,108 @@ def _check_video_or_tensor_images(
             )
 
 
+def _ffprobe_video(path: Path) -> tuple[int, int, float, int]:
+    output = subprocess.check_output(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-count_packets",
+            "-show_entries", "stream=width,height,r_frame_rate,nb_read_packets",
+            "-of", "json", str(path),
+        ],
+        text=True,
+    )
+    stream = json.loads(output)["streams"][0]
+    numerator, denominator = str(stream["r_frame_rate"]).split("/", 1)
+    fps = float(numerator) / float(denominator)
+    return (
+        int(stream["height"]),
+        int(stream["width"]),
+        fps,
+        int(stream["nb_read_packets"]),
+    )
+
+
+def _check_manifest_videos(
+    dataset: Path,
+    rows: list[dict[str, Any]],
+    schema: dict[str, Any],
+    manifest: dict[str, Any],
+    report: InspectionReport,
+) -> None:
+    scene_key = "observation.images.scene"
+    visual_keys = list(manifest.get("visual_keys") or [])
+    if visual_keys != [scene_key]:
+        report.errors.append(
+            f"visual_keys must be [{scene_key!r}] for scene-only training, got {visual_keys!r}"
+        )
+        return
+    if manifest.get("source_action_semantics") != "ee_pose_gripper_cmd_v1":
+        report.errors.append("source_action_semantics is not ee_pose_gripper_cmd_v1")
+    if not bool(manifest.get("action_semantics_verified")):
+        report.errors.append("action_semantics_verified must be true")
+    expected_fps = manifest.get("video_fps")
+    if expected_fps is None or float(expected_fps) <= 0.0:
+        report.errors.append("video_fps must be a positive number")
+        return
+    expected_shape = tuple(
+        schema["observation"]["images"]["scene_rgb"]["shape"]
+    )
+    video_map = (
+        manifest.get("video_files", {}).get(scene_key, {})
+        if isinstance(manifest.get("video_files"), dict) else {}
+    )
+    rows_by_episode: dict[int, list[dict[str, Any]]] = {}
+    for row in rows:
+        rows_by_episode.setdefault(int(row["episode_index"]), []).append(row)
+    for episode_index, episode_rows in sorted(rows_by_episode.items()):
+        relative = video_map.get(str(episode_index))
+        if not relative:
+            report.errors.append(
+                f"{scene_key}: missing video mapping for episode {episode_index}")
+            continue
+        video = dataset / relative
+        if not video.is_file():
+            report.errors.append(f"{scene_key}: missing mp4 at {video}")
+            continue
+        try:
+            height, width, observed_fps, frame_count = _ffprobe_video(video)
+        except (OSError, KeyError, ValueError, subprocess.CalledProcessError) as exc:
+            report.errors.append(f"{scene_key}: invalid mp4 {video} ({exc})")
+            continue
+        if (height, width, 3) != expected_shape:
+            report.errors.append(
+                f"{scene_key}: video shape {(height, width, 3)} != schema {expected_shape}"
+            )
+        if frame_count != len(episode_rows):
+            report.errors.append(
+                f"{scene_key}: episode {episode_index} video frames ({frame_count}) "
+                f"!= rows ({len(episode_rows)})"
+            )
+        if abs(observed_fps - float(expected_fps)) / float(expected_fps) > 0.05:
+            report.errors.append(
+                f"{scene_key}: encoded fps {observed_fps:.3f} != manifest "
+                f"{float(expected_fps):.3f}"
+            )
+        stamps = np.asarray(
+            [float(row["timestamp"]) for row in episode_rows], dtype=np.float64)
+        deltas = np.diff(stamps)
+        deltas = deltas[np.isfinite(deltas) & (deltas > 0.0)]
+        if deltas.size:
+            timestamp_fps = 1.0 / float(np.median(deltas))
+            if abs(timestamp_fps - float(expected_fps)) / float(expected_fps) > 0.30:
+                report.errors.append(
+                    f"{scene_key}: timestamp rate {timestamp_fps:.3f} Hz != "
+                    f"manifest {float(expected_fps):.3f} Hz"
+                )
+        report.optional.append(FieldResult(
+            key=scene_key,
+            status="OK",
+            expected=str(list(expected_shape)),
+            observed=(
+                f"episode {episode_index}: video {[height, width, 3]} x "
+                f"{frame_count} @ {observed_fps:.3f} fps"
+            ),
+        ))
 def load_jsonl_rows(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:

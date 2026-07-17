@@ -5,6 +5,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+import numpy as np
+import shutil
+import subprocess
 
 from training.scripts.make_mock_panda_dataset import make_rows, write_dataset
 from training.scripts.prepare_dataset_release import prepare_release
@@ -130,3 +133,64 @@ def test_prepare_release_preserves_language_instruction_contract(tmp_path: Path)
         manifest["training_contract"]["language_instruction_key"]
         == "language_instruction"
     )
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg unavailable")
+def test_prepare_scene_only_visual_release_copies_mp4(tmp_path: Path) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    source = write_source_dataset(tmp_path / "scene_source")
+    frames_path = source / "frames.jsonl"
+    rows = [
+        json.loads(line)
+        for line in frames_path.read_text(encoding="utf-8").splitlines()
+    ]
+    video_map = {}
+    for episode in (0, 1):
+        episode_rows = [row for row in rows if row["episode_index"] == episode]
+        for frame, row in enumerate(episode_rows):
+            row["timestamp"] = frame / 10.0
+        png_dir = tmp_path / f"png_{episode}"
+        png_dir.mkdir()
+        for frame in range(len(episode_rows)):
+            Image.fromarray(np.full(
+                (240, 320, 3), 20 * (episode + frame), dtype=np.uint8
+            )).save(png_dir / f"{frame + 1:06d}.png")
+        relative = (
+            Path("videos") / "observation.images.scene"
+            / f"episode_{episode:06d}.mp4"
+        )
+        video = source / relative
+        video.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run([
+            "ffmpeg", "-v", "error", "-framerate", "10",
+            "-i", str(png_dir / "%06d.png"), "-c:v", "libx264",
+            "-pix_fmt", "yuv420p", str(video),
+        ], check=True)
+        video_map[str(episode)] = relative.as_posix()
+    frames_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    manifest_path = source / "manifest.json"
+    source_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    source_manifest.update({
+        "visual_keys": ["observation.images.scene"],
+        "visual_required_for_training": True,
+        "video_fps": 10.0,
+        "video_files": {"observation.images.scene": video_map},
+        "source_action_semantics": "ee_pose_gripper_cmd_v1",
+        "action_semantics_verified": True,
+    })
+    manifest_path.write_text(
+        json.dumps(source_manifest), encoding="utf-8")
+
+    output = tmp_path / "scene_release"
+    manifest = prepare_release(
+        source, output, load_schema(), release_id="scene_v1")
+
+    assert manifest["visual_keys"] == ["observation.images.scene"]
+    assert manifest["video_fps"] == 10.0
+    assert manifest["action_semantics_verified"] is True
+    assert (
+        output / manifest["video_files"]["observation.images.scene"]["0"]
+    ).is_file()

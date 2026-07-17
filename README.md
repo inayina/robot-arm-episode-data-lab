@@ -46,11 +46,12 @@
 README 审计：[docs/portfolio/THREE_REPO_README_AUDIT.md](docs/portfolio/THREE_REPO_README_AUDIT.md)  
 图片证据索引：[docs/portfolio/EVIDENCE_INDEX.md](docs/portfolio/EVIDENCE_INDEX.md)
 
-## Canonical Experiment
+## Current Verified Evidence
 
-当前主实验：`panda_30_mlp_20260711`
+当前证据由两个独立 run 构成，不能拼接成同一次端到端性能实验：
 
-![Canonical run evidence](assets/diagrams/three_repo_canonical_run_evidence.svg)
+- `panda_30_mlp_20260711`：30-episode 数据、release、MLP BC 与 handoff；
+- `panda_closed_loop_20260712_214747`：独立的 1-episode 下游 replay smoke。
 
 | Gate / Artifact | 当前事实 | 证据 |
 | --- | --- | --- |
@@ -69,9 +70,9 @@ README 审计：[docs/portfolio/THREE_REPO_README_AUDIT.md](docs/portfolio/THREE
 | --- | --- | --- |
 | G0 Upstream Dataset | 上游仿真 episode 和 physical gate 已有运行证据 | 不证明 hardware grasp |
 | G1 Midstream Release | 本仓 release、MLP metrics、same-split linear comparison、handoff 已有产物 | 不证明 online rollout 或任务成功率 |
-| G2 Downstream Replay | 下游完成 1-episode PyBullet replay smoke | 不证明完整 fault campaign 或 completed Sim2Real |
+| Independent downstream smoke | 下游独立完成 1-episode PyBullet replay smoke | 尚未证明使用了上述 30-episode handoff；不证明完整 fault campaign 或 completed Sim2Real |
 
-旧 canonical 文档中出现过 `17.626 / 49.508 ms` 和 `94.399 ms` fault alarm；在原始 benchmark JSON 定位前，不把它们作为 README headline。`3,275` gripper warning 必须保留，因为下游 replay 前需要 clamp 或 reject。
+旧版未溯源的 latency/fault 数字已从 current canonical results 移除。`3,275` gripper warning 必须保留，因为下游 replay 前需要 clamp 或 reject。
 
 ## 实验图片
 
@@ -173,9 +174,12 @@ python3 training/scripts/prepare_bridge_handoff.py \
 | Midstream | this repo | adapter, inspector, release, EDA, MLP BC, predicted JSONL, handoff |
 | Downstream | `ros2-moveit-pybullet-bridge` | Panda PyBullet replay, monitoring, and risk benchmark |
 
-### Canonical Evidence
+### Current Verified Evidence
 
-Current experiment: `panda_30_mlp_20260711`
+The evidence comes from two independent runs: `panda_30_mlp_20260711` covers the
+30-episode training/handoff chain, while `panda_closed_loop_20260712_214747`
+covers a separate one-episode downstream smoke. They must not be presented as
+one verified end-to-end performance run.
 
 | Item | Value |
 | --- | --- |

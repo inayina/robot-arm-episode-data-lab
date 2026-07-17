@@ -1,33 +1,34 @@
-# Canonical Portfolio Experiment · Panda 30-Episode Closed Loop
+# Panda 30-Episode Training Evidence and Downstream Smoke
 
-当前作品集只使用 `panda_30_mlp_20260711` 作为三仓主实验。本文是人读摘要；机器可读证据与
-哈希索引见 [`../../evidence/canonical_20260711/`](../../evidence/canonical_20260711/README.md)。
+本文是作品集的人读摘要。机器可读证据、来源与复现入口见
+[`../../evidence/README.md`](../../evidence/README.md)。当前证据由两段不同 run 构成：
+
+1. `panda_30_mlp_20260711`：30-episode 上游数据、中游 release、MLP BC 与 handoff；
+2. `panda_closed_loop_20260712_214747`：独立的 1-episode 下游 PyBullet replay smoke。
+
+两段 run 不能拼接成同一个已验证的端到端性能实验。
 
 ## 一句话结论
 
-上游生成并通过物理门禁的 30 条 Panda 仿真抓取 episode（71,737 frames），经中游 schema
-适配、release、MLP BC 和 handoff 后，由下游 `panda_jsonl_replay + pybullet_ik` 在 PyBullet
-执行；正常 benchmark 1/1 完成，故障注入告警在 94.399 ms 内检出。
+项目已验证 30 条 Panda 仿真 episode 的数据门禁、release、低维 MLP BC 和 handoff 产物；
+另有一次独立的下游 Panda replay smoke 完成 1/1 episode。当前没有可追溯的完整 fault campaign，
+也不证明真实机械臂部署或已完成 Sim2Real。
 
-## 数据流与 Gate
+## 证据关系
 
 ```mermaid
 flowchart LR
-    U["上游 MuJoCo + batch_generator<br/>30 episodes / 71,737 frames"]
-    G0{"G0 physical gate<br/>30/30 PASS"}
-    A["中游 adapter<br/>raw action[8] → ee_delta_gripper[7]"]
-    G1{"G1 inspection/release<br/>schema PASS"}
-    T["MLP BC<br/>24 train / 6 test<br/>100 epochs"]
-    H["handoff<br/>panda_30_mlp_bridge_v0<br/>71,737 actions"]
-    G2{"G2 downstream replay<br/>pybullet_ik"}
-    N["normal<br/>1/1 complete<br/>mean 17.626 ms"]
-    F["fault injection<br/>alarm 94.399 ms"]
-    G3["G3 canonical evidence<br/>summary + SHA-256"]
+    U["上游数据<br/>30 episodes / 71,737 frames"]
+    G0{"G0<br/>30/30 PASS"}
+    A["中游 adapter + release<br/>ee_delta_gripper[7]"]
+    T["MLP BC<br/>24 train / 6 test"]
+    H["handoff<br/>71,737 actions"]
 
-    U --> G0 --> A --> G1 --> T --> H --> G2
-    G2 --> N --> G3
-    G2 --> F --> G3
-    F -. "risk feedback" .-> G1
+    S["独立 closed-loop smoke<br/>release panda_closed_loop_20260712_214747"]
+    G2["下游 PyBullet replay<br/>1/1 complete<br/>mean/max 9.79/34.218 ms"]
+
+    U --> G0 --> A --> T --> H
+    S --> G2
 
     classDef upstream fill:#102a43,stroke:#38bdf8,color:#e0f2fe
     classDef middle fill:#123524,stroke:#4ade80,color:#dcfce7
@@ -35,28 +36,27 @@ flowchart LR
     classDef gate fill:#2e1065,stroke:#c084fc,color:#f3e8ff
     class U upstream
     class A,T,H middle
-    class N,F downstream
-    class G0,G1,G2,G3 gate
+    class S,G2 downstream
+    class G0 gate
 ```
 
-**图例**：蓝色为上游，绿色为中游，橙色为下游，紫色菱形为 Gate；实线为主数据/控制流，
-虚线为质量或风险反馈。MuJoCo 与 PyBullet 都是软件仿真后端。
+图中两条链没有连接线，表示当前证据不足以确认 30-episode handoff 就是该次下游 smoke 的输入。
 
 ## 核心结果
 
-| 阶段 | 结果 | 证据 |
+| 阶段 | 当前可验证结果 | 证据 |
 |---|---:|---|
-| G0 dataset validation | 30/30 PASS | `data/episodes_mlp/logs/dataset_validation.json` |
-| G1 release | 71,737 frames, inspection PASS | `data/exports/panda_30_release/manifest.json` |
-| MLP BC | train loss 0.04914, test loss 0.23502 | `training/reports/panda_mlp_bc/mlp_metrics.json` |
-| Handoff | 30 episodes / 71,737 actions, PASS | `bridge_handoff/handoff_manifest.json` |
-| G2 normal | 1/1 complete, mean/max 17.626/49.508 ms | canonical downstream summary |
-| G2 fault | alarm detected in 94.399 ms | canonical fault summary |
+| G0 dataset validation | 30/30 PASS | [`../../evidence/upstream/validate_dataset.json`](../../evidence/upstream/validate_dataset.json) |
+| G1 release | 71,737 frames, inspection PASS | [`../../data/exports/panda_30_release/manifest.json`](../../data/exports/panda_30_release/manifest.json) |
+| MLP BC | train loss 0.04914, test loss 0.23502 | [`../../training/reports/panda_mlp_bc/mlp_metrics.json`](../../training/reports/panda_mlp_bc/mlp_metrics.json) |
+| Handoff | 30 episodes / 71,737 actions | [`../../training/reports/panda_mlp_bc/bridge_handoff/handoff_manifest.json`](../../training/reports/panda_mlp_bc/bridge_handoff/handoff_manifest.json) |
+| Latest downstream smoke | 1/1 complete, mean/max 9.79/34.218 ms, no fault injection | [`../../evidence/downstream/benchmark_summary.json`](../../evidence/downstream/benchmark_summary.json) |
 
-## 诚实边界与发现
+## 诚实边界
 
-- 本实验验证 Sim-to-Sim 数据与执行链，不证明真机 Sim2Real。
-- MLP test loss 约为 train loss 的 4.78 倍，说明小数据泛化仍是主要训练风险。
-- 本次是 low-dimensional baseline，scene/wrist image 缺失被记录为 WARN，而非伪装成多模态训练。
-- handoff replay check 发现 3,275 个 gripper 输出越界；执行端必须实施 clamp/reject 和 runtime limits。
-- 正常 benchmark 只跑了 1 个计时 episode，适合作为闭环 smoke，不应包装成长稳或统计显著性结果。
+- 本摘要只描述软件仿真、离线训练和 Sim2Sim / Sim2Real-readiness 证据。
+- MLP test loss 约为 train loss 的 4.78 倍，小数据泛化仍是主要训练风险。
+- 当前是 low-dimensional baseline；缺少图像不应被描述成多模态训练。
+- handoff replay check 中的 3,275 个 gripper 越界输出要求执行端 clamp 或 reject。
+- 下游数据只有 1-episode no-fault smoke，不能扩展成长期稳定性或 fault response 结论。
+- 旧版未溯源的 latency/fault 数字已从当前结果表移除；没有原始 JSON 就不能作为作品集 headline。

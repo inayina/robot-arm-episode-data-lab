@@ -1,0 +1,439 @@
+schema_version: 1
+
+repositories:
+  - name: ros2-arm-teleoperation-suite
+    role: upstream
+    path: ../ros2-arm-teleoperation-suite
+    path_env: ROS2_ARM_TELEOP_REPO
+    fallback_paths:
+      - /home/ina/dev/ros2-arm-teleoperation-suite
+    required: true
+  - name: robot-arm-episode-data-lab
+    role: midstream
+    path: .
+    required: true
+  - name: ros2-moveit-pybullet-bridge
+    role: downstream
+    path: ../ros2-moveit-pybullet-bridge
+    path_env: ROS2_MOVEIT_PYBULLET_BRIDGE_REPO
+    fallback_paths:
+      - /home/ina/ros2_ws/src/ros2-moveit-pybullet-bridge
+    required: true
+
+exclude_dirs: [.git, .venv, build, install, log, node_modules, dataset, checkpoints, __pycache__]
+max_file_size_bytes: 1000000
+
+# Rules are first-match. Exact overrides below always win.
+rules:
+  # Upstream tests, implementation, configuration and documentation.
+  - repository: ros2-arm-teleoperation-suite
+    globs: [tests/**/*.py, src/**/test/**/*.py]
+    kind: test
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 100
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [pytest, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [docs/archive/**/*.md]
+    kind: archive
+    status: archive
+    enabled_modes: []
+    evidence_priority: 5
+    authoritative_for: []
+    component: []
+    tags: [archive]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [docs/portfolio/**/*.md]
+    kind: portfolio
+    status: derivative
+    enabled_modes: [portfolio]
+    evidence_priority: 35
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [portfolio, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [docs/SPEC*.md, docs/*ROADMAP*.md, docs/*spec*.md]
+    kind: spec
+    status: historical
+    enabled_modes: [debug, learning]
+    evidence_priority: 20
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [design, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [docs/ros2_env_and_packages_guide.md]
+    kind: reference
+    status: current
+    enabled_modes: [learning]
+    evidence_priority: 25
+    authoritative_for: []
+    component: []
+    tags: [learning, ros2]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [.agents/skills/**/*.md]
+    kind: reference
+    status: current
+    enabled_modes: [debug, learning]
+    evidence_priority: 25
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [agent_skill, learning, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [bin/*, scripts/**/*.py, src/**/*.py, "**/*.launch.py"]
+    kind: code
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 90
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [python, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [src/**/*.cpp, src/**/*.hpp]
+    kind: code
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 90
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [cpp, upstream]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [src/**/*.yaml, config/**/*.yaml, "**/msg/*.msg", "**/srv/*.srv"]
+    kind: config
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 85
+    authoritative_for: []
+    component: [data_schema, upstream_collection]
+    tags: [config, interface, tuning]
+    last_verified: 2026-07-14
+  - repository: ros2-arm-teleoperation-suite
+    globs: [README.md, docs/**/*.md]
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook, learning, portfolio]
+    evidence_priority: 65
+    authoritative_for: []
+    component: [upstream_collection]
+    tags: [documentation, upstream]
+    last_verified: 2026-07-14
+
+  # Midstream boundaries: legacy/archive/reference/portfolio are isolated first.
+  - repository: robot-arm-episode-data-lab
+    globs: [tests/**/*.py]
+    kind: test
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 100
+    authoritative_for: []
+    component: [data_schema, dataset_adapter, training, handoff]
+    tags: [pytest, midstream]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/archive/**/*.md]
+    kind: archive
+    status: archive
+    enabled_modes: []
+    evidence_priority: 5
+    authoritative_for: []
+    component: []
+    tags: [archive]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/legacy_pybullet/**/*.md, docs/dev/**/*.md, archive/**/*.md, agents/**/*.py, core/**/*.py]
+    kind: legacy
+    status: legacy
+    enabled_modes: [legacy]
+    evidence_priority: 30
+    authoritative_for: []
+    component: [legacy_kuka]
+    tags: [legacy, kuka, pybullet]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/reference/**/*.md]
+    kind: reference
+    status: current
+    enabled_modes: [learning]
+    evidence_priority: 25
+    authoritative_for: []
+    component: []
+    tags: [learning, reference]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/specs/**/*.md, docs/*spec*.md, docs/sorting_dev_guide.md]
+    kind: spec
+    status: draft
+    enabled_modes: [debug, learning]
+    evidence_priority: 20
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [design, draft]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/portfolio/**/*.md]
+    kind: portfolio
+    status: derivative
+    enabled_modes: [portfolio]
+    evidence_priority: 35
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [portfolio]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [evidence/**/*.json, training/reports/**/*.json, data/exports/**/manifest.json, data/exports/**/inspection_report.json, docs/portfolio/**/*.json]
+    kind: run_artifact
+    status: current
+    enabled_modes: [fact, debug, portfolio]
+    evidence_priority: 98
+    authoritative_for: [canonical_evidence]
+    component: [canonical_evidence, training, handoff]
+    tags: [artifact, local_untracked]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [configs/**/*.yaml, training/configs/**/*.yaml]
+    kind: config
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 85
+    authoritative_for: [data_schema]
+    component: [data_schema]
+    tags: [config, schema]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [data/exports/README.md]
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 65
+    authoritative_for: []
+    component: [data_schema]
+    tags: [dataset_release, documentation]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [skills/**/*.md]
+    kind: runbook
+    status: current
+    enabled_modes: [debug, runbook]
+    evidence_priority: 60
+    authoritative_for: []
+    component: [data_schema, dataset_adapter, training, handoff]
+    tags: [agent_skill, runbook]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [bin/*, project_knowledge/**/*.py, training/**/*.py, scripts/**/*.py]
+    kind: code
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 90
+    authoritative_for: []
+    component: [dataset_adapter, training, handoff]
+    tags: [python, midstream]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [docs/CLOSED_LOOP_RUNBOOK.md, docs/DEMO_GUIDE.md, docs/TROUBLESHOOTING.md]
+    kind: runbook
+    status: current
+    enabled_modes: [debug, runbook]
+    evidence_priority: 60
+    authoritative_for: []
+    component: [training, handoff, canonical_evidence]
+    tags: [runbook]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    globs: [README.md, AGENTS.md, training/README_TRAINING.md, docs/**/*.md]
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook, learning, portfolio]
+    evidence_priority: 65
+    authoritative_for: []
+    component: [data_schema, dataset_adapter, training, handoff]
+    tags: [documentation, midstream]
+    last_verified: 2026-07-14
+
+  # Downstream current Panda replay and risk implementation.
+  - repository: ros2-moveit-pybullet-bridge
+    globs: ["*/test/**/*.py"]
+    kind: test
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 100
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [pytest, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docs/archive/**/*.md]
+    kind: archive
+    status: archive
+    enabled_modes: []
+    evidence_priority: 5
+    authoritative_for: []
+    component: []
+    tags: [archive]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docs/portfolio/**/*.md, docs/*PORTFOLIO*.md]
+    kind: portfolio
+    status: derivative
+    enabled_modes: [portfolio]
+    evidence_priority: 35
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [portfolio, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docs/design/**/*.md, docs/*ROADMAP*.md, docs/*spec*.md]
+    kind: spec
+    status: historical
+    enabled_modes: [debug, learning]
+    evidence_priority: 20
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [design, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docs/PROJECT_LEARNING_GUIDE.md]
+    kind: reference
+    status: current
+    enabled_modes: [learning]
+    evidence_priority: 25
+    authoritative_for: []
+    component: []
+    tags: [learning, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docker/README.md]
+    kind: runbook
+    status: current
+    enabled_modes: [debug, runbook]
+    evidence_priority: 60
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [docker, setup, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [hoc_console/frontend/README.md]
+    kind: current_doc
+    status: current
+    enabled_modes: [debug, runbook, learning]
+    evidence_priority: 65
+    authoritative_for: []
+    component: [risk_monitoring]
+    tags: [frontend, documentation, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [docs/samples/**/*.json]
+    kind: run_artifact
+    status: historical
+    enabled_modes: [debug, learning]
+    evidence_priority: 40
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [sample, historical]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [bin/*, pybullet_bridge/**/*.py, dist_monitor/**/*.py, risk_engine/**/*.py, hoc_console/**/*.py, manipulation_actions/**/*.py, scripts/**/*.py, "**/*.launch.py", hoc_console/frontend/src/**/*.ts]
+    kind: code
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 90
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [python, downstream]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: ["**/config/*.yaml", "**/msg/*.msg", "**/srv/*.srv", "**/action/*.action"]
+    kind: config
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 85
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [config, interface, tuning]
+    last_verified: 2026-07-14
+  - repository: ros2-moveit-pybullet-bridge
+    globs: [README.md, docs/**/*.md]
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook, learning, portfolio]
+    evidence_priority: 65
+    authoritative_for: []
+    component: [downstream_replay, risk_monitoring]
+    tags: [documentation, downstream]
+    last_verified: 2026-07-14
+
+overrides:
+  - repository: robot-arm-episode-data-lab
+    path: docs/portfolio/THREE_REPO_CANONICAL_FACTS.md
+    kind: canonical
+    status: current
+    enabled_modes: [fact, debug, portfolio]
+    evidence_priority: 80
+    authoritative_for: [repository_roles, canonical_evidence, act_training_status]
+    component: [canonical_evidence, training]
+    tags: [panda, three_repo, canonical]
+    depends_on:
+      - evidence/downstream/benchmark_summary.json
+      - training/reports/panda_mlp_bc/mlp_metrics.json
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    path: docs/portfolio/CANONICAL_EXPERIMENT.md
+    kind: portfolio
+    status: derivative
+    enabled_modes: [debug, portfolio]
+    evidence_priority: 35
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [panda, scoped_summary]
+    depends_on: [evidence/downstream/benchmark_summary.json]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    path: evidence/downstream/benchmark_summary.json
+    kind: run_artifact
+    status: current
+    enabled_modes: [fact, debug, portfolio]
+    evidence_priority: 98
+    authoritative_for: [latest_downstream_smoke]
+    component: [canonical_evidence, downstream_replay]
+    tags: [artifact, no_fault, one_episode_smoke]
+    depends_on: [evidence/meta/run_summary.json]
+    last_verified: 2026-07-13
+  - repository: robot-arm-episode-data-lab
+    path: docs/specs/PROJECT_EVIDENCE_AGENT_V1.md
+    kind: spec
+    status: draft
+    enabled_modes: [debug, learning]
+    evidence_priority: 20
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [design, not_implementation_evidence]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    path: tests/test_project_knowledge.py
+    kind: test
+    status: current
+    enabled_modes: [debug]
+    evidence_priority: 100
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [pytest, retrieval_evaluation, not_project_capability_evidence]
+    last_verified: 2026-07-14
+  - repository: robot-arm-episode-data-lab
+    path: tests/test_rag_assistant.py
+    kind: test
+    status: current
+    enabled_modes: [debug]
+    evidence_priority: 100
+    authoritative_for: []
+    component: [canonical_evidence]
+    tags: [pytest, compatibility, not_project_capability_evidence]
+    last_verified: 2026-07-14

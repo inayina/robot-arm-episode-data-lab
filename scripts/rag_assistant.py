@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import sys
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,9 @@ import yaml
 
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "rag_sources.yaml"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @dataclass
@@ -363,6 +367,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    # The historical CLI remains the compatibility surface.  Default project
+    # queries now use the registry-backed V1 implementation; explicit legacy
+    # rag_sources.yaml fixtures/custom configs retain the old public behavior.
+    if args.config.resolve() == DEFAULT_CONFIG.resolve():
+        try:
+            from project_knowledge.core import query_project, render_query_text
+
+            def answer_v1(query: str) -> None:
+                result = query_project(query, mode="auto", top_k=args.top_k, no_llm=False)
+                print(render_query_text(result, compatibility=True))
+
+            if args.query is not None:
+                answer_v1(args.query.strip())
+                return 0
+            print("三仓项目 RAG 助手（输入 q 退出）")
+            while True:
+                try:
+                    query = input("请输入您的问题: ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    print("\n再见！")
+                    break
+                if query.lower() in {"q", "quit", "exit"}:
+                    print("再见！")
+                    break
+                if query:
+                    answer_v1(query)
+            return 0
+        except (OSError, ValueError, yaml.YAMLError) as error:
+            print(f"配置或扫描失败：{error}")
+            return 2
     try:
         config = load_config(args.config)
         chunks = load_all_documents(config)

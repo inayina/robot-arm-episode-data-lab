@@ -1,31 +1,15 @@
 #!/usr/bin/env python3
-"""Train a language-conditioned ACT policy using the lerobot conda environment.
+"""Train a scene-only ACT policy with LeRobot 0.5.x.
 
-必须在 lerobot conda 环境中运行：
-    conda run -n lerobot python training/scripts/train_act_lerobot.py \\
-        --dataset <panda_multi_task 数据集目录> \\
-        --schema configs/robot_schemas/panda_multi_task.yaml \\
-        --output /tmp/act_run \\
-        --epochs 50 \\
-        --chunk-size 50
-
-数据流：
-    frames.jsonl
-      ↓ load_rows()
-    list[dict]
-      ↓ language_instruction → TextEncoder(clip) → float32[512]
-      ↓ 拼接到 observation.state → state[8+512=520]
-    PandaMultiTaskDataset (torch.utils.data.Dataset)
-      ↓ DataLoader
-    ACTPolicy.forward() / compute_loss()
-      ↓ checkpoint
-    output/checkpoint.pt  +  metrics.json
+The v1 policy consumes Panda state[8] and one fixed third-person RGB frame.
+Language remains release metadata and is deliberately not model input.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -38,159 +22,198 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from training.encoders.text_encoder import build_encoder
 from training.device import cpu_state_dict, resolve_device
+from training.io.scene_cache import SCENE_KEY, SceneFrameCache
 from training.scripts.inspect_dataset import load_manifest, load_rows
 
-DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda_multi_task.yaml"
+DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda.yaml"
+IMAGE_SIZE = 224
+IMAGE_MEAN = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
+IMAGE_STD = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--dataset", type=Path, required=True)
-    p.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
-    p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--epochs", type=int, default=50)
-    p.add_argument("--chunk-size", type=int, default=50,
-                   help="ACT action chunk size (num_steps per prediction)")
-    p.add_argument("--n-obs-steps", type=int, default=1)
-    p.add_argument("--batch-size", type=int, default=8)
-    p.add_argument("--lr", type=float, default=1e-4)
-    p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--text-encoder", choices=["clip", "mean_hash"], default="clip")
-    p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
-    return p.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dataset", type=Path, required=True)
+    parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--chunk-size", type=int, default=50)
+    parser.add_argument("--n-obs-steps", type=int, default=1)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--validation-fraction", type=float, default=0.2)
+    parser.add_argument("--cache-root", type=Path, default=None)
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    return parser.parse_args()
 
 
 def load_schema(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-# ─────────────────────────────── Dataset ──────────────────────────────────────
+def _episode_counts(rows: list[dict[str, Any]]) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    for row in rows:
+        episode = int(row["episode_index"])
+        counts[episode] = counts.get(episode, 0) + 1
+    return counts
 
-class PandaMultiTaskDataset:
-    """将 JSONL 数据集转为 ACT 训练张量。
 
-    LeRobot ACT 0.5.x 要求 Transformer 主输入包含 image 或
-    ``observation.environment_state``。这里保留原始 ``observation.state`` 作为
-    robot state，并把 ``state + language_embedding`` 作为 environment state。
-    """
+def split_episode_ids(
+    rows: list[dict[str, Any]],
+    *,
+    validation_fraction: float,
+    seed: int,
+) -> tuple[set[int], set[int]]:
+    episode_ids = sorted({int(row["episode_index"]) for row in rows})
+    if len(episode_ids) < 2:
+        raise ValueError("scene ACT requires at least two episodes for episode-level validation")
+    if not 0.0 < validation_fraction < 1.0:
+        raise ValueError("validation_fraction must be in (0, 1)")
+    shuffled = np.random.default_rng(seed).permutation(episode_ids).tolist()
+    val_count = max(1, min(len(episode_ids) - 1, round(
+        len(episode_ids) * validation_fraction)))
+    val_ids = set(int(value) for value in shuffled[:val_count])
+    train_ids = set(episode_ids) - val_ids
+    return train_ids, val_ids
 
+
+def normalization_from_rows(rows: list[dict[str, Any]]) -> dict[str, list[float]]:
+    states = np.asarray([row["observation.state"] for row in rows], dtype=np.float32)
+    actions = np.asarray([row["action"] for row in rows], dtype=np.float32)
+    state_std = np.maximum(states.std(axis=0), 1e-6)
+    action_std = np.maximum(actions.std(axis=0), 1e-6)
+    return {
+        "state_mean": states.mean(axis=0).tolist(),
+        "state_std": state_std.tolist(),
+        "action_mean": actions.mean(axis=0).tolist(),
+        "action_std": action_std.tolist(),
+    }
+
+
+def _load_scene_tensor(path: Path, torch):
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for scene ACT image loading") from exc
+    with Image.open(path) as image:
+        image = image.convert("RGB")
+        width, height = image.size
+        scale = max(IMAGE_SIZE / width, IMAGE_SIZE / height)
+        resized = image.resize(
+            (round(width * scale), round(height * scale)),
+            resample=Image.Resampling.BILINEAR,
+        )
+        left = (resized.width - IMAGE_SIZE) // 2
+        top = (resized.height - IMAGE_SIZE) // 2
+        cropped = resized.crop((left, top, left + IMAGE_SIZE, top + IMAGE_SIZE))
+        array = np.asarray(cropped, dtype=np.float32) / 255.0
+    array = (array - IMAGE_MEAN) / IMAGE_STD
+    return torch.from_numpy(np.transpose(array, (2, 0, 1)).copy())
+
+
+class SceneACTDataset:
     def __init__(
         self,
         rows: list[dict[str, Any]],
-        text_encoder,
+        cache: SceneFrameCache,
+        normalization: dict[str, list[float]],
         *,
-        chunk_size: int = 50,
-        n_obs_steps: int = 1,
-        device: str = "cpu",
+        chunk_size: int,
     ) -> None:
         try:
-            import torch  # noqa: PLC0415
+            import torch
         except ImportError as exc:
-            raise RuntimeError(
-                "train_act_lerobot.py requires torch. "
-                "Please activate the lerobot conda environment."
-            ) from exc
-
-        self._torch = torch
-        self._device = device
-        self._chunk_size = chunk_size
-        self._n_obs_steps = n_obs_steps
+            raise RuntimeError("Activate the lerobot conda environment") from exc
+        if not rows:
+            raise ValueError("dataset split contains no frames")
         if chunk_size <= 0:
             raise ValueError("chunk_size must be positive")
-        if n_obs_steps != 1:
-            raise ValueError("LeRobot ACT 0.5.x currently requires n_obs_steps=1")
-
-        # 对每条唯一指令预先编码，避免重复调用编码器
-        _instr_cache: dict[str, np.ndarray] = {}
-
-        robot_states, env_states, actions, episode_ids = [], [], [], []
-        for row in rows:
-            state = np.asarray(row["observation.state"], dtype=np.float32)
-            action = np.asarray(row["action"], dtype=np.float32)
-            instr = str(row.get("language_instruction", row.get("task", "")))
-            if instr not in _instr_cache:
-                _instr_cache[instr] = text_encoder.encode(instr)
-            lang_vec = _instr_cache[instr]
-            robot_states.append(state)
-            env_states.append(np.concatenate([state, lang_vec], axis=0))
-            actions.append(action)
-            episode_ids.append(int(row["episode_index"]))
-
-        self._robot_states = torch.tensor(np.stack(robot_states), dtype=torch.float32)
-        self._env_states = torch.tensor(np.stack(env_states), dtype=torch.float32)
-        self._actions = torch.tensor(np.stack(actions), dtype=torch.float32)
-        self._episode_ids = episode_ids
-        self._episode_start, self._episode_end = self._episode_bounds(episode_ids)
-        print(
-            f"[Dataset] frames={len(rows)}, "
-            f"robot_state_dim={self._robot_states.shape[1]}, "
-            f"env_state_dim={self._env_states.shape[1]} (state+lang_embed), "
-            f"action_dim={self._actions.shape[1]}, "
-            f"chunk_size={chunk_size}, n_obs_steps={n_obs_steps}"
-        )
-
-    def __len__(self) -> int:
-        return len(self._robot_states)
-
-    def __getitem__(self, idx: int):
-        episode_end = self._episode_end[idx]
-
-        end = min(idx + self._chunk_size, episode_end)
-        chunk = self._actions[idx:end]
-        action_is_pad = self._torch.zeros(self._chunk_size, dtype=self._torch.bool)
-        if len(chunk) < self._chunk_size:
-            action_is_pad[len(chunk):] = True
-            pad = chunk[-1:].expand(self._chunk_size - len(chunk), -1)
-            chunk = self._torch.cat([chunk, pad], dim=0)
-        return self._robot_states[idx], self._env_states[idx], chunk, action_is_pad
+        self._torch = torch
+        self.rows = sorted(
+            rows, key=lambda row: (int(row["episode_index"]), int(row["frame_index"])))
+        self.cache = cache
+        self.chunk_size = chunk_size
+        self.state_mean = torch.tensor(
+            normalization["state_mean"], dtype=torch.float32)
+        self.state_std = torch.tensor(
+            normalization["state_std"], dtype=torch.float32)
+        self.action_mean = torch.tensor(
+            normalization["action_mean"], dtype=torch.float32)
+        self.action_std = torch.tensor(
+            normalization["action_std"], dtype=torch.float32)
+        self.states = torch.tensor(
+            np.asarray([row["observation.state"] for row in self.rows], dtype=np.float32))
+        self.actions = torch.tensor(
+            np.asarray([row["action"] for row in self.rows], dtype=np.float32))
+        self.episode_ids = [int(row["episode_index"]) for row in self.rows]
+        self.episode_ends = self._episode_ends(self.episode_ids)
 
     @staticmethod
-    def _episode_bounds(episode_ids: list[int]) -> tuple[list[int], list[int]]:
-        starts = [0] * len(episode_ids)
+    def _episode_ends(episode_ids: list[int]) -> list[int]:
         ends = [0] * len(episode_ids)
         cursor = 0
         while cursor < len(episode_ids):
-            episode_id = episode_ids[cursor]
             end = cursor + 1
-            while end < len(episode_ids) and episode_ids[end] == episode_id:
+            while end < len(episode_ids) and episode_ids[end] == episode_ids[cursor]:
                 end += 1
             for index in range(cursor, end):
-                starts[index] = cursor
                 ends[index] = end
             cursor = end
-        return starts, ends
+        return ends
 
+    def __len__(self) -> int:
+        return len(self.rows)
 
-# ─────────────────────────────── Training ─────────────────────────────────────
+    def __getitem__(self, index: int):
+        row = self.rows[index]
+        image = _load_scene_tensor(
+            self.cache.frame_path(
+                int(row["episode_index"]), int(row["frame_index"])),
+            self._torch,
+        )
+        state = (self.states[index] - self.state_mean) / self.state_std
+        end = min(index + self.chunk_size, self.episode_ends[index])
+        chunk = (self.actions[index:end] - self.action_mean) / self.action_std
+        action_is_pad = self._torch.zeros(
+            self.chunk_size, dtype=self._torch.bool)
+        if len(chunk) < self.chunk_size:
+            action_is_pad[len(chunk):] = True
+            chunk = self._torch.cat([
+                chunk,
+                chunk[-1:].expand(self.chunk_size - len(chunk), -1),
+            ])
+        return {
+            "observation.state": state,
+            SCENE_KEY: image,
+            "action": chunk,
+            "action_is_pad": action_is_pad,
+        }
+
 
 def build_act_policy(
-    robot_state_dim: int,
-    env_state_dim: int,
+    state_dim: int,
     action_dim: int,
     chunk_size: int,
     n_obs_steps: int,
     device: str,
 ):
-    """构建 lerobot ACTPolicy 实例。"""
     try:
-        from lerobot.policies.act.configuration_act import ACTConfig  # noqa: PLC0415
-        from lerobot.policies.act.modeling_act import ACTPolicy       # noqa: PLC0415
+        from lerobot.configs import FeatureType, PolicyFeature
+        from lerobot.policies.act.configuration_act import ACTConfig
+        from lerobot.policies.act.modeling_act import ACTPolicy
     except ImportError as exc:
         raise RuntimeError(
-            "lerobot is not installed. Activate: conda activate lerobot"
+            "LeRobot 0.5.x is required; activate the lerobot conda environment"
         ) from exc
-
-    from lerobot.configs import FeatureType, PolicyFeature  # noqa: PLC0415
-
     config = ACTConfig(
         input_features={
-            "observation.state": PolicyFeature(type=FeatureType.STATE, shape=(robot_state_dim,)),
-            "observation.environment_state": PolicyFeature(
-                type=FeatureType.ENV,
-                shape=(env_state_dim,),
-            ),
+            "observation.state": PolicyFeature(
+                type=FeatureType.STATE, shape=(state_dim,)),
+            SCENE_KEY: PolicyFeature(
+                type=FeatureType.VISUAL, shape=(3, IMAGE_SIZE, IMAGE_SIZE)),
         },
         output_features={
             "action": PolicyFeature(type=FeatureType.ACTION, shape=(action_dim,)),
@@ -199,10 +222,85 @@ def build_act_policy(
         chunk_size=chunk_size,
         n_action_steps=chunk_size,
         n_obs_steps=n_obs_steps,
+        vision_backbone="resnet18",
+        pretrained_backbone_weights=None,
     )
     policy = ACTPolicy(config)
     policy.to(device)
     return policy
+
+
+def _validate_release_contract(
+    manifest: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> None:
+    if manifest.get("action_type") != "ee_delta_gripper":
+        raise ValueError("scene ACT requires action_type=ee_delta_gripper")
+    if manifest.get("source_action_semantics") != "ee_pose_gripper_cmd_v1":
+        raise ValueError("source action semantics are not verified gripper commands")
+    if not bool(manifest.get("action_semantics_verified")):
+        raise ValueError("action_semantics_verified must be true")
+    if manifest.get("visual_keys") != [SCENE_KEY]:
+        raise ValueError(f"visual_keys must be [{SCENE_KEY!r}]")
+    if not bool(manifest.get("visual_required_for_training")):
+        raise ValueError("scene visual stream must be required for training")
+    if any(len(row["observation.state"]) != 8 for row in rows):
+        raise ValueError("observation.state must have dimension 8")
+    if any(len(row["action"]) != 7 for row in rows):
+        raise ValueError("action must have dimension 7")
+
+
+def _git_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def evaluate(policy, loader, dataset: SceneACTDataset, device: str) -> dict[str, Any]:
+    import torch
+    from lerobot.utils.constants import OBS_IMAGES
+
+    predicted: list[np.ndarray] = []
+    targets: list[np.ndarray] = []
+    losses: list[float] = []
+    policy.eval()
+    with torch.no_grad():
+        for batch in loader:
+            batch = {key: value.to(device) for key, value in batch.items()}
+            _loss, loss_dict = policy.forward(batch)
+            losses.append(float(loss_dict["l1_loss"]))
+            model_batch = dict(batch)
+            model_batch[OBS_IMAGES] = [batch[SCENE_KEY]]
+            actions_hat, _ = policy.model(model_batch)
+            valid = ~batch["action_is_pad"]
+            pred_raw = (
+                actions_hat * dataset.action_std.to(device)
+                + dataset.action_mean.to(device)
+            )
+            target_raw = (
+                batch["action"] * dataset.action_std.to(device)
+                + dataset.action_mean.to(device)
+            )
+            predicted.append(pred_raw[valid].cpu().numpy())
+            targets.append(target_raw[valid].cpu().numpy())
+    pred = np.concatenate(predicted)
+    target = np.concatenate(targets)
+    rmse = np.sqrt(np.mean(np.square(pred - target), axis=0))
+    gripper_accuracy = float(np.mean((pred[:, -1] <= 0.5) == (target[:, -1] <= 0.5)))
+    smoothness = (
+        float(np.mean(np.linalg.norm(np.diff(pred, axis=0), axis=1)))
+        if len(pred) > 1 else 0.0
+    )
+    return {
+        "validation_l1_loss_normalized": float(np.mean(losses)),
+        "validation_l1_loss": float(np.mean(np.abs(pred - target))),
+        "action_rmse": rmse.tolist(),
+        "gripper_open_close_accuracy": gripper_accuracy,
+        "predicted_action_smoothness": smoothness,
+        "task_success_equivalent": False,
+    }
 
 
 def train(
@@ -216,124 +314,131 @@ def train(
     batch_size: int,
     lr: float,
     seed: int,
-    text_encoder_backend: str,
+    validation_fraction: float,
+    cache_root: Path | None,
     device: str,
 ) -> dict[str, Any]:
     try:
-        import torch  # noqa: PLC0415
-        from torch.utils.data import DataLoader  # noqa: PLC0415
+        import torch
+        from torch.utils.data import DataLoader
     except ImportError as exc:
-        raise RuntimeError("Activate the lerobot conda environment.") from exc
-
-    resolved_device, device_info = resolve_device(device)
-    device = str(resolved_device)
-    print(f"[Train] Device: {device_info}")
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-
+        raise RuntimeError("Activate the lerobot conda environment") from exc
+    if n_obs_steps != 1:
+        raise ValueError("LeRobot ACT 0.5.x requires n_obs_steps=1")
     schema = load_schema(schema_path)
     rows = load_rows(dataset)
     manifest = load_manifest(dataset)
     if not rows:
-        raise ValueError("Dataset contains no frames.")
+        raise ValueError("dataset contains no frames")
+    _validate_release_contract(manifest, rows)
+    train_ids, val_ids = split_episode_ids(
+        rows, validation_fraction=validation_fraction, seed=seed)
+    train_rows = [row for row in rows if int(row["episode_index"]) in train_ids]
+    val_rows = [row for row in rows if int(row["episode_index"]) in val_ids]
+    normalization = normalization_from_rows(train_rows)
 
-    print(f"[Train] Loaded {len(rows)} frames from {dataset}")
-    encoder_kwargs = {"device": device} if text_encoder_backend == "clip" else {}
-    text_enc = build_encoder(text_encoder_backend, **encoder_kwargs)
-    print(f"[Train] Text encoder: {text_encoder_backend} (dim={text_enc.output_dim})")
+    cache = SceneFrameCache(dataset, manifest, cache_root=cache_root)
+    cache.prepare(_episode_counts(rows))
+    train_dataset = SceneACTDataset(
+        train_rows, cache, normalization, chunk_size=chunk_size)
+    val_dataset = SceneACTDataset(
+        val_rows, cache, normalization, chunk_size=chunk_size)
 
-    ds = PandaMultiTaskDataset(
-        rows,
-        text_enc,
-        chunk_size=chunk_size,
-        n_obs_steps=n_obs_steps,
-        device=device,
-    )
-    loader = DataLoader(ds, batch_size=batch_size, shuffle=True, drop_last=False)
-
-    robot_state_dim = ds._robot_states.shape[1]
-    env_state_dim = ds._env_states.shape[1]
-    action_dim = ds._actions.shape[1]
-    policy = build_act_policy(
-        robot_state_dim,
-        env_state_dim,
-        action_dim,
-        chunk_size,
-        n_obs_steps,
-        device,
-    )
+    resolved_device, device_info = resolve_device(device)
+    device = str(resolved_device)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    policy = build_act_policy(8, 7, chunk_size, n_obs_steps, device)
     optimizer = torch.optim.AdamW(policy.parameters(), lr=lr)
-
-    output.mkdir(parents=True, exist_ok=True)
-    history = []
-    t0 = time.time()
-
+    history: list[dict[str, float]] = []
+    started = time.time()
     for epoch in range(1, epochs + 1):
-        epoch_loss = 0.0
-        batches = 0
         policy.train()
-        for robot_states_b, env_states_b, actions_b, action_is_pad_b in loader:
-            robot_states_b = robot_states_b.to(device)
-            env_states_b = env_states_b.to(device)
-            actions_b = actions_b.to(device)
-            action_is_pad_b = action_is_pad_b.to(device)
+        total = 0.0
+        count = 0
+        for batch in train_loader:
+            batch = {key: value.to(device) for key, value in batch.items()}
             optimizer.zero_grad()
-            # ACT forward: 构建 batch dict
-            batch = {
-                "observation.state": robot_states_b,
-                "observation.environment_state": env_states_b,
-                "action": actions_b,
-                "action_is_pad": action_is_pad_b,
-            }
-            forward_output = policy.forward(batch)
-            if isinstance(forward_output, tuple):
-                loss, _loss_dict = forward_output
-            elif isinstance(forward_output, dict):
-                loss = forward_output["loss"]
-            else:
-                loss = forward_output
+            loss, _ = policy.forward(batch)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
             optimizer.step()
-            epoch_loss += float(loss.item())
-            batches += 1
+            total += float(loss.item())
+            count += 1
+        history.append({"epoch": epoch, "loss": total / max(count, 1)})
 
-        avg_loss = epoch_loss / max(batches, 1)
-        history.append({"epoch": epoch, "loss": avg_loss})
-        if epoch % max(1, epochs // 10) == 0 or epoch == epochs:
-            elapsed = time.time() - t0
-            print(f"  Epoch {epoch:4d}/{epochs}  loss={avg_loss:.6f}  ({elapsed:.1f}s)")
-
-    # 保存 checkpoint
-    checkpoint_path = output / "checkpoint.pt"
-    torch.save(cpu_state_dict(policy), checkpoint_path)
-    print(f"[Train] Saved checkpoint → {checkpoint_path}")
-
-    metrics = {
-        "policy_type": "act_lerobot",
-        "schema_id": schema.get("schema_id"),
-        "dataset": str(dataset),
+    evaluation = evaluate(policy, val_loader, val_dataset, device)
+    output.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "policy_type": "scene_act_lerobot",
+        "conditioning": "none",
+        "language_instruction_retained": bool(
+            manifest.get("has_language_instruction", False)),
+        "visual_key": SCENE_KEY,
+        "image_shape": [3, IMAGE_SIZE, IMAGE_SIZE],
+        "source_image_shape": list(
+            schema["observation"]["images"]["scene_rgb"]["shape"]),
+        "video_fps": float(manifest["video_fps"]),
+        "image_normalization": {
+            "range": [0.0, 1.0],
+            "mean": IMAGE_MEAN.tolist(),
+            "std": IMAGE_STD.tolist(),
+            "resize": "short_side_to_224_then_center_crop",
+        },
+        "action_type": manifest["action_type"],
+        "source_action_semantics": manifest["source_action_semantics"],
         "release_id": manifest.get("release_id"),
-        "has_language_instruction": manifest.get("has_language_instruction", False),
-        "text_encoder_backend": text_encoder_backend,
-        "text_encoder_dim": text_enc.output_dim,
-        "num_frames": len(rows),
-        "robot_state_dim": robot_state_dim,
-        "env_state_dim": env_state_dim,
-        "action_dim": action_dim,
+        "git_commit": _git_commit(),
+        "state_dim": 8,
+        "action_dim": 7,
         "chunk_size": chunk_size,
         "n_obs_steps": n_obs_steps,
+        "train_episode_ids": sorted(train_ids),
+        "validation_episode_ids": sorted(val_ids),
+        "normalization": normalization,
+    }
+    torch.save(
+        {"state_dict": cpu_state_dict(policy), "metadata": metadata},
+        output / "checkpoint.pt",
+    )
+    metrics = {
+        **metadata,
+        **evaluation,
+        "num_frames": len(rows),
+        "train_frames": len(train_rows),
+        "validation_frames": len(val_rows),
         "epochs": epochs,
         "batch_size": batch_size,
         "lr": lr,
-        "final_loss": history[-1]["loss"] if history else None,
         "training_history": history,
+        "elapsed_s": time.time() - started,
         "device": device_info,
+        "offline_metrics_are_not_task_success": True,
     }
     (output / "metrics.json").write_text(
-        json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8"
-    )
+        json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8")
     return metrics
+
+
+def load_scene_act_checkpoint(path: Path, device: str = "cpu"):
+    import torch
+
+    payload = torch.load(path, map_location=device, weights_only=False)
+    metadata = payload["metadata"]
+    policy = build_act_policy(
+        int(metadata["state_dim"]),
+        int(metadata["action_dim"]),
+        int(metadata["chunk_size"]),
+        int(metadata["n_obs_steps"]),
+        device,
+    )
+    policy.load_state_dict(payload["state_dict"])
+    policy.eval()
+    return policy, metadata
 
 
 def main() -> int:
@@ -349,20 +454,18 @@ def main() -> int:
             batch_size=args.batch_size,
             lr=args.lr,
             seed=args.seed,
-            text_encoder_backend=args.text_encoder,
+            validation_fraction=args.validation_fraction,
+            cache_root=args.cache_root,
             device=args.device,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Training output: {args.output}")
         print("Status: FAIL")
         print(f"Error: {exc}")
         return 1
-
-    print(f"\nTraining output: {args.output}")
-    print(f"Frames: {metrics['num_frames']}")
-    print(f"Robot state dim: {metrics['robot_state_dim']}")
-    print(f"Env state dim (with lang embed): {metrics['env_state_dim']}")
-    print(f"Final loss: {metrics['final_loss']:.6f}")
+    print(f"Training output: {args.output}")
+    print(f"Train/validation frames: {metrics['train_frames']}/{metrics['validation_frames']}")
+    print(f"Validation L1: {metrics['validation_l1_loss']:.6f}")
     print("Status: PASS")
     return 0
 

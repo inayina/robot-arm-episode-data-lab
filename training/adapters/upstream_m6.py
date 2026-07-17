@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ import numpy as np
 
 
 UPSTREAM_ACTION_TYPE = "ee_pose_gripper"
+REQUIRED_ACTION_SEMANTICS = "ee_pose_gripper_cmd_v1"
 DERIVED_ACTION_TYPE = "ee_delta_gripper"
 PHYSICAL_VALIDATION_GATES = frozenset({"batch_generator"})
 TRAINING_FILTER_ONLY_GATES = PHYSICAL_VALIDATION_GATES
@@ -144,6 +146,75 @@ def resolve_upstream_gate(source: Path) -> str | None:
     return "mixed"
 
 
+def resolve_action_semantics(source: Path) -> str | None:
+    semantics: set[str] = set()
+    for meta_path in _collect_meta_json_paths(source):
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        value = payload.get("action_semantics")
+        if not value and isinstance(payload.get("metadata"), dict):
+            value = payload["metadata"].get("action_semantics")
+        if value:
+            semantics.add(str(value))
+    if not semantics:
+        return None
+    return next(iter(semantics)) if len(semantics) == 1 else "mixed"
+
+
+def require_verified_action_semantics(source: Path) -> str:
+    semantics = resolve_action_semantics(source)
+    if semantics != REQUIRED_ACTION_SEMANTICS:
+        raise ValueError(
+            "upstream action semantics are unverified: expected "
+            f"{REQUIRED_ACTION_SEMANTICS!r}, got {semantics!r}; "
+            "legacy episodes must remain quarantined"
+        )
+    return semantics
+
+
+def _copy_scene_videos(source: Path, output: Path) -> dict[str, str]:
+    candidates = discover_scene_videos(source)
+    copied: dict[str, str] = {}
+    for path in candidates:
+        episode_index = int(path.stem.split("_", 1)[1])
+        relative = Path("videos") / "observation.images.scene" / path.name
+        destination = output / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+        copied[str(episode_index)] = relative.as_posix()
+    return copied
+
+
+def discover_scene_videos(source: Path) -> list[Path]:
+    root = source.resolve()
+    if source.name == "train" and source.parent.name.startswith("episode_"):
+        root = source.parent.parent
+    elif source.name.startswith("episode_"):
+        root = source.parent
+    return sorted(
+        root.glob("videos/chunk-*/observation.images.scene/episode_*.mp4")
+    )
+
+
+def resolve_capture_fps(source: Path) -> float | None:
+    values: set[float] = set()
+    for meta_path in _collect_meta_json_paths(source):
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        value = payload.get("capture_fps", payload.get("fps"))
+        if value is not None:
+            values.add(float(value))
+    if not values:
+        return None
+    if len(values) != 1:
+        raise ValueError(f"mixed capture fps values: {sorted(values)}")
+    return next(iter(values))
+
+
 def physical_validation_applied(upstream_gate: str | None) -> bool:
     return upstream_gate in PHYSICAL_VALIDATION_GATES
 
@@ -175,6 +246,7 @@ def write_adapted_dataset(
     source: Path,
     derive_ee_delta_action: bool,
     upstream_gate: str | None = None,
+    source_action_semantics: str | None = None,
 ) -> None:
     output.mkdir(parents=True, exist_ok=True)
     with (output / "frames.jsonl").open("w", encoding="utf-8") as handle:
@@ -184,6 +256,13 @@ def write_adapted_dataset(
     has_lang = any("language_instruction" in row for row in rows)
     has_success = any("success" in row for row in rows)
     resolved_gate = upstream_gate if upstream_gate is not None else resolve_upstream_gate(source)
+    semantics = (
+        source_action_semantics
+        if source_action_semantics is not None
+        else resolve_action_semantics(source)
+    )
+    video_files = _copy_scene_videos(source, output)
+    video_fps = resolve_capture_fps(source)
     manifest = {
         "dataset_format": "panda_jsonl_v0",
         "schema_id": schema["schema_id"],
@@ -194,6 +273,8 @@ def write_adapted_dataset(
         "source": "ros2-arm-teleoperation-suite",
         "source_path": str(source),
         "source_action_type": UPSTREAM_ACTION_TYPE,
+        "source_action_semantics": semantics,
+        "action_semantics_verified": semantics == REQUIRED_ACTION_SEMANTICS,
         "derive_ee_delta_action": bool(derive_ee_delta_action),
         "has_language_instruction": has_lang,
         "has_success_labels": has_success,
@@ -201,6 +282,10 @@ def write_adapted_dataset(
         "physical_validation_applied": physical_validation_applied(resolved_gate),
         "filter_scope": filter_scope_for_gate(resolved_gate),
         "frames": "frames.jsonl",
+        "visual_keys": ["observation.images.scene"] if video_files else [],
+        "visual_required_for_training": bool(video_files),
+        "video_fps": video_fps,
+        "video_files": {"observation.images.scene": video_files} if video_files else {},
     }
     (output / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True),

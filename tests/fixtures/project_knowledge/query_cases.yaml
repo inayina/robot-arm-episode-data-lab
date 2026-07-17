@@ -1,0 +1,49 @@
+- id: act_canonical_status
+  query: ACT是否已经完成canonical训练？
+  mode: fact
+  required_paths:
+    - training/scripts/train_act_lerobot.py
+    - training/scripts/train_act_smoke.py
+    - docs/portfolio/THREE_REPO_CANONICAL_FACTS.md
+  forbidden_kinds: [archive, legacy, reference, portfolio]
+  claim_status: insufficient_verified_run
+
+- id: unverified_resume_number
+  query: 94.399 ms能否作为已验证数字写入简历？
+  mode: portfolio
+  required_paths:
+    - docs/portfolio/CANONICAL_EXPERIMENT.md
+    - docs/portfolio/THREE_REPO_CANONICAL_FACTS.md
+    - evidence/downstream/benchmark_summary.json
+  forbidden_kinds: [archive, legacy, reference]
+  claim_status: needs_reconciliation
+
+- id: repository_roles
+  query: 三仓当前职责是什么？
+  mode: fact
+  required_paths: [AGENTS.md]
+  forbidden_kinds: [archive, legacy, reference, portfolio, spec]
+
+- id: explicit_legacy
+  query: KUKA legacy RRT抓取实现在哪里？
+  mode: legacy
+  required_kinds: [legacy]
+  forbidden_kinds: [archive, reference, portfolio]
+
+- id: runbook
+  query: 如何运行三仓闭环并复现handoff？
+  mode: runbook
+  required_kinds: [runbook]
+  forbidden_kinds: [archive, legacy, reference, portfolio, spec]
+
+- id: learning_reference
+  query: 学习机械臂数据契约的概念和原理
+  mode: learning
+  required_kinds: [reference]
+  forbidden_kinds: [archive, legacy, portfolio]
+
+- id: real_robot_boundary
+  query: 当前是否已经完成真实机器人部署和Sim2Real？
+  mode: fact
+  required_paths: [docs/portfolio/THREE_REPO_CANONICAL_FACTS.md]
+  forbidden_kinds: [archive, legacy, reference, portfolio, spec]

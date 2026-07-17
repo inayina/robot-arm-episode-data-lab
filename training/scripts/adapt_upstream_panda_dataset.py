@@ -13,7 +13,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from training.adapters.upstream_m6 import adapt_rows, resolve_upstream_gate, write_adapted_dataset
+from training.adapters.upstream_m6 import (
+    adapt_rows,
+    discover_scene_videos,
+    require_verified_action_semantics,
+    resolve_capture_fps,
+    resolve_upstream_gate,
+    write_adapted_dataset,
+)
 from training.scripts.inspect_dataset import inspect_dataset, load_rows
 
 DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda.yaml"
@@ -45,6 +52,12 @@ def load_schema(path: Path) -> dict:
 def main() -> int:
     args = parse_args()
     schema = load_schema(args.schema)
+    source_action_semantics = require_verified_action_semantics(args.input)
+    if not discover_scene_videos(args.input):
+        raise ValueError(
+            "scene-only visual adaptation requires observation.images.scene MP4 files")
+    if resolve_capture_fps(args.input) is None:
+        raise ValueError("scene-only visual adaptation requires capture_fps metadata")
     rows = load_rows(args.input)
     adapted_rows, action_type = adapt_rows(
         rows,
@@ -60,6 +73,7 @@ def main() -> int:
         source=args.input,
         derive_ee_delta_action=args.derive_ee_delta_action,
         upstream_gate=upstream_gate,
+        source_action_semantics=source_action_semantics,
     )
 
     print(f"Adapted upstream Panda dataset: {args.output}")

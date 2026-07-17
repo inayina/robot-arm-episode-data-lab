@@ -1,9 +1,11 @@
 # 文档索引
 
-作品集当前唯一主实验：[portfolio/CANONICAL_EXPERIMENT.md](portfolio/CANONICAL_EXPERIMENT.md)，
-机器可读证据：[../evidence/canonical_20260711/](../evidence/canonical_20260711/README.md)。
+新人建议按以下顺序阅读：本索引 → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) →
+[DATA_FLOW.md](DATA_FLOW.md) → [CLOSED_LOOP_RUNBOOK.md](CLOSED_LOOP_RUNBOOK.md)。
+作品集实验摘要见 [portfolio/CANONICAL_EXPERIMENT.md](portfolio/CANONICAL_EXPERIMENT.md)，
+机器可读证据入口见 [../evidence/README.md](../evidence/README.md)。
 
-面试和作品集展示优先看 **P0 文档**；本地 legacy PyBullet/KUKA 采集样例再看 **[开发指南](dev/quickstart.md)** 和 **[架构与模块地图](dev/architecture.md)**。
+面试和作品集展示优先看 **P0 文档**；Legacy PyBullet/KUKA 材料仅用于理解历史实现，不代表 Panda 当前主线。
 
 ## 日常开发（优先看这里）
 
@@ -17,21 +19,29 @@
 | [INTER_REPO_CONTRACTS.md](INTER_REPO_CONTRACTS.md) | **P0** 三仓交接 gate、handoff、feedback loop 和模板入口 |
 | [DEMO_GUIDE.md](DEMO_GUIDE.md) | **P0** 10 分钟可复现 mock Panda 闭环 |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | **P0** schema / action / checkpoint / handoff 排障 |
-| [../archive/README.md](../archive/README.md) | **Legacy 资产索引**（PyBullet/KUKA 代码与文档归档入口） |
-| [dev/quickstart.md](dev/quickstart.md) | legacy PyBullet/KUKA 安装、常用命令、Demo 入口 |
-| [dev/architecture.md](dev/architecture.md) | legacy PyBullet/KUKA 模块职责、Phase 命名对照 |
-| [dev/data_schema.md](dev/data_schema.md) | legacy PyBullet/KUKA episode 目录结构与字段 |
-| [dev/upstream_downstream_contracts.md](dev/upstream_downstream_contracts.md) | Panda 上游数据、仓库内训练输出、bridge replay handoff 契约 |
-| [dev/collection_pipeline.md](dev/collection_pipeline.md) | 采集链路、控制模式、规划器 |
 | [CLOSED_LOOP_RUNBOOK.md](CLOSED_LOOP_RUNBOOK.md) | **P0** 三仓 G0–G3 闭环跑手册 |
 | [../AGENTS.md](../AGENTS.md) | **P0** 三仓 Agent 规范 V2.1 |
+| [specs/PROJECT_EVIDENCE_AGENT_V1.md](specs/PROJECT_EVIDENCE_AGENT_V1.md) | Project Evidence Agent V1 设计、边界与验收标准；项目事实仍以 registry 选择出的代码、测试和产物为准 |
 
-## 历史规划与路线图
+Project Evidence Agent 命令：
+
+```bash
+python3 -m project_knowledge.cli query --mode auto --no-llm --query "三仓当前职责是什么？"
+python3 -m project_knowledge.cli audit --json-out /tmp/project-audit.json --markdown-out /tmp/project-audit.md
+python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
+```
+
+## Legacy 与历史规划（仅在明确查询历史实现时阅读）
 
 | 文档 | 用途 |
 |------|------|
 | [archive/README.md](archive/README.md) | 已完成 SPEC、路线图与媒体计划的统一归档索引 |
 | [legacy_pybullet/README.md](legacy_pybullet/README.md) | legacy PyBullet/KUKA 文档归档 |
+| [dev/quickstart.md](dev/quickstart.md) | Legacy PyBullet/KUKA 安装、命令与 Demo 入口 |
+| [dev/architecture.md](dev/architecture.md) | Legacy PyBullet/KUKA 模块职责与 Phase 命名 |
+| [dev/data_schema.md](dev/data_schema.md) | Legacy PyBullet/KUKA episode 字段 |
+| [dev/collection_pipeline.md](dev/collection_pipeline.md) | Legacy 采集、控制模式与规划器 |
+| [dev/upstream_downstream_contracts.md](dev/upstream_downstream_contracts.md) | 历史过渡版 Panda contract；当前契约以 [INTER_REPO_CONTRACTS.md](INTER_REPO_CONTRACTS.md) 为准 |
 
 ## 参考
 
@@ -64,12 +74,8 @@
 | **Panda P0 主线** | `PROJECT_OVERVIEW.md`, `DATA_FLOW.md`, `TRAINING_PIPELINE.md` | 中游 schema / validation / training / handoff |
 | **legacy PyBullet/KUKA** | `legacy_pybullet/README.md` | HAL / IK / RRT / grasp / LeRobot 早期样例 |
 
-更新进度快照：
-
-```bash
-手动维护 README 与本文档后，运行：
+维护 README 与本文档后运行：
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
-```
 ```

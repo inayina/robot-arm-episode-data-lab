@@ -109,9 +109,9 @@ Gazebo Harmonic 仿真
 
 | 结论 | 结果 | 证据路径 | 可证明 | 不可证明 |
 | :--- | :--- | :--- | :--- | :--- |
-| **自动化测试回归** | 33 项用例全部通过 (33 passed in 0.64s) | [tests_ci_summary_2026_05_14.md](file:///home/ina/ros2_ws/src/amr_warehouse_sim/docs/reports/tests_ci_summary_2026_05_14.md) | 证明 SQLite DB 操作、FastAPI 契约、Executor 状态机契约和 API 逻辑 100% 正确。 | 不代表 Gazebo 和物理导航 100% 成功（测试中使用 Mock ROS 模拟）。 |
-| **Headless 导航运行** | 累计 12 轮运行记录，5 次真实 Goal 均 `SUCCEEDED` | [repeat_navigation_test_report_2026_05_13.md](file:///home/ina/ros2_ws/src/amr_warehouse_sim/docs/reports/repeat_navigation_test_report_2026_05_13.md) | 证明 `shelf_2` (candidate) 成功导航（耗时 66s，5 次 recovery 重试后到达）；证明历史候选点 `candidate_dock_a` 导航通过。 | 不代表所有点位稳定。如 `station_a`、`station_b`、`shelf_1` 因 Lifecycle 波动在部分轮次被 Ready Gate 拦截并记为 `SKIPPED`，暴露了真实仿真波动。 |
-| **WMS 任务链闭环** | WMS HTTP 创建任务，Executor 消费并回写 Succeeded | [v2_validation_closure_2026_05_13.md](file:///home/ina/ros2_ws/src/amr_warehouse_sim/docs/reports/v2_validation_closure_2026_05_13.md) | 证明 `station_a` 导航任务回写成功：`id=1, target_name=station_a, status=succeeded, status_reason=NavigateToPose result: SUCCEEDED.` | 任务链仅支持单车单任务串行消费，未实现多车并行调度。 |
+| **自动化测试回归** | 33 项用例全部通过 (33 passed in 0.64s) | [tests_ci_summary_2026_05_14.md](https://github.com/inayina/amr_warehouse_navigation/blob/main/docs/reports/tests_ci_summary_2026_05_14.md) | 证明 SQLite DB 操作、FastAPI 契约、Executor 状态机契约和 API 逻辑 100% 正确。 | 不代表 Gazebo 和物理导航 100% 成功（测试中使用 Mock ROS 模拟）。 |
+| **Headless 导航运行** | 累计 12 轮运行记录，5 次真实 Goal 均 `SUCCEEDED` | [repeat_navigation_test_report_2026_05_13.md](https://github.com/inayina/amr_warehouse_navigation/blob/main/docs/reports/repeat_navigation_test_report_2026_05_13.md) | 证明 `shelf_2` (candidate) 成功导航（耗时 66s，5 次 recovery 重试后到达）；证明历史候选点 `candidate_dock_a` 导航通过。 | 不代表所有点位稳定。如 `station_a`、`station_b`、`shelf_1` 因 Lifecycle 波动在部分轮次被 Ready Gate 拦截并记为 `SKIPPED`，暴露了真实仿真波动。 |
+| **WMS 任务链闭环** | WMS HTTP 创建任务，Executor 消费并回写 Succeeded | [v2_validation_closure_2026_05_13.md](https://github.com/inayina/amr_warehouse_navigation/blob/main/docs/reports/v2_validation_closure_2026_05_13.md) | 证明 `station_a` 导航任务回写成功：`id=1, target_name=station_a, status=succeeded, status_reason=NavigateToPose result: SUCCEEDED.` | 任务链仅支持单车单任务串行消费，未实现多车并行调度。 |
 
 ### 关键难点与排障
 * **Lifecycle 启动时序与波动**：ROS 2 导航节点在无头启动时有极概率因初始位姿（Initial Pose）未发布或发布过晚导致节点挂起在 `inactive [2]`。本项目通过编写 Ready Gate 检测代码逻辑，发现一旦发生节点不可用，立刻在数据库回写 `status_reason=... lifecycle state is timeout/unavailable`，并将状态标记为 `pending` 留待下轮重试，避免了导航无响应导致系统白屏。
@@ -191,9 +191,9 @@ Gazebo Harmonic 仿真
 
 | 结论 | 结果 | 证据路径 | 可证明 | 不可证明 |
 | :--- | :--- | :--- | :--- | :--- |
-| **串口双向链路跑通** | 上行：`/imu/data` 47.5Hz, `/robot/state` 9.5Hz 正常发布。下行：CMDVEL 帧稳定转发。 | [Debug.md](file:///home/ina/Documents/PlatformIO/Projects/robot-state-monitor-v1/firmware/esp32_microros_bridge/Debug.md#L80-L97) | 证明 `ROS 2 -> ESP32 -> STM32 -> TB6612` 以及 `STM32 -> ESP32 -> ROS 2` 网桥已全部打通。 | 仅代表数据链路畅通，不代表硬件完全处于自动导航状态。 |
-| **电驱与电机闭环** | 电机可控旋转，编码器中断可稳定读取，PI 控制代码已烧录并支持单轴调试。 | [single_motor_control.cpp](file:///home/ina/Documents/PlatformIO/Projects/robot-state-monitor-v1/firmware/esp32_microros_bridge/src/motor/single_motor_control.cpp#L187-L200) | 证明底层硬件实现了增量式编码器中断计算与具备抗积分饱和（Anti-Windup）的 PI 闭环算法。 | 在数字孪生主分支中，电机的物理输出默认是关闭的（`kEnableMotorHardwareOutputs=false`），需开发者开启。 |
-| **数字孪生姿态同步** | Gazebo Harmonic 成功加载 `mpu6050` 静态模型，倾斜 MPU6050 硬件时，Gazebo 中模型同步发生姿态旋转。 | [README.md](file:///home/ina/Documents/PlatformIO/Projects/robot-state-monitor-v1/ros2/robot_state_monitor/README.md#L59-L68) | 证明 `/imu/filtered` 姿态四元数通过 ROS 2 节点被成功桥接到 Gazebo Sim 服务，实现姿态数字孪生。 | 位姿中仅包含 Roll 和 Pitch 旋转，因为 MPU6050 无磁力计，Yaw 轴已被代码锁定以防漂移，位置 (X, Y, Z) 固定。 |
+| **串口双向链路跑通** | 上行：`/imu/data` 47.5Hz, `/robot/state` 9.5Hz 正常发布。下行：CMDVEL 帧稳定转发。 | [Debug.md](https://github.com/inayina/ros2-robot-digital-twin/blob/main/firmware/esp32_microros_bridge/Debug.md#L80-L97) | 证明 `ROS 2 -> ESP32 -> STM32 -> TB6612` 以及 `STM32 -> ESP32 -> ROS 2` 网桥已全部打通。 | 仅代表数据链路畅通，不代表硬件完全处于自动导航状态。 |
+| **电驱与电机闭环** | 电机可控旋转，编码器中断可稳定读取，PI 控制代码已烧录并支持单轴调试。 | [single_motor_control.cpp](https://github.com/inayina/ros2-robot-digital-twin/blob/main/firmware/esp32_microros_bridge/src/motor/single_motor_control.cpp#L187-L200) | 证明底层硬件实现了增量式编码器中断计算与具备抗积分饱和（Anti-Windup）的 PI 闭环算法。 | 在数字孪生主分支中，电机的物理输出默认是关闭的（`kEnableMotorHardwareOutputs=false`），需开发者开启。 |
+| **数字孪生姿态同步** | Gazebo Harmonic 成功加载 `mpu6050` 静态模型，倾斜 MPU6050 硬件时，Gazebo 中模型同步发生姿态旋转。 | [README.md](https://github.com/inayina/ros2-robot-digital-twin/blob/main/ros2/robot_state_monitor/README.md#L59-L68) | 证明 `/imu/filtered` 姿态四元数通过 ROS 2 节点被成功桥接到 Gazebo Sim 服务，实现姿态数字孪生。 | 位姿中仅包含 Roll 和 Pitch 旋转，因为 MPU6050 无磁力计，Yaw 轴已被代码锁定以防漂移，位置 (X, Y, Z) 固定。 |
 
 ### 关键难点与排障
 * **编码器极性反向与积分饱和**：首次调试单电机闭环时，因接线导致编码器读数增加的方向与电机 TIM3 PWM 驱动的物理正向相反，形成了**正反馈**，导致 $K_i$ 累积到最大值引起电机暴冲失控。排查后，在 `app_config.h` 中设置 `kN20ClosedLoopBenchInvertEncoderDirection = true` 进行了逻辑反转，并在 PID 更新算法中加入抗积分饱和（Anti-Windup）门禁，当输出达到限幅且误差同向时停止积分累积，彻底解决了过冲暴冲问题。
@@ -267,9 +267,9 @@ Dashboard 看板中的数据流采用“真实联调数据为主，规划机制�
 
 | 结论 | 结果 | 证据路径 | 可证明 | 不可证明 |
 | :--- | :--- | :--- | :--- | :--- |
-| **后端单元/集成测试** | 42 项后端用例全部通过 (42 passed) | [full_pipeline_validation_report.md](file:///home/ina/workspace/robot-ops-dashboard/docs/full_pipeline_validation_report.md#L14) | 证明 FastAPI API 路径、Task Mapper 映射逻辑、API 异常捕获机制 100% 正确。 | 不代表物理硬件 100% 连通。 |
-| **Readiness 验证脚本** | 30 项联调指标全部通过 (PASS=30 WARN=0 FAIL=0) | [full_pipeline_validation_report.md](file:///home/ina/workspace/robot-ops-dashboard/docs/full_pipeline_validation_report.md#L13) | 验证了 Dashboard 后端与 WMS API 连通性、MQTT Broker、WebSocket 状态广播均打通。 | 证明了系统接口契约处于随时可联调的状态。 |
-| **电机 bench 联调通过** | 向 `:9000/api/robot/motor/cmd` 发送命令成功，下游收到 STOP 载荷。 | [full_pipeline_validation_report.md](file:///home/ina/workspace/robot-ops-dashboard/docs/full_pipeline_validation_report.md#L99-L103) | 证明了 Dashboard -> MQTT Broker -> ROS 2 电机话题的下行回路已被实机打通并验证。 | 不证明电机会长期持续运行。 |
+| **后端单元/集成测试** | 42 项后端用例全部通过 (42 passed) | [full_pipeline_validation_report.md](https://github.com/inayina/robot-ops-dashboard/blob/main/docs/full_pipeline_validation_report.md#L14) | 证明 FastAPI API 路径、Task Mapper 映射逻辑、API 异常捕获机制 100% 正确。 | 不代表物理硬件 100% 连通。 |
+| **Readiness 验证脚本** | 30 项联调指标全部通过 (PASS=30 WARN=0 FAIL=0) | [full_pipeline_validation_report.md](https://github.com/inayina/robot-ops-dashboard/blob/main/docs/full_pipeline_validation_report.md#L13) | 验证了 Dashboard 后端与 WMS API 连通性、MQTT Broker、WebSocket 状态广播均打通。 | 证明了系统接口契约处于随时可联调的状态。 |
+| **电机 bench 联调通过** | 向 `:9000/api/robot/motor/cmd` 发送命令成功，下游收到 STOP 载荷。 | [full_pipeline_validation_report.md](https://github.com/inayina/robot-ops-dashboard/blob/main/docs/full_pipeline_validation_report.md#L99-L103) | 证明了 Dashboard -> MQTT Broker -> ROS 2 电机话题的下行回路已被实机打通并验证。 | 不证明电机会长期持续运行。 |
 
 ### 关键难点与排障
 * **MQTT 控制下行偶发性中断**：实机调试时，前端通过 API `POST /api/robot/motor/cmd` 发送控制命令，FastAPI 后端已返回 200，但下游 ROS 2 节点未收到数据。排查后发现，由于 FastAPI 路由处理为短连接，`paho-mqtt` 客户端在没有开启循环监听的情况下直接调用 `publish()`，在网络抖动时可能因连接未完全建立就被垃圾回收销毁。为了解决此问题，在 `mqtt_motor_command.py` 中引入了 `mosquitto_pub` 的命令行 fallback 机制，一旦 python 连接未成功，立即通过 shell 调用本地 mosquitto 客户端补发，并为 python 实例补充了 `loop_start()`/`loop_stop()`，彻底消除了控制丢包问题。
@@ -337,7 +337,7 @@ Dashboard 看板中的数据流采用“真实联调数据为主，规划机制�
 * **修改内容**：修改 `publish_initial_pose.py` 的注入逻辑，在干净重启（Fresh Session）后的第 12-26 秒黄金窗口内强制连续发布 10 条 `start_zone` bit 位姿。
 * **验证方式**：在无头环境下调用 `ros2 lifecycle get /planner_server`，结果返回 `active [3]`，且 `ros2 action info /navigate_to_pose` 显示 Server 数量为 1。
 * **最终结果**：导航 Lifecycle 的全部激活率在 Fresh Session 干净启动下提升至 100%。
-* **代码依据**：[repeat_navigation_test_report_2026_05_13.md:L51-L71](file:///home/ina/ros2_ws/src/amr_warehouse_sim/docs/reports/repeat_navigation_test_report_2026_05_13.md#L51-L71)。
+* **代码依据**：[repeat_navigation_test_report_2026_05_13.md:L51-L71](https://github.com/inayina/amr_warehouse_navigation/blob/main/docs/reports/repeat_navigation_test_report_2026_05_13.md#L51-L71)。
 * **面试陈述**：
   > “在无头仿真调试中，我遇到了导航动作丢失的问题。通过编写 Python 脚本实时追踪 Nav2 节点的 Lifecycle 状态，我定位到 `planner_server` 在启动早期如果缺位姿变换会超时挂死在 inactive 状态。为了解决此问题，我调整了初始位姿的自动发布时机，在节点超时前完成注入，使得 5 核心节点 Lifecycle 的一次性激活成功率达到 100%，这也成了我们 Ready Gate 门禁的重要指标。”
 
@@ -347,7 +347,7 @@ Dashboard 看板中的数据流采用“真实联调数据为主，规划机制�
 * **修改内容**：在后端服务 `mqtt_motor_command.py` 中引入 `mosquitto_pub` 的命令行 Fallback 机制。一旦 Python 发布句柄捕获到异常或网络超时，直接通过 `subprocess` 调用系统本地的 `mosquitto_pub` 客户端强行向 Broker 发布载荷，并为 Python Paho 客户端补充 `loop_start()`/`loop_stop()`。
 * **验证方式**：网页端连续调整滑块，观察终端中 ROS 2 话题 `/motor/cmd` 输出。
 * **最终结果**：下行动作丢包率彻底清零，实现了 100% 的下行冗余可达。
-* **代码依据**：[full_pipeline_validation_report.md:L80-L103](file:///home/ina/workspace/robot-ops-dashboard/docs/full_pipeline_validation_report.md#L80-L103)。
+* **代码依据**：[full_pipeline_validation_report.md:L80-L103](https://github.com/inayina/robot-ops-dashboard/blob/main/docs/full_pipeline_validation_report.md#L80-L103)。
 * **面试陈述**：
   > “在开发 Dashboard 下行控制接口时，我发现 API 响应成功但电机话题数据偶发性丢失。通过抓包和分析后端异步进程，我判断是 FastAPI 的垃圾回收机制在 MQTT 物理握手完成前释放了客户端连接。为了解决这个问题，我采用了命令行的 fallback 冗余发布设计，利用系统级 mosquitto 客户端进行强制覆盖，并优化了 Python 的事件循环，确保了控制命令的绝对送达。”
 
@@ -357,7 +357,7 @@ Dashboard 看板中的数据流采用“真实联调数据为主，规划机制�
 * **修改内容**：在配置文件 `app_config.h` 中设置 `kN20ClosedLoopBenchInvertEncoderDirection = true` 进行软件层面极性反转；同时在 `speed_pid.cpp` 中加入抗积分饱和（Anti-Windup）门禁，当输出达到限幅且误差同方向时直接锁死积分累积。
 * **验证方式**：烧录后给目标 RPM 为 50.0，观察串口输出的 RPM 曲线和 Duty 值变化。
 * **最终结果**：电机能够稳定平滑地加速到 50.0 RPM，无超调暴冲现象。
-* **代码依据**：[single_motor_control.cpp:L168-L200](file:///home/ina/Documents/PlatformIO/Projects/robot-state-monitor-v1/firmware/esp32_microros_bridge/src/motor/single_motor_control.cpp#L168-L200)。
+* **代码依据**：[single_motor_control.cpp:L168-L200](https://github.com/inayina/ros2-robot-digital-twin/blob/main/firmware/esp32_microros_bridge/src/motor/single_motor_control.cpp#L168-L200)。
 * **面试陈述**：
   > “在调试嵌入式电机闭环控制时，由于硬件接线极性反向，电机出现了严重的积分饱和暴冲。我没有简单地通过手动调线解决，而是在固件中增加了编码器方向配置层，并在 PI 控制算法中引入了 Anti-Windup 抗积分饱和机制。当控制输出达到上限且误差无法消除时，暂停积分器累加，从而使系统即使在接线不匹配的情况下，也能保持稳定收敛。”
 
@@ -367,7 +367,7 @@ Dashboard 看板中的数据流采用“真实联调数据为主，规划机制�
 * **修改内容**：在上位机使用指定 QoS 配置的参数重新订阅：`ros2 topic echo --qos-reliability best_effort /imu/data`；并在状态网桥聚合层显式指定最佳努力（Best Effort）订阅配置。
 * **验证方式**：终端查看，成功读到惯导传感器载荷。
 * **最终结果**：数据链路成功打通，QoS 策略实现了一致匹配。
-* **代码依据**：[full_pipeline_validation_report.md:L120-L130](file:///home/ina/workspace/robot-ops-dashboard/docs/full_pipeline_validation_report.md#L120-L130)。
+* **代码依据**：[full_pipeline_validation_report.md:L120-L130](https://github.com/inayina/robot-ops-dashboard/blob/main/docs/full_pipeline_validation_report.md#L120-L130)。
 * **面试陈述**：
   > “在打通 micro-ROS 与上位机通信时，我遇到了底层发布正常但 ROS 2 topic 白屏的诡异现象。我通过排查 DDS 通信契约，定位到是底层为了硬件资源使用了 Best Effort QoS，而上位机默认使用 Reliable QoS，两者的可靠性策略不兼容。修改了上位机接收端的 QoS 规则后数据恢复正常。这也让我意识到在机器人集成中，通信策略的微小差异都会导致全链路的阻断。”
 

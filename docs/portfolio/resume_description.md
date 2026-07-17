@@ -15,10 +15,10 @@
 针对具身智能研发中“实时运动控制、离线AI策略训练、下游物理仿真评估”开发流程繁琐、调试环境臃肿的问题，**独立设计并实现了一套三仓解耦的具身闭环仿真与数据治理系统**。自主打通了从人类遥操作示范到仿真物理验证的端到端数据-物理双向循环。
 
 ### **核心工作与技术实现（STAR法则）**：
-*   **【系统架构与契约设计】** 自主设计了三仓解耦架构，制定了统一的机器人描述协议 [panda.yaml](file:///home/ina/robot-sim-lab/robot-arm-episode-data-lab/configs/robot_schemas/panda.yaml)，规范了 8 维状态（State）与 7 维末端动作（Action）的数学语义。从架构源头上将“物理校验”与“数据治理”解耦，消除多仓接口定义冲突。
+*   **【系统架构与契约设计】** 自主设计了三仓解耦架构，制定了统一的机器人描述协议 [panda.yaml](../../configs/robot_schemas/panda.yaml)，规范了 8 维状态（State）与 7 维末端动作（Action）的数学语义。从架构源头上将“物理校验”与“数据治理”解耦，消除多仓接口定义冲突。
 *   **【高频控制与多模态采集】** 基于 **ROS 2 (Jazzy)** 与 **MoveIt Servo** 自主搭建了 1kHz 实时末端笛卡尔伺服控制及阻抗控制层，加入了关节限位与急停安全保护机制；在 **MuJoCo** 物理仿真中实现遥操作示范的高频多模态轨迹录制，并将数据以高读写性能的 **Parquet** 格式进行持久化。
-*   **【中游数据治理与策略训练】** 独立开发了静态数据质量校验网关 (Quality Gate)，编写了 [inspect_dataset.py](file:///home/ina/robot-sim-lab/robot-arm-episode-data-lab/training/scripts/inspect_dataset.py) 基于关节步长 P99 限值与反向运动率自动过滤抖动与丢帧坏帧。使用 **PyTorch** 训练端到端行为克隆策略网络（MLP BC），实现离线 Loss 在 $10^{-4}$ 量级稳定收敛。
-*   **【下游解耦重放与验证】** 创新构建了中立动作流交接管道 (Handoff Pipeline)，编写了 [prepare_bridge_handoff.py](file:///home/ina/robot-sim-lab/robot-arm-episode-data-lab/training/scripts/prepare_bridge_handoff.py) 将模型预测出的动作解耦打包为无 ROS 依赖的轻量化 `jsonl` 动作包；在 **PyBullet** 中搭建物理重放与执行监控沙盒，评估轨迹偏差 (RMSE)，并利用机械臂雅可比矩阵（SVD 奇异值分解）在线监测关节奇异性风险，同时实时监控包含关节数据分布漂移（KL散度/Wasserstein距离）、关节速度突变与软限位触发等 Sim2Real 安全就绪度指标。
+*   **【中游数据治理与策略训练】** 独立开发了静态数据质量校验网关 (Quality Gate)，编写了 [inspect_dataset.py](../../training/scripts/inspect_dataset.py) 基于关节步长 P99 限值与反向运动率自动过滤抖动与丢帧坏帧。使用 **PyTorch** 训练端到端行为克隆策略网络（MLP BC），实现离线 Loss 在 $10^{-4}$ 量级稳定收敛。
+*   **【下游解耦重放与验证】** 创新构建了中立动作流交接管道 (Handoff Pipeline)，编写了 [prepare_bridge_handoff.py](../../training/scripts/prepare_bridge_handoff.py) 将模型预测出的动作解耦打包为无 ROS 依赖的轻量化 `jsonl` 动作包；在 **PyBullet** 中搭建物理重放与执行监控沙盒，评估轨迹偏差 (RMSE)，并利用机械臂雅可比矩阵（SVD 奇异值分解）在线监测关节奇异性风险，同时实时监控包含关节数据分布漂移（KL散度/Wasserstein距离）、关节速度突变与软限位触发等 Sim2Real 安全就绪度指标。
 
 ### **项目业绩（量化成果）**：
 *   **闭环验证**：基于 30 条真实遥操作示范轨迹（7.1万帧）独立跑通了“采集-清洗-训练-回放-评估”的系统大循环，回放末端均方根误差 (RMSE) 达到毫米级。
@@ -53,6 +53,6 @@
 
 ### Q3：下游的物理评估沙盒是如何工作的？为什么没有评估抓取成功率？
 *   **回答话术**：
-    > “下游的 PyBullet 物理重放沙盒（[panda_handoff.py](file:///home/ina/ros2_ws/src/ros2-moveit-pybullet-bridge/pybullet_bridge/pybullet_bridge/learning/panda_handoff.py)）通过轻量化读取中游导出的 `predicted_actions.jsonl`，在几何与运动学层面进行重放。它除了结算**‘轨迹偏差 RMSE’**之外，还通过计算机械臂雅可比矩阵的最小奇异值（SVD）来在线预警**‘关节奇异性风险’**（当最小奇异值 < 0.01 时触发警告），并联合计算**‘关节数据分布漂移（KL散度/Wasserstein距离）’、‘关节速度跳变’与‘软限位触发（Soft Limit）’**等 Sim2Real-readiness 风险与健康度指标。
+    > “下游的 PyBullet 物理重放沙盒（[panda_handoff.py](https://github.com/inayina/ros2-moveit-pybullet-bridge/blob/main/pybullet_bridge/pybullet_bridge/learning/panda_handoff.py)）通过轻量化读取中游导出的 `predicted_actions.jsonl`，在几何与运动学层面进行重放。它除了结算**‘轨迹偏差 RMSE’**之外，还通过计算机械臂雅可比矩阵的最小奇异值（SVD）来在线预警**‘关节奇异性风险’**（当最小奇异值 < 0.01 时触发警告），并联合计算**‘关节数据分布漂移（KL散度/Wasserstein距离）’、‘关节速度跳变’与‘软限位触发（Soft Limit）’**等 Sim2Real-readiness 风险与健康度指标。
     >
     > 我们严格遵守职责隔离的设计原则：具体的物理抓取成败（如积木是否被成功提起）在**上游数据采集时通过主轨自动标记**并保存在 episode 属性中。中游和下游为了防止物理逻辑多头定义带来的不一致，不重新推导抓取物理成败，仅评估运动执行质量并反馈给中游以修正数据集。”
