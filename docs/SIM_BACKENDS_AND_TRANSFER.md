@@ -16,7 +16,7 @@ MuJoCo upstream interaction
 
 | 仓库 | 主要后端 | 职责 |
 |---|---|---|
-| `ros2-arm-teleoperation-suite` | MuJoCo | 上游遥操作、控制栈、动力学仿真、传感器观测和 raw episode 产生 |
+| `ros2-arm-teleoperation-suite` | MuJoCo（默认）/ Isaac Sim（PoC） | 上游遥操作、控制栈、动力学仿真、传感器观测和 raw episode 产生 |
 | `robot-arm-episode-data-lab` | 仿真器无关数据层 | 统一 observation / action / state / episode / metadata / training schema |
 | `ros2-moveit-pybullet-bridge` | PyBullet | 下游轻量执行验证、接触参数排查、轨迹误差评估和 Sim2Real-readiness 分析 |
 
@@ -104,6 +104,15 @@ observation.state[8] = concat(observation.state[7], observation.gripper[1])
 | 夹爪建模 | 可做 contact hold、adaptive force、grasp debug | 更适合轻量接触参数扫描 | 下游评估应报告“风险和敏感性”，不是保证真实抓取 |
 
 这些差异不是架构错误，而是迁移评估的一部分。项目要展示的是：我知道差异在哪里，并且通过 schema、adapter、validation 和报告把差异显式化。
+
+## MuJoCo vs Isaac P5 Evidence
+
+2026-07-17 已完成每 backend 1 个、每个 25 帧的最小 Sim2Sim 分布比较。raw action 完全相同且两边 adapted schema 均 PASS，但 joint/EE/object/FT/gripper/RGB 初态分布明显不同，因此结果标记为 `EVIDENCE_ONLY`，不作为 gate。
+
+- 生成脚本：`training/scripts/compare_sim_backends.py`
+- 实测摘要：[`docs/portfolio/SIM2SIM_ISAAC_P5_EVIDENCE.md`](portfolio/SIM2SIM_ISAAC_P5_EVIDENCE.md)
+- 直接暴露的主要缺口：scene 初态未物理对齐、FT frame/语义不同、样本量不足。Isaac
+  effort command 已在后续 E1 完成固定序列实跑，但 learned-policy 闭环仍未接入。
 
 ## Current Evaluation Name
 

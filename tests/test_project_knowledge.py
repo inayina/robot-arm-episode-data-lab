@@ -146,7 +146,7 @@ def test_auto_routing_is_deterministic():
     assert core.route_mode("三仓职责") == "fact"
 
 
-def test_act_query_cannot_claim_completed_canonical_training():
+def test_act_query_reports_verified_diagnostic_run_without_task_success():
     result = core.query_project("ACT是否已经完成canonical训练？", mode="fact", no_llm=True)
     paths = {item.chunk.relative_path for item in result.evidence}
     assert {
@@ -154,9 +154,10 @@ def test_act_query_cannot_claim_completed_canonical_training():
         "training/scripts/train_act_smoke.py",
         "docs/portfolio/THREE_REPO_CANONICAL_FACTS.md",
     } <= paths
-    assert result.claims[0]["status"] == "insufficient_verified_run"
-    assert result.claims[0]["verified"] is False
+    assert result.claims[0]["status"] == "verified_diagnostic_run"
+    assert result.claims[0]["verified"] is True
     assert result.claims[0]["code_present"] is True
+    assert result.claims[0]["task_success_verified"] is False
     assert all(item.chunk.entry.metadata.kind not in {"archive", "legacy", "reference", "portfolio"}
                for item in result.evidence)
 
@@ -304,7 +305,8 @@ def test_legacy_cli_and_shell_wrapper_subprocesses():
     )
     assert script.returncode == 0, script.stderr
     assert "证据类型:" in script.stdout
-    assert "无法确认 canonical 完整训练产物" in script.stdout
+    assert "ACT diagnostic training and bounded Isaac evaluation are verified" in script.stdout
+    assert '"task_success_verified": false' in script.stdout
     wrapper = subprocess.run(
         [str(ROOT / "bin" / "ask-project"), "三仓当前职责是什么？"],
         cwd=ROOT, env=env, capture_output=True, text=True, check=False,

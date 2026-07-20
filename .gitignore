@@ -8,6 +8,12 @@ venv/
 *.egg-info/
 .marscode/
 
+# IDE / local editor
+.vscode/
+.idea/
+*.swp
+*.code-workspace
+
 # Local/generated episode data (regenerate with scripts/batch_collect.py)
 dataset/
 dataset/v1/

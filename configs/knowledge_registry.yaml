@@ -384,7 +384,21 @@ overrides:
     depends_on:
       - evidence/downstream/benchmark_summary.json
       - training/reports/panda_mlp_bc/mlp_metrics.json
-    last_verified: 2026-07-14
+    last_verified: 2026-07-20
+  - repository: robot-arm-episode-data-lab
+    path: docs/EVALUATION_REPORT.md
+    kind: canonical
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 82
+    authoritative_for: [current_act_evaluation]
+    component: [canonical_evidence, training]
+    tags: [panda, act, isaac, evaluation, current_status]
+    depends_on:
+      - evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json
+      - evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json
+      - evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json
+    last_verified: 2026-07-20
   - repository: robot-arm-episode-data-lab
     path: docs/portfolio/CANONICAL_EXPERIMENT.md
     kind: portfolio

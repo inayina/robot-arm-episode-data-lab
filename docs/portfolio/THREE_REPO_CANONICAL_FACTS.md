@@ -28,10 +28,25 @@
 | 仓库 | 输入 | 处理 | 输出 | 明确不负责 | 状态 | 主要证据 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ros2-arm-teleoperation-suite` | 目标/遥操作或 batch 任务输入 | 安全与运动控制、MoveIt Servo、MuJoCo 交互、episode 录制、上游物理门禁 | raw episode、`episode_*/train/`、`meta.json`、G0 validation | 中游 schema/release/training；下游 PyBullet replay/risk benchmark | `implemented_and_verified` | `docs/AGENTS.md:13`, `docs/AGENTS.md:26`, `docs/AGENTS.md:37`, `docs/AGENTS.md:54`, `src/synth_data_gen/synth_data_gen/batch_generator.py:933`, `evidence/upstream/validate_dataset.json` |
-| `robot-arm-episode-data-lab` | 上游 raw Panda episode | adapter、schema/data quality validation、release、EDA、MLP BC、offline eval、predicted action replay、bridge handoff | `frames.jsonl`、release manifest、metrics、`predicted_actions.jsonl`、bridge handoff bundle | ROS 2 实时控制、MuJoCo 物理执行、PyBullet replay 执行、实机控制 | `implemented_and_verified` for release/MLP/handoff; ACT is lower confidence | `AGENTS.md:45`, `configs/robot_schemas/panda.yaml:23`, `training/adapters/upstream_m6.py:12`, `training/scripts/inspect_dataset.py:303`, `training/scripts/train_mlp_policy.py:1`, `training/scripts/prepare_bridge_handoff.py:247` |
+| `robot-arm-episode-data-lab` | 上游 raw Panda episode 与 runtime outcome | adapter、schema/data quality validation、release、ACT/MLP training、offline eval、runtime summary aggregation、model card/SOP、bridge handoff | `frames.jsonl`、release manifest、checkpoint/metrics、evaluation summary/report、bridge handoff | ROS 2 实时控制、MuJoCo/Isaac 物理执行、PyBullet replay 执行、实机控制、重新推导上游 physical success | `implemented_and_verified` for release/training/evaluation aggregation/handoff | `AGENTS.md`, `configs/robot_schemas/panda.yaml`, `training/scripts/train_act_lerobot.py`, `training/scripts/aggregate_evaluation_summary.py`, `docs/EVALUATION_REPORT.md` |
 | `ros2-moveit-pybullet-bridge` | midstream bridge handoff | 静态校验、JSONL replay、Panda action adapter、PyBullet replay、tracking/distribution monitoring、risk/fault benchmark | downstream benchmark summary/report | raw episode 采集、数据清洗、模型训练、真实机械臂驱动、实机 Sim2Real | `implemented_and_verified` for loader/adapter/tests and smoke benchmark; broader monitoring is partially verified | `docs/AGENTS.md:9`, `pybullet_bridge/pybullet_bridge/learning/panda_handoff.py:34`, `pybullet_bridge/pybullet_bridge/learning/jsonl_action_replay_policy.py:20`, `pybullet_bridge/pybullet_bridge/learning/panda_action_adapter.py:43`, `scripts/benchmark_system.py:439`, `pybullet_bridge/test/test_panda_handoff.py:46` |
 
-## Canonical Experiment
+## Current ACT Evaluation Experiment
+
+| 项 | 当前事实 | 状态 | 证据 |
+|---|---|---|---|
+| E2 selected checkpoint | 30-episode descend ACT；5 epochs；用于权威 E3 nominal20 | `implemented_and_verified` diagnostic baseline | `docs/E2_E3_MODEL_CARD.md`, `data/e2_500hz_act_random30_descend_conservative_5epoch_20260719/metrics.json` |
+| E3 nominal20 | seeds 2000–2019；reach 10/20；grasp/lift/place 0/20；`go_no_go=no_go` | `implemented_and_verified` runtime diagnostic | `evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json` |
+| Evaluator validation | invalid v0 隔离；v1 command/state 分离、FT 接入、2101/2102 preflight PASS | `implemented_and_verified` | `docs/EMBODIED_POLICY_EVALUATION_SOP.md`, `evidence/e3_gt_preflight_v1_20260719/preflight_summary.json` |
+| E3.5 scripted oracle | v1 lift 0/5；修物理/contact/GT 后 v2b lift 5/5 | `implemented_and_verified` physics gate | `evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json` |
+| Close→lift release | release_id 路径含 `random35`，权威 manifest 为 40 episodes / 9,779 frames | `implemented_and_verified` with provenance alias | `data/releases/e2_500hz_random35_closelift_20260720/manifest.json`, `PROVENANCE.md` |
+| E3.6 close→lift model | 5-seed interface 5/5；reach/grasp/lift 0/0/0；5/5 `HOME_NO_CLOSE` | `implemented_and_verified` runtime No-Go | `evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json` |
+| E4 | 四类 shift、100+ bounded rollout | `documented_plan_only`; blocked by zero-lift gate | `docs/portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md` |
+
+结论：ACT diagnostic training 与 Isaac bounded evaluation 已有可追溯产物；**learned-policy task
+success 未验证且当前为 No-Go**。不得把“ACT run 已完成”写成“ACT 抓取成功”。
+
+## Historical MLP / Handoff Baseline
 
 | 项 | 当前事实 | 状态 | 证据 |
 | --- | --- | --- | --- |
@@ -70,9 +85,9 @@
 | --- | --- | --- | --- |
 | MLP BC | 低维 state 到 `ee_delta_gripper`，feature contract 排除图像/触觉 | `implemented_and_verified` | `training/scripts/train_mlp_policy.py:166`, `training/reports/panda_mlp_bc/mlp_metrics.json` |
 | ACT smoke | 文件名含 ACT 但实际是 ridge/linear smoke baseline | `smoke_or_mock_only` | `training/scripts/train_act_smoke.py:1` |
-| LeRobot ACT script | 有 LeRobot ACTPolicy 构建代码，但阶段 1 未发现 canonical 完整训练产物 | `implemented_not_fully_verified` | `training/scripts/train_act_lerobot.py:1`, `training/scripts/train_act_lerobot.py:168` |
-| Offline eval | 当前证据是 loss/MAE 和 replay JSONL 检查，不等同任务成功率 | `implemented_and_verified` | `training/reports/panda_mlp_bc/mlp_metrics.json`, `training/reports/panda_mlp_bc/bridge_handoff/replay_check.json` |
-| Online policy rollout | 阶段 1 未发现中游在线 rollout 成功证据 | `not_supported` | `docs/CLOSED_LOOP_RUNBOOK.md:172` |
+| LeRobot ACT training | scene ACT、episode split、stage-balanced sampling、多个 3/5-epoch checkpoint 与 hash 已落地 | `implemented_and_verified` diagnostic training | `training/scripts/train_act_lerobot.py`, `docs/E2_E3_MODEL_CARD.md`, `data/e2_500hz_act_random35_closelift_5epoch_20260720/metrics.json` |
+| Offline eval | ACT/MLP loss、action RMSE、gripper accuracy 与 replay checks；不等同任务成功率 | `implemented_and_verified` | `docs/EVALUATION_REPORT.md`, `training/reports/panda_mlp_bc/mlp_metrics.json` |
+| Online policy rollout | ACT→Isaac 有界 rollout、continuous GT、20-seed summary 与 5-seed gate 已完成；task success 为 0 | `implemented_and_verified` diagnostic No-Go | `evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json`, `evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json` |
 
 ## Downstream Runtime Facts
 
@@ -92,10 +107,10 @@
 | --- | --- | --- |
 | 已完成真实机械臂部署 | 当前项目证据不足，无法确认 | `not_supported` |
 | 已完成真实 Sim2Real | 当前项目证据不足，无法确认；只能写 Sim2Sim / Sim2Real-readiness | `not_supported` |
-| 稳定在线自主抓取 | 当前项目证据不足，无法确认 | `not_supported` |
+| 稳定在线自主抓取 | 已有 learned-policy rollout，但 E3 为 0/20、E3.6 lift 0/5，不能声称成功 | `not_supported` |
 | MLP loss 提升等同抓取成功率提升 | 当前项目证据不足，无法确认 | `not_supported` |
 | 下游 PyBullet replay 已验证物理抓取成功 | 当前项目证据不足，无法确认；downstream 主要验证 replay/monitor/risk | `implemented_not_fully_verified` for replay, not for grasp success |
-| ACT 已完成 canonical training/run | 当前项目证据不足，无法确认 | `implemented_not_fully_verified` for code only |
+| ACT 已完成 diagnostic training/run | 已确认；但 learned-policy task success 未通过 | `implemented_and_verified` diagnostic No-Go |
 
 ## Legacy Boundary
 

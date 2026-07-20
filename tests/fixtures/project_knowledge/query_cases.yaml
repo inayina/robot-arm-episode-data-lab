@@ -6,7 +6,7 @@
     - training/scripts/train_act_smoke.py
     - docs/portfolio/THREE_REPO_CANONICAL_FACTS.md
   forbidden_kinds: [archive, legacy, reference, portfolio]
-  claim_status: insufficient_verified_run
+  claim_status: verified_diagnostic_run
 
 - id: unverified_resume_number
   query: 94.399 ms能否作为已验证数字写入简历？

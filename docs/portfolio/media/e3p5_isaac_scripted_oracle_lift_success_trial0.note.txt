@@ -1,0 +1,2 @@
+frames=290
+source=evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_video_20260720/videos/trial_0.mp4

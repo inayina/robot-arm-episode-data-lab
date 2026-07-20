@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/summary.schema.json",
+  "title": "Panda evaluation summary",
+  "description": "Offline aggregation output; it may aggregate runtime truth but may not create physical success labels.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "evaluation_run_id",
+    "execution_status",
+    "evidence_level",
+    "source",
+    "counts",
+    "overall_success",
+    "per_suite",
+    "subgoal_funnel",
+    "failure_pareto",
+    "seed_results",
+    "repeatability",
+    "baseline_delta",
+    "top_failure_videos",
+    "recommendations",
+    "go_no_go",
+    "limitations"
+  ],
+  "properties": {
+    "contract_version": {"const": "evaluation_contract_v0"},
+    "artifact_type": {"const": "summary"},
+    "evaluation_run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"},
+    "execution_status": {"enum": ["not_executed", "partial", "completed", "aborted"]},
+    "evidence_level": {"enum": ["contract_fixture", "runtime_observed"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_manifest_path", "run_manifest_sha256", "episode_results_path", "episode_results_sha256", "aggregator_repository"],
+      "properties": {
+        "run_manifest_path": {"type": "string", "minLength": 1},
+        "run_manifest_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "episode_results_path": {"type": "string", "minLength": 1},
+        "episode_results_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "aggregator_repository": {"const": "robot-arm-episode-data-lab"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planned", "completed", "aborted", "infrastructure_failure"],
+      "properties": {
+        "planned": {"type": "integer", "minimum": 0},
+        "completed": {"type": "integer", "minimum": 0},
+        "aborted": {"type": "integer", "minimum": 0},
+        "infrastructure_failure": {"type": "integer", "minimum": 0}
+      }
+    },
+    "overall_success": {"$ref": "#/$defs/rateMetric"},
+    "per_suite": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["suite_id", "success"],
+        "properties": {
+          "suite_id": {"enum": ["nominal", "object_pose", "visual", "camera", "dynamics"]},
+          "success": {"$ref": "#/$defs/rateMetric"}
+        }
+      }
+    },
+    "subgoal_funnel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reach", "grasp", "lift", "transport", "place", "release"],
+      "properties": {
+        "reach": {"$ref": "#/$defs/rateMetric"},
+        "grasp": {"$ref": "#/$defs/rateMetric"},
+        "lift": {"$ref": "#/$defs/rateMetric"},
+        "transport": {"$ref": "#/$defs/rateMetric"},
+        "place": {"$ref": "#/$defs/rateMetric"},
+        "release": {"$ref": "#/$defs/rateMetric"}
+      }
+    },
+    "failure_pareto": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["failure_stage", "failure_reason", "count", "fraction"],
+        "properties": {
+          "failure_stage": {"enum": ["reset", "reach", "grasp", "lift", "transport", "place", "release", "system"]},
+          "failure_reason": {"type": "string", "minLength": 1},
+          "count": {"type": "integer", "minimum": 1},
+          "fraction": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "seed_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seed", "execution_status", "success", "failure_reason"],
+        "properties": {
+          "seed": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+          "execution_status": {"enum": ["planned", "completed", "aborted", "infrastructure_failure"]},
+          "success": {"type": ["boolean", "null"]},
+          "failure_reason": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "repeatability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repeated_seed_count", "flaky_seed_count", "agreement_rate"],
+      "properties": {
+        "repeated_seed_count": {"type": "integer", "minimum": 0},
+        "flaky_seed_count": {"type": "integer", "minimum": 0},
+        "agreement_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      }
+    },
+    "baseline_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_run_id", "success_rate_delta", "comparison_status"],
+      "properties": {
+        "baseline_run_id": {"type": ["string", "null"]},
+        "success_rate_delta": {"type": ["number", "null"], "minimum": -1, "maximum": 1},
+        "comparison_status": {"enum": ["not_requested", "not_available", "computed"]}
+      }
+    },
+    "top_failure_videos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seed", "failure_reason", "video_path"],
+        "properties": {
+          "seed": {"type": "integer", "minimum": 0},
+          "failure_reason": {"type": "string", "minLength": 1},
+          "video_path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "recommendations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_collection", "model_changes", "simulator_calibration"],
+      "properties": {
+        "data_collection": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "model_changes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "simulator_calibration": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "go_no_go": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {"enum": ["not_assessed", "go", "no_go", "requires_review"]},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidence_level": {"const": "contract_fixture"}}},
+      "then": {
+        "properties": {
+          "execution_status": {"const": "not_executed"},
+          "counts": {"properties": {"completed": {"const": 0}, "aborted": {"const": 0}, "infrastructure_failure": {"const": 0}}},
+          "overall_success": {"properties": {"numerator": {"const": 0}, "denominator": {"const": 0}, "rate": {"type": "null"}, "ci95_low": {"type": "null"}, "ci95_high": {"type": "null"}}},
+          "go_no_go": {"properties": {"status": {"const": "not_assessed"}}}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"execution_status": {"const": "completed"}}},
+      "then": {
+        "properties": {
+          "evidence_level": {"const": "runtime_observed"},
+          "overall_success": {"properties": {"rate": {"type": "number"}, "ci95_low": {"type": "number"}, "ci95_high": {"type": "number"}}}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "rateMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator", "denominator", "rate", "ci_method", "ci95_low", "ci95_high"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 0},
+        "denominator": {"type": "integer", "minimum": 0},
+        "rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "ci_method": {"enum": ["wilson", "bootstrap", "not_computed"]},
+        "ci95_low": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "ci95_high": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

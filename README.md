@@ -8,205 +8,220 @@
 
 [![CI](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.10%2B-green.svg)
-![Panda](https://img.shields.io/badge/Robot-Franka%20Panda-0f766e)
-![MLP BC](https://img.shields.io/badge/Policy-MLP%20BC-2563eb)
-![Scope](https://img.shields.io/badge/Scope-Sim2Sim%20%2F%20Readiness-f59e0b)
+![Robot](https://img.shields.io/badge/Robot-Franka%20Panda-0f766e)
+![Policy](https://img.shields.io/badge/Policy-LeRobot%20ACT-2563eb)
+![Evaluation](https://img.shields.io/badge/Evaluation-MuJoCo%20%E2%86%92%20Isaac-f59e0b)
 
 ---
 
 ## 中文
 
-`robot-arm-episode-data-lab` 是三仓 Panda 闭环的**中游数据与训练实验室**：消费上游 ROS 2 / MuJoCo 生成的 Panda raw episode，完成 schema 适配、数据质量检查、release、EDA、MLP BC 离线训练评估、predicted action JSONL 与下游 `bridge_handoff/` 打包。
+这是一个面向 **Panda 具身操作模型评测** 的三仓闭环项目。本仓位于中游，负责把上游
+MuJoCo 专家 episode 转换成可审计 release，训练 ACT，并将 learned-policy 在 Isaac 中的
+interface、safety、behavior 与 task outcome 分开评估。
 
-> 当前定位：Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环。  
-> 不声称 real-robot deployment、completed Sim2Real、稳定在线自主抓取，也不把 offline loss 等同于任务成功率。
+项目当前最重要的结果不是“模型抓取成功”，而是建立了一条能够发现错误评测器、区分物理链
+故障与策略故障、并驱动定向数据生产的评测闭环：
 
-### 30 秒回答
+- ACT home-start nominal：**0/20 task success，No-Go**；
+- Isaac scripted oracle：修复物理链后 **lift 5/5，Pass**；
+- close→lift 定向数据新模型：interface 5/5 PASS，但真实 lift **0/5**，因此停止扩大评测，
+  **不进入完整 E4**。
 
-| 问题 | 答案 |
-| --- | --- |
-| 这是哪个仓？ | 三仓闭环中游：data adapter / inspector / release / training / handoff |
-| 输入是什么？ | 上游 `ros2-arm-teleoperation-suite` 的 Panda 仿真 raw episode |
-| 输出是什么？ | `panda_30_release_v0`、MLP metrics、predicted actions、`panda_30_mlp_bridge_v0` handoff |
-| 当前真正完成了什么？ | 30 episodes / 71,737 frames 的 release、MLP BC、same-split linear comparison、handoff、downstream smoke 证据 |
-| 没完成什么？ | real robot、completed Sim2Real、online ACT runtime、下游物理抓取成功验证 |
+> 项目范围：Panda 多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证。<br>
+> 不声称真实机械臂部署、completed Sim2Real、稳定在线自主抓取；offline loss 不等于任务成功率。
 
-## 三仓库链路
+### 30 秒说明
 
-![Canonical three-repo dataflow](assets/diagrams/three_repo_canonical_dataflow.svg)
+| 问题 | 回答 |
+|---|---|
+| 做了什么？ | 数据 gate、immutable release、ACT、Isaac 有界 rollout、continuous GT、失败视频、评测器预检和 scripted oracle |
+| 最关键的工程判断？ | interface PASS ≠ task PASS；oracle 5/5 证明 ACT 失败不是“Isaac 根本抓不起来” |
+| 当前模型效果？ | 权威 E3 nominal 为 0/20；close→lift 新模型 5-seed 仍 lift 0/5 |
+| 为什么不继续堆数据/跑 E4？ | 已出现 floor effect；问题仍是 home→对准→闭合，扩大 suite 不能改善归因 |
+| 求职价值？ | 展示评测契约、失败归因、实验止损、跨仓边界、可复现报告与诚实结论 |
 
-| 层级 | 仓库 | 本次 canonical experiment 中的职责 |
-| --- | --- | --- |
-| 上游 | `ros2-arm-teleoperation-suite` | ROS 2/MuJoCo 仿真交互、batch generation、recorder、`upstream_gate=batch_generator` |
-| 中游 | `robot-arm-episode-data-lab` | adapter、inspection、release、EDA、MLP BC、predicted JSONL、bridge handoff |
-| 下游 | `ros2-moveit-pybullet-bridge` | handoff loader、Panda PyBullet replay、tracking/distribution/risk benchmark |
+## 评测逻辑
 
-统一事实源：[docs/portfolio/THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md)  
-README 审计：[docs/portfolio/THREE_REPO_README_AUDIT.md](docs/portfolio/THREE_REPO_README_AUDIT.md)  
-图片证据索引：[docs/portfolio/EVIDENCE_INDEX.md](docs/portfolio/EVIDENCE_INDEX.md)
-
-## Current Verified Evidence
-
-当前证据由两个独立 run 构成，不能拼接成同一次端到端性能实验：
-
-- `panda_30_mlp_20260711`：30-episode 数据、release、MLP BC 与 handoff；
-- `panda_closed_loop_20260712_214747`：独立的 1-episode 下游 replay smoke。
-
-| Gate / Artifact | 当前事实 | 证据 |
-| --- | --- | --- |
-| G0 upstream dataset | 30 Panda simulation episodes, 71,737 frames, 30/30 valid | `evidence/upstream/validate_dataset.json` |
-| G1 release | `panda_30_release_v0`, `state[8] -> ee_delta_gripper[7]` | `data/exports/panda_30_release/manifest.json` |
-| MLP BC | 100 epochs, 24 train episodes / 6 test episodes, CUDA | `training/reports/panda_mlp_bc/mlp_metrics.json` |
-| MLP loss | train `0.049142921178624864`, test `0.2350177516977917` | `training/reports/panda_mlp_bc/mlp_metrics.json` |
-| Linear same-split normalized MSE | train `0.5580591706337537`, test `0.5800455135789114` | [docs/portfolio/linear_same_split_metrics.json](docs/portfolio/linear_same_split_metrics.json) |
-| Handoff | `panda_30_mlp_bridge_v0`, 71,737 actions | `training/reports/panda_mlp_bc/bridge_handoff/handoff_manifest.json` |
-| Handoff warning | 3,275 gripper commands outside `[0, 1]` | `training/reports/panda_mlp_bc/bridge_handoff/replay_check.json` |
-| Latest downstream smoke | 1/1 completed, mean/max `9.79 / 34.218 ms`, no fault injection | `evidence/downstream/benchmark_summary.json` |
-
-### 实验证据图解读
-
-| 图中区域 | 证据含义 | 边界 |
-| --- | --- | --- |
-| G0 Upstream Dataset | 上游仿真 episode 和 physical gate 已有运行证据 | 不证明 hardware grasp |
-| G1 Midstream Release | 本仓 release、MLP metrics、same-split linear comparison、handoff 已有产物 | 不证明 online rollout 或任务成功率 |
-| Independent downstream smoke | 下游独立完成 1-episode PyBullet replay smoke | 尚未证明使用了上述 30-episode handoff；不证明完整 fault campaign 或 completed Sim2Real |
-
-旧版未溯源的 latency/fault 数字已从 current canonical results 移除。`3,275` gripper warning 必须保留，因为下游 replay 前需要 clamp 或 reject。
-
-## 实验图片
-
-这些图可以用于 README 和作品集展示；每张图都带有“能证明什么 / 不能证明什么”的边界。
-
-| 图 | 能证明 | 不能证明 |
-| --- | --- | --- |
-| ![Object randomization](assets/diagrams/panda_domain_randomization_distribution.png) | 30 episodes target object 起始位置分布 | 泛化保证或 completed Sim2Real |
-| ![Panda trajectories](assets/diagrams/panda_teleop_trajectories_3d.png) | Panda episode 轨迹覆盖可视化 | 任务成功率 |
-| ![Joint reversal distribution](assets/diagrams/eda_joint_reversals_distribution.png) | low-dimensional EDA 的关节反向频率分布 | 策略在线执行成功 |
-| ![Joint step P99 gate](assets/diagrams/eda_joint_step_p99_gate.png) | joint step P99 quality gate | 上游 physical gate |
-| ![MLP vs Linear loss](assets/diagrams/mlp_bc_loss_comparison.png) | 同一 24/6 episode split 下 MLP normalized MSE 低于 Linear | 任务成功率；也不能与 frame-split smoke MSE 混用 |
-| ![Bridge handoff bundle](assets/screenshots/bridge_handoff_bundle.png) | handoff bundle 文件结构 | 下游 latency 或 fault response |
-| ![Panda P0 terminal](assets/screenshots/panda_p0_demo_terminal.png) | 终端运行证据截图 | 若无命令、日期、run ID 对齐，则不能单独作为强证据 |
-
-## Data Contract
-
-| 字段 | 语义 |
-| --- | --- |
-| `observation.state[8]` | Panda joint positions `[7]` + gripper opening `[1]` |
-| `observation.ee_pose[7]` | end-effector pose |
-| `observation.object_pose[7]` | optional object pose copied from upstream |
-| `observation.ft[6]` | optional force/torque |
-| `action[7]` | `delta_xyz[3] + delta_rpy[3] + gripper_cmd[1]` |
-| `filter_scope=training_split_only` | 中游只检查 schema 与 training split；物理 gate 归上游 |
-
-当 `filter_scope=training_split_only` 时，本仓不得从 `observation.object_pose` 重新推导 lift/place 成败。
-
-## 快速验证
-
-```bash
-# 1. Inspect the canonical release.
-python3 training/scripts/inspect_dataset.py data/exports/panda_30_release
-
-# 2. Re-plot EDA + MLP-vs-linear figures.
-python3 scripts/plot_portfolio_results.py
-
-# 3. Re-run MLP BC when PyTorch/CUDA dependencies are available.
-python3 training/scripts/train_mlp_policy.py \
-  --dataset data/exports/panda_30_release \
-  --output training/reports/panda_mlp_bc \
-  --epochs 100
-
-# 4. Package downstream handoff after predicted actions exist.
-python3 training/scripts/prepare_bridge_handoff.py \
-  --release data/exports/panda_30_release \
-  --predicted-actions training/reports/panda_mlp_bc/predicted_actions.jsonl \
-  --out-dir training/reports/panda_mlp_bc/bridge_handoff
+```mermaid
+flowchart LR
+    A[MuJoCo experts] --> B[Data gate]
+    B --> C[Immutable release]
+    C --> D[ACT offline metrics]
+    D --> E[Isaac interface and safety]
+    E --> F[Continuous task GT]
+    F -->|learned policy fails| G[Scripted oracle]
+    G -->|physics fails| H[Fix TCP gripper contact]
+    G -->|physics passes| I[Target policy or data]
+    I --> J[5-seed smoke]
+    J -->|real lift appears| K[E4 shift suites]
+    J -->|0 lift| L[Stop and diagnose]
 ```
 
-完整 G0-G3 跑法见 [docs/CLOSED_LOOP_RUNBOOK.md](docs/CLOSED_LOOP_RUNBOOK.md)。
+每一层只回答自己的问题：
 
-## 代码导航
+| 层级 | 权威产物 | 能证明 | 不能证明 |
+|---|---|---|---|
+| Data | inspection、release manifest | schema、episode split、上游 gate 已执行 | policy 成功 |
+| Offline | ACT `metrics.json` | loss、action RMSE、gripper accuracy | 抓取成功率 |
+| Interface | policy `report.json` | checkpoint 加载、动作完成、护栏状态 | 物体被抓起 |
+| Behavior | EE/gripper 轨迹 | 接近、降 Z、XY 对准、闭合时序 | lift/place |
+| Task | continuous simulator GT | reach/grasp/lift/place | 真机或 Sim2Real |
+| System | GPU/CPU、时延、QoS、cleanup | 本轮运行健康 | hard real-time |
 
-| 路径 | 作用 |
-| --- | --- |
-| `configs/robot_schemas/panda.yaml` | Panda schema and action contract |
-| `training/adapters/upstream_m6.py` | raw upstream episode adapter |
-| `training/scripts/inspect_dataset.py` | schema and split validation |
-| `training/scripts/prepare_dataset_release.py` | immutable release packaging |
-| `training/scripts/train_mlp_policy.py` | low-dimensional MLP BC |
-| `training/scripts/train_act_smoke.py` | historical name; current behavior is linear/ridge smoke baseline |
-| `training/scripts/train_act_lerobot.py` | LeRobot ACT code path, not canonical completed run |
-| `training/scripts/replay_mlp_policy.py` | predicted action JSONL export |
-| `training/scripts/prepare_bridge_handoff.py` | downstream handoff packaging |
-| `scripts/rag_assistant.py` | local project RAG helper |
+## E0–E4 当前状态
+
+| 阶段 | 目标 | 当前事实 | 状态 |
+|---|---|---|---|
+| **E0** | 评测契约 | run/episode/summary schema、fixture、聚合测试 | 已实现 |
+| **E1** | Isaac action execution | 有界 action、watchdog、reset、安全与 5-repeat 证据 | 已实现；不是 learned-policy success |
+| **E2** | ACT 被测基线 | 500 Hz real-rendered MuJoCo 数据、release、ACT checkpoints、A/B | 已实现 diagnostic baseline |
+| **E3** | nominal learned rollout | seeds 2000–2019；reach 10/20，grasp/lift/place 0/20 | **No-Go，已关闭** |
+| **E3.5** | scripted oracle | v1 lift 0/5 → 修 pick/PD gripper/摩擦/GT threshold → v2b lift 5/5 | **Pass** |
+| **E3.6** | close→lift 定向模型 | 40 episodes；5-seed interface 5/5，reach/grasp/lift 0/0/0 | **No-Go** |
+| **E4** | object/visual/camera/dynamics 矩阵 | 规划为 100+ bounded rollouts | **未执行，不启动** |
+
+完整审计报告：[docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md)
+
+## 三次关键实验决策
+
+### 1. 不把错误 evaluator 的结果当真
+
+首轮 E3 中，recorder 把 gripper command 混作 measured state。旧结果被标记为
+`INVALID_EVALUATOR_V0` 并隔离；修复 command/state、接入 FT、通过两个 seed 一致性预检后，
+才运行权威 nominal20。旧结果不计成功率。
+
+### 2. 不把 interface PASS 当任务成功
+
+E3 中 20/20 rollout 均能完成有界动作，安全链正常，但 continuous GT 显示：
+
+- reach：10/20；
+- grasp、lift、transport、place：0/20；
+- overall：0/20，Wilson 95% CI `[0.000, 0.161]`。
+
+权威运行 ID：`e3_nominal20_home_30ep_gt_v1_20260719`。模型身份、hash 和止损见
+[docs/E2_E3_MODEL_CARD.md](docs/E2_E3_MODEL_CARD.md)。
+
+### 3. 用 scripted oracle 隔离物理链
+
+E3.5 先用固定 FSM 测试同一 Isaac 抓取链。v1 专家轨迹也无法 lift，随后修正 pick 高度、
+PD gripper、方块摩擦、grasp pause 和 5 cm 方块侧夹阈值；v2b 达到 reach/grasp/lift 5/5。
+
+这证明 Isaac 名义物理链可工作，ACT 的失败应聚焦 home→对准→闭合，而不是继续盲目堆 epoch。
+完整 STAR 实验记录：
+[docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md)。
+
+## 最新定向模型：仍然 No-Go
+
+E3.5 后新增 10 条 align→close→lift episode，并与 30 条 descend 数据合并：
+
+| 项 | 事实 |
+|---|---|
+| Release ID | `e2_500hz_random35_closelift_20260720`（历史路径名） |
+| 权威计数 | **40 episodes / 9,779 frames**，不是 35 |
+| Inspection | PASS；真实 320×240@10 Hz scene；上游 physical gate |
+| ACT | 5 epochs；CUDA；loss `1.7390 → 0.3276` |
+| Offline | validation L1 `0.009193`；gripper accuracy `0.971790` |
+| Checkpoint SHA-256 | `bc4a8fc49d24e9c22e8337ae9376fe189344235405d91e1034bcb7fe332785c3` |
+| 5-seed | seeds 2200–2204；interface 5/5；**lift 0/5** |
+| Behavior | 5/5 `HOME_NO_CLOSE`；`grip_min=1.0`；`z_span≈0.014 m` |
+
+`random35` 只是未重命名的路径别名；`manifest.num_episodes=40` 才是权威 provenance。
+该 checkpoint 没有替换 E3 选型，也不进入完整 E4。
+
+## 三仓边界
+
+| 仓库 | 职责 | 权威输出 |
+|---|---|---|
+| [上游 ros2-arm-teleoperation-suite](https://github.com/inayina/ros2-arm-teleoperation-suite) | MuJoCo 采集、batch gate、Isaac execution、continuous GT、scripted oracle | raw episode、runtime outcome |
+| **本仓** | adapter、inspection、release、ACT training、summary、model card、SOP | release、checkpoint、evaluation report |
+| [下游 ros2-moveit-pybullet-bridge](https://github.com/inayina/ros2-moveit-pybullet-bridge) | handoff loader、PyBullet replay、risk/monitoring | replay/risk benchmark |
+
+中游不得从 `observation.object_pose` 重新推导上游 physical success；下游 risk 结果也不能覆盖
+上游 runtime GT。
+
+## 数据契约
+
+| 字段 | 语义 |
+|---|---|
+| `observation.state[8]` | Panda joint positions `[7]` + normalized gripper `[1]` |
+| `observation.ee_pose[7]` | end-effector pose |
+| `observation.object_pose[7]` | optional privileged pose；不作为中游 success gate |
+| `observation.ft[6]` | optional force/torque；当前 scene ACT 未优先使用 |
+| `observation.images.scene` | 320×240@10 Hz real MuJoCo renderer |
+| `action[7]` | `delta_xyz[3] + delta_rpy[3] + gripper_cmd[1]` |
+| `filter_scope=training_split_only` | 中游检查 schema/success/safety flags；物理 gate 在上游 |
+
+Schema：[configs/robot_schemas/panda.yaml](configs/robot_schemas/panda.yaml)
+
+## 复核与复现
+
+先查询和审计三仓事实：
+
+```bash
+python3 -m project_knowledge.cli query --mode auto --no-llm \
+  --query "E3 nominal20 和 E3.5 oracle 当前结论是什么？"
+
+python3 -m project_knowledge.cli audit \
+  --json-out /tmp/project-audit.json \
+  --markdown-out /tmp/project-audit.md
+```
+
+验证中游契约与训练代码：
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
+
+python3 training/scripts/inspect_dataset.py \
+  --dataset data/releases/e2_500hz_random35_closelift_20260720 \
+  --schema configs/robot_schemas/panda.yaml
+```
+
+Isaac 有界评测、oracle 和结果报告的完整命令见
+[docs/EMBODIED_POLICY_EVALUATION_SOP.md](docs/EMBODIED_POLICY_EVALUATION_SOP.md)。
+
+## 代码与证据导航
+
+| 入口 | 用途 |
+|---|---|
+| [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md) | 当前审计结论与实验总报告 |
+| [docs/EMBODIED_POLICY_EVALUATION_SOP.md](docs/EMBODIED_POLICY_EVALUATION_SOP.md) | 日常评测协议、gate、失败归因和报告模板 |
+| [docs/E2_E3_MODEL_CARD.md](docs/E2_E3_MODEL_CARD.md) | checkpoint 身份、A/B、sha256 和 No-Go |
+| [docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | oracle v1→v2b 完整实验记录与面试口述 |
+| [docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md](docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md) | 数据迭代历史、止损与当前接力点 |
+| [docs/EVALUATION_CONTRACT.md](docs/EVALUATION_CONTRACT.md) | run/episode/summary contract 与 ownership |
+| [training/scripts/train_act_lerobot.py](training/scripts/train_act_lerobot.py) | scene ACT 训练与阶段采样 |
+| [training/scripts/aggregate_evaluation_summary.py](training/scripts/aggregate_evaluation_summary.py) | runtime outcome 聚合、CI 与 Go/No-Go |
+| [AGENTS.md](AGENTS.md) | 三仓职责、gate 和项目事实检索规则 |
 
 ## Legacy
 
-`agents/`, `core/`, older PyBullet/KUKA GIFs, and historical LeRobot screenshots are legacy material. They remain useful for old local demos, but they are not part of the Panda canonical release/training/handoff mainline. See [archive/README.md](archive/README.md).
-
-## 文档导航
-
-| 场景 | 文档 |
-| --- | --- |
-| Canonical facts | [docs/portfolio/THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md) |
-| README audit | [docs/portfolio/THREE_REPO_README_AUDIT.md](docs/portfolio/THREE_REPO_README_AUDIT.md) |
-| Evidence index | [docs/portfolio/EVIDENCE_INDEX.md](docs/portfolio/EVIDENCE_INDEX.md) |
-| Canonical experiment | [docs/portfolio/CANONICAL_EXPERIMENT.md](docs/portfolio/CANONICAL_EXPERIMENT.md) |
-| Closed-loop runbook | [docs/CLOSED_LOOP_RUNBOOK.md](docs/CLOSED_LOOP_RUNBOOK.md) |
-| Three-repo architecture | [docs/THREE_REPO_ARCHITECTURE.md](docs/THREE_REPO_ARCHITECTURE.md) |
-| Training to handoff | [docs/TRAINING_TO_SIM2REAL.md](docs/TRAINING_TO_SIM2REAL.md) |
-| Training details | [training/README_TRAINING.md](training/README_TRAINING.md) |
-| Agent rules | [AGENTS.md](AGENTS.md) |
+`agents/`、`core/`、早期 KUKA/PyBullet GIF 和旧 MLP handoff 是历史能力，不与当前 Panda ACT
+评测主线混用。历史材料索引见 [archive/README.md](archive/README.md)。
 
 ---
 
 ## English
 
-`robot-arm-episode-data-lab` is the **midstream Panda data and training lab** in a three-repository closed loop. It consumes upstream ROS 2 / MuJoCo Panda simulation episodes, adapts them into a stable schema, validates data quality, packages releases, runs low-dimensional MLP BC training/evaluation, exports predicted action JSONL, and prepares downstream bridge handoff bundles.
+This repository is the midstream data, training, and evaluation lab of a three-repository Panda manipulation
+stack. It turns gated MuJoCo demonstrations into immutable releases and ACT checkpoints, then separates Isaac
+interface execution, safety, behavior, and simulator-ground-truth task outcomes.
 
-> Scope: software simulation, offline training evidence, and Sim2Sim / Sim2Real-readiness validation. This repository does not claim real-robot deployment, completed Sim2Real, stable online autonomous grasping, or completed ACT runtime.
+### Current evidence
 
-### Repository Role
+| Stage | Result |
+|---|---|
+| E3 learned-policy nominal | **0/20 task success**, 10/20 reach, 0/20 grasp/lift/place; No-Go |
+| E3.5 scripted oracle | v1 lift 0/5; after physics/contact fixes, **lift 5/5** |
+| Targeted close→lift model | 40 episodes; offline training PASS; 5-seed interface 5/5 but **lift 0/5** |
+| E4 generalization matrix | Planned, not executed; blocked by the zero-lift gate |
 
-| Layer | Repository | Role |
-| --- | --- | --- |
-| Upstream | `ros2-arm-teleoperation-suite` | ROS 2 / MuJoCo collection and upstream physical gate |
-| Midstream | this repo | adapter, inspector, release, EDA, MLP BC, predicted JSONL, handoff |
-| Downstream | `ros2-moveit-pybullet-bridge` | Panda PyBullet replay, monitoring, and risk benchmark |
+The central result is diagnostic: Isaac can lift the nominal cube with a scripted oracle, while both learned
+policies fail before contact. The remaining bottleneck is the learned home→alignment→closure behavior, not
+proof that the simulator is physically incapable of grasping.
 
-### Current Verified Evidence
+See [the evaluation audit report](docs/EVALUATION_REPORT.md),
+[the evaluation SOP](docs/EMBODIED_POLICY_EVALUATION_SOP.md), and
+[the scripted-oracle experiment](docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md).
 
-The evidence comes from two independent runs: `panda_30_mlp_20260711` covers the
-30-episode training/handoff chain, while `panda_closed_loop_20260712_214747`
-covers a separate one-episode downstream smoke. They must not be presented as
-one verified end-to-end performance run.
-
-| Item | Value |
-| --- | --- |
-| Dataset | 30 Panda simulation episodes, 71,737 frames |
-| Release | `panda_30_release_v0` |
-| Action contract | `state[8] -> ee_delta_gripper[7]` |
-| MLP BC | 100 epochs, 24 train episodes / 6 test episodes |
-| MLP normalized MSE | train `0.049142921178624864`, test `0.2350177516977917` |
-| Linear same-split normalized MSE | train `0.5580591706337537`, test `0.5800455135789114` |
-| Handoff | `panda_30_mlp_bridge_v0`, 71,737 actions |
-| Latest downstream smoke | 1/1 completed, mean/max `9.79 / 34.218 ms` |
-
-The MLP-vs-linear figure is valid for the same 24/6 episode split and normalized-MSE metric. It must not be mixed with `panda_linear_bc/metrics.json`, which is a different frame-split smoke artifact. Offline loss is not task success rate.
-
-### Quick Start
-
-```bash
-python3 training/scripts/inspect_dataset.py data/exports/panda_30_release
-python3 scripts/plot_portfolio_results.py
-```
-
-For the complete G0-G3 path, use [docs/CLOSED_LOOP_RUNBOOK.md](docs/CLOSED_LOOP_RUNBOOK.md).
-
-### Key Docs
-
-- [docs/portfolio/THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md)
-- [docs/portfolio/THREE_REPO_README_AUDIT.md](docs/portfolio/THREE_REPO_README_AUDIT.md)
-- [docs/portfolio/EVIDENCE_INDEX.md](docs/portfolio/EVIDENCE_INDEX.md)
-- [docs/CLOSED_LOOP_RUNBOOK.md](docs/CLOSED_LOOP_RUNBOOK.md)
-- [AGENTS.md](AGENTS.md)
+This project does **not** claim real-robot deployment, completed Sim2Real, or stable autonomous grasping.

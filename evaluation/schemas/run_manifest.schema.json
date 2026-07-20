@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/run_manifest.schema.json",
+  "title": "Panda evaluation run manifest",
+  "description": "Backend-neutral E0 contract. Runtime results are authoritative only when evidence_level is runtime_observed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "evaluation_run_id",
+    "created_at",
+    "execution_status",
+    "evidence_level",
+    "provenance",
+    "scenario",
+    "simulator",
+    "action_contract",
+    "ownership",
+    "qos_matrix",
+    "clock_contract",
+    "plane_contract",
+    "thread_ownership",
+    "fail_safe_contract",
+    "nfr_evidence_contract",
+    "evidence_paths",
+    "limitations"
+  ],
+  "properties": {
+    "contract_version": {"const": "evaluation_contract_v0"},
+    "artifact_type": {"const": "run_manifest"},
+    "evaluation_run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "execution_status": {
+      "enum": ["contract_only", "planned", "running", "completed", "aborted"]
+    },
+    "evidence_level": {"enum": ["contract_fixture", "runtime_observed"]},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "dataset", "repositories"],
+      "properties": {
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model_id", "model_commit", "checkpoint_sha256", "checkpoint_path"],
+          "properties": {
+            "model_id": {"type": "string", "minLength": 1},
+            "model_commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+            "checkpoint_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+            "checkpoint_path": {"type": ["string", "null"]}
+          }
+        },
+        "dataset": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["release_id", "manifest_path", "manifest_sha256"],
+          "properties": {
+            "release_id": {"type": "string", "minLength": 1},
+            "manifest_path": {"type": ["string", "null"]},
+            "manifest_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "repositories": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["upstream", "midstream", "downstream"],
+          "properties": {
+            "upstream": {"$ref": "#/$defs/repositoryRevision"},
+            "midstream": {"$ref": "#/$defs/repositoryRevision"},
+            "downstream": {"$ref": "#/$defs/repositoryRevision"}
+          }
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scene_id", "suite", "seeds"],
+      "properties": {
+        "scene_id": {"type": "string", "minLength": 1},
+        "suite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["suite_id", "suite_version", "config_path", "config_sha256"],
+          "properties": {
+            "suite_id": {"enum": ["nominal", "object_pose", "visual", "camera", "dynamics"]},
+            "suite_version": {"type": "string", "minLength": 1},
+            "config_path": {"type": "string", "minLength": 1},
+            "config_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "seeds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+        }
+      }
+    },
+    "simulator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "version", "build_id", "driver_version", "hardware_id"],
+      "properties": {
+        "backend": {"enum": ["mujoco", "isaac", "pybullet"]},
+        "version": {"type": ["string", "null"]},
+        "build_id": {"type": ["string", "null"]},
+        "driver_version": {"type": ["string", "null"]},
+        "hardware_id": {"type": ["string", "null"]}
+      }
+    },
+    "action_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_type", "action_dim", "policy_rate_hz", "adapter_rate_hz", "controller_rate_hz", "future_runtime_adapter"],
+      "properties": {
+        "action_type": {"const": "ee_delta_gripper"},
+        "action_dim": {"const": 7},
+        "policy_rate_hz": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "adapter_rate_hz": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "controller_rate_hz": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "future_runtime_adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "implementation_status", "command_semantics"],
+          "properties": {
+            "target": {"const": "isaac_action_execution"},
+            "implementation_status": {"enum": ["not_implemented", "implemented", "verified"]},
+            "command_semantics": {
+              "enum": ["latest_valid_sample_and_hold", "bounded_interpolation"]
+            }
+          }
+        }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_ground_truth", "offline_aggregation", "risk_review"],
+      "properties": {
+        "runtime_ground_truth": {
+          "allOf": [
+            {"$ref": "#/$defs/owner"},
+            {"properties": {"repository": {"const": "ros2-arm-teleoperation-suite"}}}
+          ]
+        },
+        "offline_aggregation": {
+          "allOf": [
+            {"$ref": "#/$defs/owner"},
+            {"properties": {"repository": {"const": "robot-arm-episode-data-lab"}}}
+          ]
+        },
+        "risk_review": {
+          "allOf": [
+            {"$ref": "#/$defs/owner"},
+            {"properties": {"repository": {"const": "ros2-moveit-pybullet-bridge"}}}
+          ]
+        }
+      }
+    },
+    "qos_matrix": {
+      "type": "array",
+      "minItems": 6,
+      "items": {"$ref": "#/$defs/qosEntry"}
+    },
+    "clock_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["simulation_clock", "ros_clock", "monotonic_clock", "timeout_clock", "use_sim_time", "reset_epoch_rule"],
+      "properties": {
+        "simulation_clock": {"const": "physics_step_and_sim_timestamp"},
+        "ros_clock": {"const": "message_alignment_and_age"},
+        "monotonic_clock": {"const": "timeouts_and_wall_latency"},
+        "timeout_clock": {"const": "monotonic"},
+        "use_sim_time": {"type": ["boolean", "null"]},
+        "reset_epoch_rule": {"const": "first_valid_state_must_follow_reset_completion"}
+      }
+    },
+    "plane_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control_plane", "data_plane"],
+      "properties": {
+        "control_plane": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["location", "network_rule", "blocking_io_allowed"],
+          "properties": {
+            "location": {"const": "simulator_host_or_low_latency_lan"},
+            "network_rule": {"const": "do_not_span_1khz_loop_over_public_network"},
+            "blocking_io_allowed": {"const": false}
+          }
+        },
+        "data_plane": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["queue_semantics", "overload_policy", "flush_thread"],
+          "properties": {
+            "queue_semantics": {"const": "bounded"},
+            "overload_policy": {"const": "drop_old_frames_and_count"},
+            "flush_thread": {"const": "non_control"}
+          }
+        }
+      }
+    },
+    "thread_ownership": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workload", "owner", "may_block_control", "queue_semantics"],
+        "properties": {
+          "workload": {"enum": ["control_state", "policy_inference", "reset_services", "camera_recording", "artifact_flush"]},
+          "owner": {"type": "string", "minLength": 1},
+          "may_block_control": {"const": false},
+          "queue_semantics": {"enum": ["latest_value", "bounded_fifo", "transaction"]}
+        }
+      }
+    },
+    "fail_safe_contract": {
+      "type": "array",
+      "minItems": 4,
+      "items": {"$ref": "#/$defs/failSafe"}
+    },
+    "nfr_evidence_contract": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "unit", "required_for_runtime_claim", "evidence_path"],
+        "properties": {
+          "metric": {"type": "string", "minLength": 1},
+          "unit": {"type": "string", "minLength": 1},
+          "required_for_runtime_claim": {"type": "boolean"},
+          "evidence_path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "evidence_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_root", "raw_episode_pattern", "video_pattern", "runtime_log_pattern", "qos_preflight", "nfr_snapshot"],
+      "properties": {
+        "artifact_root": {"type": "string", "minLength": 1},
+        "raw_episode_pattern": {"type": "string", "minLength": 1},
+        "video_pattern": {"type": "string", "minLength": 1},
+        "runtime_log_pattern": {"type": "string", "minLength": 1},
+        "qos_preflight": {"type": "string", "minLength": 1},
+        "nfr_snapshot": {"type": "string", "minLength": 1}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidence_level": {"const": "contract_fixture"}}},
+      "then": {"properties": {"execution_status": {"const": "contract_only"}}}
+    },
+    {
+      "if": {"properties": {"execution_status": {"const": "completed"}}},
+      "then": {
+        "properties": {
+          "evidence_level": {"const": "runtime_observed"},
+          "provenance": {
+            "properties": {
+              "model": {"properties": {"model_commit": {"type": "string"}, "checkpoint_sha256": {"type": "string"}, "checkpoint_path": {"type": "string", "minLength": 1}}},
+              "dataset": {"properties": {"manifest_path": {"type": "string", "minLength": 1}, "manifest_sha256": {"type": "string"}}},
+              "repositories": {
+                "properties": {
+                  "upstream": {"properties": {"commit_sha": {"type": "string"}}},
+                  "midstream": {"properties": {"commit_sha": {"type": "string"}}},
+                  "downstream": {"properties": {"commit_sha": {"type": "string"}}}
+                }
+              }
+            }
+          },
+          "scenario": {"properties": {"suite": {"properties": {"config_sha256": {"type": "string"}}}}},
+          "simulator": {
+            "properties": {
+              "version": {"type": "string", "minLength": 1},
+              "build_id": {"type": "string", "minLength": 1},
+              "driver_version": {"type": "string", "minLength": 1},
+              "hardware_id": {"type": "string", "minLength": 1}
+            }
+          },
+          "action_contract": {
+            "properties": {
+              "policy_rate_hz": {"type": "number"},
+              "adapter_rate_hz": {"type": "number"},
+              "controller_rate_hz": {"type": "number"},
+              "future_runtime_adapter": {
+                "properties": {"implementation_status": {"enum": ["implemented", "verified"]}}
+              }
+            }
+          },
+          "clock_contract": {"properties": {"use_sim_time": {"type": "boolean"}}},
+          "fail_safe_contract": {
+            "items": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "threshold_source": {"const": "runtime_config"},
+                    "threshold_ms": {"type": "number"}
+                  }
+                },
+                {
+                  "properties": {
+                    "threshold_source": {"const": "not_applicable"},
+                    "threshold_ms": {"type": "null"}
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "repositoryRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit_sha"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "commit_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "responsibility", "may_infer_physical_success"],
+      "properties": {
+        "repository": {"type": "string"},
+        "responsibility": {"type": "string", "minLength": 1},
+        "may_infer_physical_success": {"type": "boolean"}
+      }
+    },
+    "qosEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel_class", "reliability", "durability", "history", "depth", "preflight_required"],
+      "properties": {
+        "channel_class": {"enum": ["joint_command", "robot_state", "camera", "safety_estop", "health_event", "transaction_service", "static_tf"]},
+        "reliability": {"enum": ["best_effort", "reliable"]},
+        "durability": {"enum": ["volatile", "transient_local"]},
+        "history": {"const": "keep_last"},
+        "depth": {"type": "integer", "minimum": 1, "maximum": 100},
+        "preflight_required": {"const": true}
+      }
+    },
+    "failSafe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition", "threshold_ms", "threshold_source", "response", "terminal_outcome", "evidence_event_required"],
+      "properties": {
+        "condition": {"enum": ["stale_command", "stale_state", "dds_qos_mismatch", "reset_timeout", "policy_timeout"]},
+        "threshold_ms": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "threshold_source": {"enum": ["runtime_config", "not_applicable"]},
+        "response": {"enum": ["hold_then_abort", "abort_and_clear_history", "fail_preflight"]},
+        "terminal_outcome": {"enum": ["timeout", "infrastructure_failure"]},
+        "evidence_event_required": {"const": true}
+      }
+    }
+  }
+}

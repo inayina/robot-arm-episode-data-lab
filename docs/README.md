@@ -17,6 +17,13 @@
 | [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) | **P0** 最小 baseline training / eval / replay pipeline |
 | [TRAINING_METHODS.md](TRAINING_METHODS.md) | **P0/P1** inspection-only、linear smoke、MLP BC、未来训练方式分层 |
 | [INTER_REPO_CONTRACTS.md](INTER_REPO_CONTRACTS.md) | **P0** 三仓交接 gate、handoff、feedback loop 和模板入口 |
+| [EVALUATION_CONTRACT.md](EVALUATION_CONTRACT.md) | **P0** E0 run/episode/summary 评测契约、ownership、QoS/时钟/fail-safe/NFR 边界 |
+| [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | **P0** 当前三仓审计结论、E3 0/20、E3.5 oracle 5/5 与 close→lift 5-seed No-Go 总报告 |
+| [EMBODIED_POLICY_EVALUATION_SOP.md](EMBODIED_POLICY_EVALUATION_SOP.md) | **P0** 具身操作模型日常评测 SOP；含 §1.3 五类指标权威来源对照（对齐当前代码，非猜测） |
+| [E2_ACT_BASELINE_PREFLIGHT.md](E2_ACT_BASELINE_PREFLIGHT.md) | E2 真实渲染 5-episode preflight、release 与 ACT 1-epoch GPU 证据；不等同于完整约 50 条 E2 |
+| [E2_E3_MODEL_CARD.md](E2_E3_MODEL_CARD.md) | **P0** E2/E3 最终 checkpoint 选型、sha256、home/warm A/B 与止损结论 |
+| [E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md](E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md) | **P0** E2 单红块续跑接力；E3 止损后下一 ROI |
+| [E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | **P0** E3.5 Isaac scripted oracle 完整实验日志（动机→v1 失败→修复→v2b 通过→面试口述） |
 | [DEMO_GUIDE.md](DEMO_GUIDE.md) | **P0** 10 分钟可复现 mock Panda 闭环 |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | **P0** schema / action / checkpoint / handoff 排障 |
 | [CLOSED_LOOP_RUNBOOK.md](CLOSED_LOOP_RUNBOOK.md) | **P0** 三仓 G0–G3 闭环跑手册 |
@@ -66,6 +73,9 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 | [portfolio/project_status.md](portfolio/project_status.md) | 自动生成的进度快照 |
 | [portfolio/DATA_AND_ANALYSIS_PATHS.md](portfolio/DATA_AND_ANALYSIS_PATHS.md) | 中游 KUKA legacy 与 Panda 主线两条数据/分析路径说明 |
 | [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计、训练策略分层、下游评估架构与冗余说明 |
+| [portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md](portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md) | Isaac 具身操作模型评测岗位对齐、三仓复用边界与 E0–E5 实施路线 |
+| [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | 当前评测漏斗、实验结论与 Go/No-Go 审计入口 |
+| [E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | E3.5 oracle 完整实验日志（面试 STAR / 口述稿） |
 
 ## Phase 命名对照（避免混淆）
 

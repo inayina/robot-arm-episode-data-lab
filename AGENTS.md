@@ -5,6 +5,7 @@ Canonical 三仓 Agent 总览。各仓实现映射见：
 - 上游：`ros2-arm-teleoperation-suite/docs/AGENTS.md`
 - 下游：`ros2-moveit-pybullet-bridge/docs/AGENTS.md`
 - 闭环跑法：`docs/CLOSED_LOOP_RUNBOOK.md`
+- E2 单红块续跑：`docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md`
 
 ---
 
@@ -28,7 +29,7 @@ Canonical 三仓 Agent 总览。各仓实现映射见：
 
 ### Motion Planning & Control Agent
 - **位置**：L2 `moveit_servo` + L3 `cartesian_impedance_controller`
-- **行为**：笛卡尔伺服 + 1kHz 阻抗力矩；**不含** RRT（RRT 在 legacy/下游）
+- **行为**：笛卡尔伺服 + 阻抗力矩（仿真 `500 Hz` / 真机路径 `1 kHz`，见上游 `control_rate_{sim,real}.yaml`）；**不含** RRT（RRT 在 legacy/下游）
 
 ### Evaluation Agent（双轨）
 | 轨道 | 实现 | 批采默认 |
@@ -332,6 +333,9 @@ graph TD
 
 #### 9.2.2 中游：数据转换与模型训练
 * **路径**：`~/robot-sim-lab/robot-arm-episode-data-lab` （Conda 虚拟环境运行）
+* **当前 E2 单红块 +10、阶段均衡 ACT 与 Isaac A/B 接力**：
+  `docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md`。接手的 AI 必须从该文档“当前接力点”继续，
+  不得从零重跑、混入旧 1000 Hz 数据或继续盲扫权重。
 * **一键运行三仓闭环数据流水线（Adapted -> Release -> Smoke Train -> Handoff）**：
   ```bash
   # 运行离线数据闭环，生成 handoff 压缩包
@@ -369,4 +373,3 @@ graph TD
   pkill -9 -f "servo_node" || true
   pkill -9 -f "ros2_control" || true
   ```
-

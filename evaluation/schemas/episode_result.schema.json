@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/episode_result.schema.json",
+  "title": "Panda evaluation episode result",
+  "description": "One JSONL row. Planned contract fixtures keep runtime measurements null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "evaluation_run_id",
+    "execution_status",
+    "evidence_level",
+    "identity",
+    "timestamps",
+    "outcome",
+    "subgoals",
+    "motion",
+    "contact_safety",
+    "data_health",
+    "system_performance",
+    "fail_safe_events",
+    "evidence"
+  ],
+  "properties": {
+    "contract_version": {"const": "evaluation_contract_v0"},
+    "artifact_type": {"const": "episode_result"},
+    "evaluation_run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"},
+    "execution_status": {"enum": ["planned", "completed", "aborted", "infrastructure_failure"]},
+    "evidence_level": {"enum": ["contract_fixture", "runtime_observed"]},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_id", "backend", "scene_id", "suite_id", "seed", "episode_index"],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "backend": {"enum": ["mujoco", "isaac", "pybullet"]},
+        "scene_id": {"type": "string", "minLength": 1},
+        "suite_id": {"enum": ["nominal", "object_pose", "visual", "camera", "dynamics"]},
+        "seed": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+        "episode_index": {"type": "integer", "minimum": 0}
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["simulation_start_s", "simulation_end_s", "ros_start_s", "ros_end_s", "monotonic_start_s", "monotonic_end_s", "reset_completed_monotonic_s", "first_valid_state_monotonic_s"],
+      "properties": {
+        "simulation_start_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "simulation_end_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "ros_start_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "ros_end_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "monotonic_start_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "monotonic_end_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "reset_completed_monotonic_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "first_valid_state_monotonic_s": {"$ref": "#/$defs/nullableNonnegative"}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_evaluated", "evaluator", "success", "timeout", "failure_stage", "failure_reason"],
+      "properties": {
+        "runtime_evaluated": {"type": "boolean"},
+        "evaluator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner_repository", "evaluator_id", "evaluator_version", "ground_truth_source"],
+          "properties": {
+            "owner_repository": {"const": "ros2-arm-teleoperation-suite"},
+            "evaluator_id": {"type": ["string", "null"]},
+            "evaluator_version": {"type": ["string", "null"]},
+            "ground_truth_source": {"enum": ["runtime_ground_truth", "not_evaluated"]}
+          }
+        },
+        "success": {"type": ["boolean", "null"]},
+        "timeout": {"type": ["boolean", "null"]},
+        "failure_stage": {
+          "type": ["string", "null"],
+          "enum": [null, "reset", "reach", "grasp", "lift", "transport", "place", "release", "system"]
+        },
+        "failure_reason": {"type": ["string", "null"]}
+      }
+    },
+    "subgoals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reach", "grasp", "lift", "transport", "place", "release"],
+      "properties": {
+        "reach": {"$ref": "#/$defs/nullableBoolean"},
+        "grasp": {"$ref": "#/$defs/nullableBoolean"},
+        "lift": {"$ref": "#/$defs/nullableBoolean"},
+        "transport": {"$ref": "#/$defs/nullableBoolean"},
+        "place": {"$ref": "#/$defs/nullableBoolean"},
+        "release": {"$ref": "#/$defs/nullableBoolean"}
+      }
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completion_time_s", "ee_tracking_rmse_m", "ee_tracking_p95_m", "ee_tracking_max_m", "path_length_m", "smoothness_jerk_rms"],
+      "properties": {
+        "completion_time_s": {"$ref": "#/$defs/nullableNonnegative"},
+        "ee_tracking_rmse_m": {"$ref": "#/$defs/nullableNonnegative"},
+        "ee_tracking_p95_m": {"$ref": "#/$defs/nullableNonnegative"},
+        "ee_tracking_max_m": {"$ref": "#/$defs/nullableNonnegative"},
+        "path_length_m": {"$ref": "#/$defs/nullableNonnegative"},
+        "smoothness_jerk_rms": {"$ref": "#/$defs/nullableNonnegative"}
+      }
+    },
+    "contact_safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collision_count", "drop_detected", "slip_detected", "peak_force_n", "peak_torque_nm", "joint_limit_event_count", "estop_triggered"],
+      "properties": {
+        "collision_count": {"$ref": "#/$defs/nullableCount"},
+        "drop_detected": {"$ref": "#/$defs/nullableBoolean"},
+        "slip_detected": {"$ref": "#/$defs/nullableBoolean"},
+        "peak_force_n": {"$ref": "#/$defs/nullableNonnegative"},
+        "peak_torque_nm": {"$ref": "#/$defs/nullableNonnegative"},
+        "joint_limit_event_count": {"$ref": "#/$defs/nullableCount"},
+        "estop_triggered": {"$ref": "#/$defs/nullableBoolean"}
+      }
+    },
+    "data_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing_frame_count", "stale_state_count", "stale_command_count", "reused_frame_count", "dropped_frame_count", "recorder_hz"],
+      "properties": {
+        "missing_frame_count": {"$ref": "#/$defs/nullableCount"},
+        "stale_state_count": {"$ref": "#/$defs/nullableCount"},
+        "stale_command_count": {"$ref": "#/$defs/nullableCount"},
+        "reused_frame_count": {"$ref": "#/$defs/nullableCount"},
+        "dropped_frame_count": {"$ref": "#/$defs/nullableCount"},
+        "recorder_hz": {"$ref": "#/$defs/nullableNonnegative"}
+      }
+    },
+    "system_performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physics_fps", "real_time_factor", "cpu_percent", "rss_mb", "gpu_percent", "vram_mb", "frame_time_p95_ms", "command_age_p50_ms", "command_age_p95_ms", "command_age_max_ms", "state_age_p50_ms", "state_age_p95_ms", "state_age_max_ms", "control_frequency_hz", "state_frequency_hz", "watchdog_latency_ms", "reset_recovery_ms"],
+      "properties": {
+        "physics_fps": {"$ref": "#/$defs/nullableNonnegative"},
+        "real_time_factor": {"$ref": "#/$defs/nullableNonnegative"},
+        "cpu_percent": {"$ref": "#/$defs/nullableNonnegative"},
+        "rss_mb": {"$ref": "#/$defs/nullableNonnegative"},
+        "gpu_percent": {"$ref": "#/$defs/nullableNonnegative"},
+        "vram_mb": {"$ref": "#/$defs/nullableNonnegative"},
+        "frame_time_p95_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "command_age_p50_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "command_age_p95_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "command_age_max_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "state_age_p50_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "state_age_p95_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "state_age_max_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "control_frequency_hz": {"$ref": "#/$defs/nullableNonnegative"},
+        "state_frequency_hz": {"$ref": "#/$defs/nullableNonnegative"},
+        "watchdog_latency_ms": {"$ref": "#/$defs/nullableNonnegative"},
+        "reset_recovery_ms": {"$ref": "#/$defs/nullableNonnegative"}
+      }
+    },
+    "fail_safe_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["condition", "response", "monotonic_timestamp_s", "details"],
+        "properties": {
+          "condition": {"enum": ["stale_command", "stale_state", "dds_qos_mismatch", "reset_timeout", "policy_timeout"]},
+          "response": {"enum": ["hold_then_abort", "abort_and_clear_history", "fail_preflight"]},
+          "monotonic_timestamp_s": {"type": "number", "minimum": 0},
+          "details": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_episode_path", "video_path", "runtime_log_path", "event_log_path", "nfr_sample_path"],
+      "properties": {
+        "raw_episode_path": {"type": ["string", "null"]},
+        "video_path": {"type": ["string", "null"]},
+        "runtime_log_path": {"type": ["string", "null"]},
+        "event_log_path": {"type": ["string", "null"]},
+        "nfr_sample_path": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidence_level": {"const": "contract_fixture"}}},
+      "then": {
+        "properties": {
+          "execution_status": {"const": "planned"},
+          "outcome": {
+            "properties": {
+              "runtime_evaluated": {"const": false},
+              "success": {"type": "null"},
+              "timeout": {"type": "null"},
+              "failure_stage": {"type": "null"},
+              "failure_reason": {"type": "null"},
+              "evaluator": {"properties": {"ground_truth_source": {"const": "not_evaluated"}}}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"execution_status": {"const": "completed"}}},
+      "then": {
+        "properties": {
+          "evidence_level": {"const": "runtime_observed"},
+          "outcome": {
+            "properties": {
+              "runtime_evaluated": {"const": true},
+              "success": {"type": "boolean"},
+              "timeout": {"type": "boolean"},
+              "evaluator": {
+                "properties": {
+                  "evaluator_id": {"type": "string", "minLength": 1},
+                  "evaluator_version": {"type": "string", "minLength": 1},
+                  "ground_truth_source": {"const": "runtime_ground_truth"}
+                }
+              }
+            }
+          },
+          "evidence": {
+            "properties": {
+              "raw_episode_path": {"type": "string", "minLength": 1},
+              "runtime_log_path": {"type": "string", "minLength": 1},
+              "event_log_path": {"type": "string", "minLength": 1},
+              "nfr_sample_path": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nullableBoolean": {"type": ["boolean", "null"]},
+    "nullableCount": {"type": ["integer", "null"], "minimum": 0},
+    "nullableNonnegative": {"type": ["number", "null"], "minimum": 0}
+  }
+}

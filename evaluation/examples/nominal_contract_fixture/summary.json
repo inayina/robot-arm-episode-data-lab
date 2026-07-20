@@ -1,0 +1,79 @@
+{
+  "contract_version": "evaluation_contract_v0",
+  "artifact_type": "summary",
+  "evaluation_run_id": "e0_nominal_contract_fixture",
+  "execution_status": "not_executed",
+  "evidence_level": "contract_fixture",
+  "source": {
+    "run_manifest_path": "run_manifest.json",
+    "run_manifest_sha256": null,
+    "episode_results_path": "episode_results.jsonl",
+    "episode_results_sha256": null,
+    "aggregator_repository": "robot-arm-episode-data-lab"
+  },
+  "counts": {
+    "planned": 3,
+    "completed": 0,
+    "aborted": 0,
+    "infrastructure_failure": 0
+  },
+  "overall_success": {
+    "numerator": 0,
+    "denominator": 0,
+    "rate": null,
+    "ci_method": "not_computed",
+    "ci95_low": null,
+    "ci95_high": null
+  },
+  "per_suite": [
+    {
+      "suite_id": "nominal",
+      "success": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null,
+        "ci_method": "not_computed",
+        "ci95_low": null,
+        "ci95_high": null
+      }
+    }
+  ],
+  "subgoal_funnel": {
+    "reach": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null},
+    "grasp": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null},
+    "lift": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null},
+    "transport": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null},
+    "place": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null},
+    "release": {"numerator": 0, "denominator": 0, "rate": null, "ci_method": "not_computed", "ci95_low": null, "ci95_high": null}
+  },
+  "failure_pareto": [],
+  "seed_results": [
+    {"seed": 101, "execution_status": "planned", "success": null, "failure_reason": null},
+    {"seed": 202, "execution_status": "planned", "success": null, "failure_reason": null},
+    {"seed": 303, "execution_status": "planned", "success": null, "failure_reason": null}
+  ],
+  "repeatability": {
+    "repeated_seed_count": 0,
+    "flaky_seed_count": 0,
+    "agreement_rate": null
+  },
+  "baseline_delta": {
+    "baseline_run_id": null,
+    "success_rate_delta": null,
+    "comparison_status": "not_requested"
+  },
+  "top_failure_videos": [],
+  "recommendations": {
+    "data_collection": [],
+    "model_changes": [],
+    "simulator_calibration": []
+  },
+  "go_no_go": {
+    "status": "not_assessed",
+    "reason": "E0 defines and validates the contract only; no rollout evidence exists."
+  },
+  "limitations": [
+    "No runtime episode was executed and success rate is intentionally null.",
+    "This fixture cannot support model, simulator, real-time or Sim2Real claims."
+  ]
+}

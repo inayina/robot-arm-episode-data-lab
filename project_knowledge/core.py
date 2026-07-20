@@ -553,9 +553,14 @@ def _intent_bonus(query: str, chunk: EvidenceChunk) -> float:
         if path.endswith("docs/portfolio/canonical_experiment.md"):
             return 90.0
         if path.endswith("docs/portfolio/three_repo_canonical_facts.md"):
-            return 35.0
+            return 70.0
         if path.endswith("evidence/downstream/benchmark_summary.json"):
-            return 30.0
+            return 90.0
+    if "三仓" in lowered and any(term in lowered for term in ("职责", "角色", "边界")):
+        if path.endswith("agents.md"):
+            return 70.0
+        if path.endswith("docs/portfolio/three_repo_canonical_facts.md"):
+            return 60.0
     if any(term in lowered for term in ("真实机器人", "真实机械臂", "sim2real", "实机")):
         if path.endswith("docs/portfolio/three_repo_canonical_facts.md"):
             return 40.0
@@ -623,12 +628,14 @@ def _resolve_claims(query: str, evidence: list[RankedEvidence]) -> tuple[str, li
         return "94.399 ms 当前未经运行产物验证，不能作为 verified headline。", claims
     if "act" in lowered and any(term in lowered for term in ("canonical", "完成", "训练", "run")):
         claims = [{
-            "claim": "ACT canonical training completed",
-            "status": "insufficient_verified_run",
-            "verified": False,
+            "claim": "ACT diagnostic training and bounded Isaac evaluation completed",
+            "status": "verified_diagnostic_run",
+            "verified": True,
             "code_present": any("train_act_lerobot.py" in path for path in paths),
+            "task_success_verified": False,
+            "reason": "ACT checkpoints and E3/E3.6 runtime evidence exist, but learned-policy lift/place remain zero.",
         }]
-        return "ACT 训练代码路径存在，但当前项目证据不足，无法确认 canonical 完整训练产物。", claims
+        return "ACT diagnostic training and bounded Isaac evaluation are verified; task success is not.", claims
     if not evidence:
         return "当前项目证据不足，无法确认。", []
     return "已返回按知识注册表过滤和排序的项目证据；最终事实应服从证据类型、状态与冲突标记。", []

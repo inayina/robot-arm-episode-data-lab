@@ -1,0 +1,139 @@
+{
+  "contract_version": "evaluation_contract_v0",
+  "artifact_type": "run_manifest",
+  "evaluation_run_id": "e0_nominal_contract_fixture",
+  "created_at": "2026-07-18T00:00:00Z",
+  "execution_status": "contract_only",
+  "evidence_level": "contract_fixture",
+  "provenance": {
+    "model": {
+      "model_id": "act_scene_v0_placeholder",
+      "model_commit": null,
+      "checkpoint_sha256": null,
+      "checkpoint_path": null
+    },
+    "dataset": {
+      "release_id": "unresolved_before_e1",
+      "manifest_path": null,
+      "manifest_sha256": null
+    },
+    "repositories": {
+      "upstream": {"repository": "ros2-arm-teleoperation-suite", "commit_sha": null},
+      "midstream": {"repository": "robot-arm-episode-data-lab", "commit_sha": null},
+      "downstream": {"repository": "ros2-moveit-pybullet-bridge", "commit_sha": null}
+    }
+  },
+  "scenario": {
+    "scene_id": "panda_pick_place_v1",
+    "suite": {
+      "suite_id": "nominal",
+      "suite_version": "0.1.0",
+      "config_path": "nominal_suite.json",
+      "config_sha256": null
+    },
+    "seeds": [101, 202, 303]
+  },
+  "simulator": {
+    "backend": "isaac",
+    "version": null,
+    "build_id": null,
+    "driver_version": null,
+    "hardware_id": null
+  },
+  "action_contract": {
+    "action_type": "ee_delta_gripper",
+    "action_dim": 7,
+    "policy_rate_hz": null,
+    "adapter_rate_hz": null,
+    "controller_rate_hz": null,
+    "future_runtime_adapter": {
+      "target": "isaac_action_execution",
+      "implementation_status": "not_implemented",
+      "command_semantics": "latest_valid_sample_and_hold"
+    }
+  },
+  "ownership": {
+    "runtime_ground_truth": {
+      "repository": "ros2-arm-teleoperation-suite",
+      "responsibility": "Evaluate reach/grasp/lift/transport/place/release from runtime simulator ground truth and publish the authoritative physical outcome.",
+      "may_infer_physical_success": true
+    },
+    "offline_aggregation": {
+      "repository": "robot-arm-episode-data-lab",
+      "responsibility": "Validate result schema and aggregate runtime labels without re-deriving lift or place from object_pose.",
+      "may_infer_physical_success": false
+    },
+    "risk_review": {
+      "repository": "ros2-moveit-pybullet-bridge",
+      "responsibility": "Review replay, tracking, distribution and safety risk without replacing runtime task-success truth.",
+      "may_infer_physical_success": false
+    }
+  },
+  "qos_matrix": [
+    {"channel_class": "joint_command", "reliability": "best_effort", "durability": "volatile", "history": "keep_last", "depth": 1, "preflight_required": true},
+    {"channel_class": "robot_state", "reliability": "best_effort", "durability": "volatile", "history": "keep_last", "depth": 5, "preflight_required": true},
+    {"channel_class": "camera", "reliability": "best_effort", "durability": "volatile", "history": "keep_last", "depth": 2, "preflight_required": true},
+    {"channel_class": "safety_estop", "reliability": "reliable", "durability": "transient_local", "history": "keep_last", "depth": 1, "preflight_required": true},
+    {"channel_class": "health_event", "reliability": "reliable", "durability": "volatile", "history": "keep_last", "depth": 20, "preflight_required": true},
+    {"channel_class": "transaction_service", "reliability": "reliable", "durability": "volatile", "history": "keep_last", "depth": 10, "preflight_required": true},
+    {"channel_class": "static_tf", "reliability": "reliable", "durability": "transient_local", "history": "keep_last", "depth": 1, "preflight_required": true}
+  ],
+  "clock_contract": {
+    "simulation_clock": "physics_step_and_sim_timestamp",
+    "ros_clock": "message_alignment_and_age",
+    "monotonic_clock": "timeouts_and_wall_latency",
+    "timeout_clock": "monotonic",
+    "use_sim_time": null,
+    "reset_epoch_rule": "first_valid_state_must_follow_reset_completion"
+  },
+  "plane_contract": {
+    "control_plane": {
+      "location": "simulator_host_or_low_latency_lan",
+      "network_rule": "do_not_span_1khz_loop_over_public_network",
+      "blocking_io_allowed": false
+    },
+    "data_plane": {
+      "queue_semantics": "bounded",
+      "overload_policy": "drop_old_frames_and_count",
+      "flush_thread": "non_control"
+    }
+  },
+  "thread_ownership": [
+    {"workload": "control_state", "owner": "runtime control callback group", "may_block_control": false, "queue_semantics": "latest_value"},
+    {"workload": "policy_inference", "owner": "bounded inference worker", "may_block_control": false, "queue_semantics": "latest_value"},
+    {"workload": "reset_services", "owner": "reset transaction callback group", "may_block_control": false, "queue_semantics": "transaction"},
+    {"workload": "camera_recording", "owner": "bounded recorder worker", "may_block_control": false, "queue_semantics": "bounded_fifo"},
+    {"workload": "artifact_flush", "owner": "non-control flush worker", "may_block_control": false, "queue_semantics": "bounded_fifo"}
+  ],
+  "fail_safe_contract": [
+    {"condition": "stale_command", "threshold_ms": null, "threshold_source": "runtime_config", "response": "hold_then_abort", "terminal_outcome": "timeout", "evidence_event_required": true},
+    {"condition": "stale_state", "threshold_ms": null, "threshold_source": "runtime_config", "response": "hold_then_abort", "terminal_outcome": "timeout", "evidence_event_required": true},
+    {"condition": "dds_qos_mismatch", "threshold_ms": null, "threshold_source": "not_applicable", "response": "fail_preflight", "terminal_outcome": "infrastructure_failure", "evidence_event_required": true},
+    {"condition": "reset_timeout", "threshold_ms": null, "threshold_source": "runtime_config", "response": "abort_and_clear_history", "terminal_outcome": "timeout", "evidence_event_required": true},
+    {"condition": "policy_timeout", "threshold_ms": null, "threshold_source": "runtime_config", "response": "hold_then_abort", "terminal_outcome": "timeout", "evidence_event_required": true}
+  ],
+  "nfr_evidence_contract": [
+    {"metric": "kernel_and_scheduler_snapshot", "unit": "text", "required_for_runtime_claim": true, "evidence_path": "nfr/kernel_scheduler.txt"},
+    {"metric": "dds_transport_and_qos_snapshot", "unit": "text", "required_for_runtime_claim": true, "evidence_path": "nfr/dds_qos.txt"},
+    {"metric": "command_age_p50_p95_max", "unit": "ms", "required_for_runtime_claim": true, "evidence_path": "nfr/timing.json"},
+    {"metric": "state_age_p50_p95_max", "unit": "ms", "required_for_runtime_claim": true, "evidence_path": "nfr/timing.json"},
+    {"metric": "control_and_state_frequency", "unit": "Hz", "required_for_runtime_claim": true, "evidence_path": "nfr/frequencies.json"},
+    {"metric": "watchdog_and_reset_recovery", "unit": "ms", "required_for_runtime_claim": true, "evidence_path": "nfr/fail_safe.json"},
+    {"metric": "cpu_gpu_rss_vram", "unit": "mixed", "required_for_runtime_claim": true, "evidence_path": "nfr/resources.jsonl"},
+    {"metric": "physics_fps_and_rtf", "unit": "mixed", "required_for_runtime_claim": true, "evidence_path": "nfr/simulator.jsonl"},
+    {"metric": "qos_mismatch_and_disconnect_injection", "unit": "events", "required_for_runtime_claim": true, "evidence_path": "nfr/fault_injection.jsonl"}
+  ],
+  "evidence_paths": {
+    "artifact_root": "reports/e0_nominal_contract_fixture",
+    "raw_episode_pattern": "episodes/seed_{seed}/",
+    "video_pattern": "videos/seed_{seed}.mp4",
+    "runtime_log_pattern": "logs/seed_{seed}.log",
+    "qos_preflight": "nfr/dds_qos.txt",
+    "nfr_snapshot": "nfr/"
+  },
+  "limitations": [
+    "Contract fixture only: no Isaac rollout has been executed.",
+    "Null provenance, thresholds and NFR values must be resolved before runtime execution.",
+    "Offline loss or replay metrics must not be reported as physical task success."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "suite_id": "nominal",
+  "suite_version": "0.1.0",
+  "description": "E0 contract fixture for in-distribution Panda pick-place evaluation.",
+  "scene_id": "panda_pick_place_v1",
+  "seeds": [101, 202, 303],
+  "perturbations": {
+    "object_pose": "training_distribution",
+    "visual": "reference",
+    "camera": "reference_calibration",
+    "dynamics": "reference_parameters"
+  },
+  "episode_timeout_s": null,
+  "status": "contract_only",
+  "note": "Thresholds and runtime values must be resolved before E1 execution. This file contains no rollout evidence."
+}

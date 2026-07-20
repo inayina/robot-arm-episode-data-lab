@@ -1,7 +1,12 @@
 # 三仓机器人项目作品集事实母版
 
-审计日期：2026-07-13  
-项目定位：Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环。  
+> 2026-07-20 更新：本文保留早期 MLP/handoff 素材；当前求职主叙事已经切换为
+> ACT→Isaac 评测闭环。E3 nominal=0/20、E3.5 oracle lift=5/5、close→lift 模型 5-seed
+> lift=0/5 的权威口径见 [EVALUATION_REPORT.md](../EVALUATION_REPORT.md)。若下文旧段落与该报告
+> 冲突，以运行产物、canonical facts 和该报告为准。
+
+审计日期：2026-07-13
+项目定位：Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环。
 本文件用途：为简历、README、作品集 PDF、面试话术、演示脚本、HR 沟通和技术追问提供统一事实来源。
 
 ## 候选人画像
@@ -105,7 +110,7 @@ Motion Agent 使用 MoveIt Servo 做笛卡尔伺服，输出 `/joint_target`；�
 
 ### ros2_control
 
-ros2_control 作为 L3 控制层，包含 `controller_manager`、`cartesian_impedance_controller`、`joint_state_broadcaster` 和 `canopen_system`，目标控制频率在架构文档中记录为 1000 Hz（`docs/ARCHITECTURE_V2.md:47-55`，`docs/ARCHITECTURE_V2.md:150-162`）。
+ros2_control 作为 L3 控制层，包含 `controller_manager`、`cartesian_impedance_controller`、`joint_state_broadcaster` 和 `canopen_system`。当前仿真主线为 **500 Hz**（`control_rate_sim.yaml`），真机路径为 **1000 Hz**（`control_rate_real.yaml`）；见上游 `docs/ARCHITECTURE_V2.md` 与 `ros2_control.launch.py`。
 
 ### MuJoCo
 
@@ -142,8 +147,8 @@ Recorder 订阅 gripper、teleop cmd、safety、drive status 和 record trigger�
 
 ### 本仓边界
 
-已实现且验证：ROS 2/MuJoCo 软件仿真采集、batch physical gate、recorder 字段输出、上游 G0 30/30 valid。  
-已实现但验证不完整：多模态 portfolio media 与完整 30 Hz acceptance 的强证据，需要附原始验证日志。  
+已实现且验证：ROS 2/MuJoCo 软件仿真采集、batch physical gate、recorder 字段输出、上游 G0 30/30 valid。
+已实现但验证不完整：多模态 portfolio media 与完整 30 Hz acceptance 的强证据，需要附原始验证日志。
 当前未实现：真实 Panda 部署、真实 Sim2Real、在线自主策略成功率评估。
 
 候选简历素材：
@@ -234,9 +239,10 @@ Canonical handoff：`training/reports/panda_mlp_bc/bridge_handoff/handoff_manife
 
 ### 当前局限
 
-已实现且验证：30 条 release、schema inspection、EDA、MLP BC、same-split linear comparison、predicted JSONL、handoff。  
-已实现但验证不完整：LeRobot ACT 脚本存在，但未定位到 canonical 完整 ACT 训练产物。  
-smoke/mock：`train_act_smoke.py` 是线性/ridge smoke，不是真 ACT。  
+已实现且验证：30 条 MLP 历史 release/handoff；以及 500 Hz ACT release/checkpoint、Isaac
+bounded rollout、continuous GT、E3 nominal20、E3.5 oracle 和 E3.6 5-seed No-Go。
+已实现但验证不完整：E4 泛化矩阵、跨后端物理标定和真实硬件验证。
+smoke/mock：`train_act_smoke.py` 是线性/ridge smoke，不是真 ACT。
 当前未实现：在线自主抓取成功率提升、实机部署、完整 Sim2Real、大规模训练、模型泛化充分验证。
 
 候选简历素材：
@@ -280,7 +286,7 @@ Latest archived downstream smoke：`robot-arm-episode-data-lab/evidence/downstre
 
 ### nominal / randomized simulation、fault injection、watchdog、E-stop / Hold
 
-已实现证据：PolicyRunner 有 fault injection 参数、watchdog timeout、stalled health；测试覆盖 fault injection stalled health（`policy_runner.py:80-83`，`policy_runner.py:250-333`，`test_policy_runner_node.py:280-323`）。下游 README 与 Current Status 记录 distribution/risk components 为已实现或部分验证（`README.md:19-28`，`docs/CURRENT_STATUS.md:19-34`）。  
+已实现证据：PolicyRunner 有 fault injection 参数、watchdog timeout、stalled health；测试覆盖 fault injection stalled health（`policy_runner.py:80-83`，`policy_runner.py:250-333`，`test_policy_runner_node.py:280-323`）。下游 README 与 Current Status 记录 distribution/risk components 为已实现或部分验证（`README.md:19-28`，`docs/CURRENT_STATUS.md:19-34`）。
 当前证据不足：未定位到 canonical 主实验的完整 randomized/fault campaign 原始 JSON；旧 canonical 文档提到 94.399 ms fault alarm，但原始 benchmark summary 未在本次检索中定位。
 
 ### downstream feedback
@@ -440,7 +446,7 @@ Latest archived downstream smoke：`robot-arm-episode-data-lab/evidence/downstre
 
 | 选择 | 原因 | 替代方案 | 为什么暂缓 |
 | --- | --- | --- | --- |
-| 先做 MLP BC，不直接做 ACT | 小规模低维数据更适合先验证数据、训练、handoff 链路 | LeRobot ACT / Diffusion Policy | ACT 需要更完整数据、环境和运行证据；当前未定位 canonical ACT 产物 |
+| 先做 MLP BC，再进入 ACT | 小规模低维数据先验证数据、训练、handoff；随后 ACT→Isaac diagnostic 已完成 | Diffusion Policy / 更大模型 | ACT 已有运行证据，但 E3 0/20、定向模型 lift 0/5，不能包装成成功策略 |
 | 先用 30 条小规模数据验证闭环 | 30 条足够暴露 schema、Gate、split、handoff、replay 问题 | 直接大规模采集 | 大规模前先确认接口稳定，避免批量产出错误数据 |
 | 先做 offline evaluation | 离线 MSE 可快速验证 state-action 拟合与训练代码 | 直接 online rollout | online rollout 涉及控制、场景、物理成败和安全边界，不能由 loss 代替 |
 | 不把 loss 等同任务成功率 | loss 衡量动作预测误差，不衡量抓取物理成功 | 宣称成功率提升 | 当前没有在线抓取成功率评测 |
@@ -487,99 +493,99 @@ Latest archived downstream smoke：`robot-arm-episode-data-lab/evidence/downstre
 4. 下游：`ros2-moveit-pybullet-bridge` 是 replay 和验证仓。它 load handoff，校验 JSONL，用 `panda_jsonl_replay` 和 `PandaActionAdapter` 在 PyBullet 中执行，并接入 KL/W1/MMD 与 risk aggregation。
 5. 实验结果：30 episodes / 71,737 frames，G0 30/30 valid，release PASS，MLP 100 epochs，MLP test MSE 0.2350，linear same split test MSE 0.5800，handoff 71,737 actions PASS，latest downstream smoke 1/1 completed。
 6. 难点：state/action 语义不一致、Gate owner 冲突、gripper command 越界 warning、README 与代码路径不一致、RAG 不能用通用知识补项目事实。
-7. 局限：没有实机、没有完整 Sim2Real、没有在线 rollout 成功率、没有大规模数据和 ACT canonical 结果。
-8. 下一步：扩大数据、补齐 image/tactile modalities、正式 ACT/LeRobot 训练、下游更完整 fault/randomized campaign、最终在有真实硬件条件时做安全可控的 Sim2Real 验证。
+7. 局限：没有实机、没有完整 Sim2Real；learned-policy E3 为 0/20，定向模型 5-seed lift 0/5；E4 未执行。
+8. 下一步：不开完整 E4，也不盲目扩大同类数据；继续诊断 home→对准→闭合的观测/阶段建模，候选模型先过小规模真实 lift gate。
 
 ## 13. 高频技术追问
 
-1. 为什么要三仓拆分？  
+1. 为什么要三仓拆分？
 答：因为采集控制、数据训练、执行验证的职责和失败模式不同。三仓让 Gate、schema、handoff 和 replay owner 清楚，避免一个仓库既改数据又改执行导致证据不可信。
 
-2. state 和 observation 有什么区别？  
+2. state 和 observation 有什么区别？
 答：当前训练用的核心 state 是 `observation.state[8]`，即 7 个 Panda joint positions 加 1 个 gripper opening。observation 还可包含 ee_pose、object_pose、FT、images 等更广义观测。
 
-3. action 是什么？  
+3. action 是什么？
 答：中游和下游主线 action 是 `ee_delta_gripper[7]`：末端 `delta_xyz[3] + delta_rpy[3] + gripper_cmd[1]`。
 
-4. 上游 action[8] 为什么要转？  
+4. 上游 action[8] 为什么要转？
 答：上游 recorder action 是目标 ee pose + gripper，训练/下游 replay 约定需要 ee delta + gripper。这个语义转换放在中游 adapter，不能让下游静默截断。
 
-5. BC 学到的是什么？  
+5. BC 学到的是什么？
 答：当前 MLP BC 学的是低维 `state[8]` 到 `ee_delta_gripper[7]` 的监督映射，不是在线规划器，也不是自主任务策略完整闭环。
 
-6. 为什么 MLP 比线性回归好？  
+6. 为什么 MLP 比线性回归好？
 答：在同 24/6 episode split 与 normalized MSE 口径下，MLP test 0.2350 低于 linear 0.5800，说明非线性映射拟合当前数据更强。
 
-7. 30 条数据是否过少？  
+7. 30 条数据是否过少？
 答：对证明泛化确实过少；对验证 schema、release、training、handoff、replay 的工程闭环是有价值的小规模起点。
 
-8. 100 epochs 是什么意思？  
+8. 100 epochs 是什么意思？
 答：训练脚本对 train split 遍历 100 轮优化 MSE。它不是 100 次任务执行，也不是 100 次在线 rollout。
 
-9. 什么是 CUDA？  
+9. 什么是 CUDA？
 答：这里指 PyTorch 使用 NVIDIA GPU 加速训练。metrics 记录 selected=cuda、torch CUDA version 和 GPU 型号。
 
-10. loss 下降说明什么？  
+10. loss 下降说明什么？
 答：说明模型在离线数据上的动作预测误差降低。它不能直接说明抓取成功率提升。
 
-11. 为什么不能代表抓取成功？  
+11. 为什么不能代表抓取成功？
 答：抓取成功涉及环境状态、接触、控制稳定性、误差累积和闭环反馈；当前指标只是单步/逐帧动作预测误差。
 
-12. offline evaluation 与 online rollout 区别？  
+12. offline evaluation 与 online rollout 区别？
 答：offline evaluation 在已有数据上比较预测动作和记录动作；online rollout 是策略真的控制仿真或机器人完成任务。
 
-13. replay 与 handoff 区别？  
+13. replay 与 handoff 区别？
 答：handoff 是中游交付包，含 manifest、predicted JSONL、inspection、replay check；replay 是下游消费这个包并执行动作流。
 
-14. Gate 为什么放在上游？  
+14. Gate 为什么放在上游？
 答：lift/place 成败依赖物理执行和对象状态，发生在 MuJoCo/batch_generator 侧。中游只拿离线数据，不应重新推断物理成功。
 
-15. 中游为什么不重新判断物理成功？  
+15. 中游为什么不重新判断物理成功？
 答：避免重复 owner 和不一致判定。`filter_scope=training_split_only` 明确中游只检查 schema、success、safety_estop、drive_fault。
 
-16. 下游为什么还要 action adapter？  
+16. 下游为什么还要 action adapter？
 答：handoff action 是任务空间 delta，下游执行需要 joint command。PandaActionAdapter 做 action limit、gripper range、IK/hold/mock conversion。
 
-17. 什么是 KL/W1/MMD？  
+17. 什么是 KL/W1/MMD？
 答：本项目中它们是下游 distribution monitor 的漂移指标，用于比较对齐后的状态/误差分布，不等于 Sim2Real 已完成。
 
-18. 当前是不是具身 Agent？  
+18. 当前是不是具身 Agent？
 答：可以说是具身工程闭环的雏形，包含数据、策略和仿真执行验证；但不是稳定在线自主抓取 Agent。
 
-19. 当前是否完成 Sim2Real？  
+19. 当前是否完成 Sim2Real？
 答：没有。当前是 Sim2Sim 与 Sim2Real-readiness，未完成真实机器人验证。
 
-20. AI 在项目中承担了什么？  
+20. AI 在项目中承担了什么？
 答：Codex/生成式 AI 可用于辅助开发、审计、文档和 RAG，但项目价值要落到候选人的架构、取舍、验证和事实审查上。
 
-21. 如何证明项目是自己做的？  
+21. 如何证明项目是自己做的？
 答：可以讲清三仓职责、关键代码路径、manifest 字段、实验 ID、loss 口径、handoff warning、事实冲突和下一步限制；这些细节不是只看 README 能背出来的。
 
-22. ACT 完成了吗？  
+22. ACT 完成了吗？
 答：当前证据不足以确认 canonical ACT 正式实验完成。`train_act_smoke.py` 是线性 smoke，`train_act_lerobot.py` 是代码路径但非主实验产物。
 
-23. 为什么不用强化学习？  
+23. 为什么不用强化学习？
 答：当前目标是打通数据和验证闭环。RL 需要 reward、稳定 rollout 和更多实验预算，先暂缓。
 
-24. gripper warning 是什么？  
+24. gripper warning 是什么？
 答：handoff replay check 发现 3,275 个 gripper command 超出 `[0,1]`，下游执行前必须 clamp 或 reject。
 
-25. images 缺失会影响什么？  
+25. images 缺失会影响什么？
 答：canonical MLP 是 low-dimensional baseline，没有使用 scene/wrist/tactile image。image 缺失作为 warning 记录，不能写成多模态训练。
 
-26. 为什么下游 replay 不等于抓取？  
+26. 为什么下游 replay 不等于抓取？
 答：replay 验证动作流能被加载、适配并在 PyBullet 中执行；物体接触、抓取成功和任务完成需要额外物理评估。
 
-27. latest downstream smoke 能证明什么？  
+27. latest downstream smoke 能证明什么？
 答：证明 latest archived handoff replay path 完成了 1 个 episode，并输出 latency/health summary。不能证明长期稳定或 fault campaign。
 
-28. README 与代码冲突怎么办？  
+28. README 与代码冲突怎么办？
 答：按项目规则优先采用测试和代码，并在作品集母版记录冲突，后续再同步 README。
 
-29. RAG 为什么重要？  
+29. RAG 为什么重要？
 答：它降低三仓事实遗忘和跨仓接口误读风险，要求回答项目前先检索代码、测试、schema 和文档。
 
-30. 这个项目最能体现什么能力？  
+30. 这个项目最能体现什么能力？
 答：系统边界拆分、接口契约设计、数据质量治理、训练验证闭环、风险监控和诚实表达实验边界。
 
 ## 14. HR 视角说明

@@ -30,6 +30,13 @@ DEFAULT_SCHEMA = REPO_ROOT / "configs" / "robot_schemas" / "panda.yaml"
 IMAGE_SIZE = 224
 IMAGE_MEAN = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
 IMAGE_STD = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+STAGE_NAMES = (
+    "other",
+    "grasp_context",
+    "closing",
+    "closed_transport",
+    "release",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,6 +53,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--validation-fraction", type=float, default=0.2)
     parser.add_argument("--cache-root", type=Path, default=None)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    parser.add_argument(
+        "--stage-balanced-sampling",
+        action="store_true",
+        help=(
+            "Weight grasp context, gripper closing, and closed-carry anchors. "
+            "Validation remains uniformly sampled."
+        ),
+    )
+    parser.add_argument("--grasp-context-frames", type=int, default=10)
+    parser.add_argument("--grasp-context-weight", type=float, default=4.0)
+    parser.add_argument("--closing-weight", type=float, default=2.0)
+    parser.add_argument("--transport-weight", type=float, default=1.5)
+    parser.add_argument("--stage-closed-threshold", type=float, default=0.12)
+    parser.add_argument("--stage-open-threshold", type=float, default=0.95)
     return parser.parse_args()
 
 
@@ -91,6 +112,130 @@ def normalization_from_rows(rows: list[dict[str, Any]]) -> dict[str, list[float]
         "action_mean": actions.mean(axis=0).tolist(),
         "action_std": action_std.tolist(),
     }
+
+
+def infer_stage_labels(
+    rows: list[dict[str, Any]],
+    *,
+    closed_threshold: float = 0.12,
+    open_threshold: float = 0.95,
+    transition_delta: float = 0.01,
+    grasp_context_frames: int = 10,
+) -> list[str]:
+    """Infer temporal task stages from the verified gripper command sequence.
+
+    This is a training sampler heuristic, not a physical lift/place evaluator. It
+    deliberately does not inspect ``observation.object_pose``. ``closed_transport``
+    means the interval after close and before release, which covers grasp hold,
+    lift, transport, and pre-release motion in the upstream ordered FSM.
+    """
+    if not 0.0 <= closed_threshold < open_threshold <= 1.0:
+        raise ValueError("stage thresholds must satisfy 0 <= closed < open <= 1")
+    if transition_delta <= 0.0:
+        raise ValueError("transition_delta must be positive")
+    if grasp_context_frames < 0:
+        raise ValueError("grasp_context_frames must be non-negative")
+    labels = ["other"] * len(rows)
+    cursor = 0
+    while cursor < len(rows):
+        episode = int(rows[cursor]["episode_index"])
+        end = cursor + 1
+        while end < len(rows) and int(rows[end]["episode_index"]) == episode:
+            end += 1
+        gripper = [float(row["action"][-1]) for row in rows[cursor:end]]
+        close_start = next((
+            index for index in range(1, len(gripper))
+            if gripper[index - 1] - gripper[index] >= transition_delta
+            and gripper[index] < open_threshold
+        ), None)
+        if close_start is None:
+            cursor = end
+            continue
+        close_end = next((
+            index for index in range(close_start, len(gripper))
+            if gripper[index] <= closed_threshold
+        ), None)
+        if close_end is None:
+            cursor = end
+            continue
+        release_start = next((
+            index for index in range(close_end + 1, len(gripper))
+            if gripper[index] - gripper[index - 1] >= transition_delta
+        ), len(gripper))
+        release_end = next((
+            index for index in range(release_start, len(gripper))
+            if gripper[index] >= open_threshold
+        ), len(gripper) - 1)
+
+        context_start = max(0, close_start - grasp_context_frames)
+        for local_index in range(context_start, close_start):
+            labels[cursor + local_index] = "grasp_context"
+        for local_index in range(close_start, close_end + 1):
+            labels[cursor + local_index] = "closing"
+        for local_index in range(close_end + 1, release_start):
+            labels[cursor + local_index] = "closed_transport"
+        for local_index in range(release_start, release_end + 1):
+            labels[cursor + local_index] = "release"
+        cursor = end
+    return labels
+
+
+def stage_sampling_profile(
+    rows: list[dict[str, Any]],
+    *,
+    grasp_context_frames: int,
+    grasp_context_weight: float,
+    closing_weight: float,
+    transport_weight: float,
+    closed_threshold: float,
+    open_threshold: float,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Build per-anchor weights and a serializable audit profile."""
+    requested_weights = {
+        "other": 1.0,
+        "grasp_context": float(grasp_context_weight),
+        "closing": float(closing_weight),
+        "closed_transport": float(transport_weight),
+        "release": 1.0,
+    }
+    if any(not np.isfinite(value) or value <= 0.0
+           for value in requested_weights.values()):
+        raise ValueError("all stage sampling weights must be finite and positive")
+    labels = infer_stage_labels(
+        rows,
+        closed_threshold=closed_threshold,
+        open_threshold=open_threshold,
+        grasp_context_frames=grasp_context_frames,
+    )
+    counts = {stage: labels.count(stage) for stage in STAGE_NAMES}
+    if counts["closing"] == 0 or counts["closed_transport"] == 0:
+        raise ValueError(
+            "stage-balanced sampling found no complete close/carry sequence"
+        )
+    weights = np.asarray(
+        [requested_weights[label] for label in labels], dtype=np.float64)
+    total_frames = len(labels)
+    weighted_total = float(weights.sum())
+    profile = {
+        "strategy": "weighted_random_anchor_with_replacement",
+        "phase_source": "per_episode_verified_action_gripper_sequence",
+        "physical_success_rederived": False,
+        "grasp_context_frames": grasp_context_frames,
+        "closed_threshold": closed_threshold,
+        "open_threshold": open_threshold,
+        "weights": requested_weights,
+        "observed_frames": counts,
+        "observed_fraction": {
+            stage: counts[stage] / total_frames for stage in STAGE_NAMES
+        },
+        "expected_sample_fraction": {
+            stage: counts[stage] * requested_weights[stage] / weighted_total
+            for stage in STAGE_NAMES
+        },
+        "samples_per_epoch": total_frames,
+        "validation_sampling": "uniform_sequential_unweighted",
+    }
+    return weights, profile
 
 
 def _load_scene_tensor(path: Path, torch):
@@ -269,12 +414,15 @@ def evaluate(policy, loader, dataset: SceneACTDataset, device: str) -> dict[str,
     with torch.no_grad():
         for batch in loader:
             batch = {key: value.to(device) for key, value in batch.items()}
-            _loss, loss_dict = policy.forward(batch)
-            losses.append(float(loss_dict["l1_loss"]))
             model_batch = dict(batch)
             model_batch[OBS_IMAGES] = [batch[SCENE_KEY]]
             actions_hat, _ = policy.model(model_batch)
             valid = ~batch["action_is_pad"]
+            valid_values = valid.unsqueeze(-1).expand_as(actions_hat)
+            normalized_l1 = (
+                torch.abs(actions_hat - batch["action"])[valid_values].mean()
+            )
+            losses.append(float(normalized_l1))
             pred_raw = (
                 actions_hat * dataset.action_std.to(device)
                 + dataset.action_mean.to(device)
@@ -317,10 +465,17 @@ def train(
     validation_fraction: float,
     cache_root: Path | None,
     device: str,
+    stage_balanced_sampling: bool = False,
+    grasp_context_frames: int = 10,
+    grasp_context_weight: float = 4.0,
+    closing_weight: float = 2.0,
+    transport_weight: float = 1.5,
+    stage_closed_threshold: float = 0.12,
+    stage_open_threshold: float = 0.95,
 ) -> dict[str, Any]:
     try:
         import torch
-        from torch.utils.data import DataLoader
+        from torch.utils.data import DataLoader, WeightedRandomSampler
     except ImportError as exc:
         raise RuntimeError("Activate the lerobot conda environment") from exc
     if n_obs_steps != 1:
@@ -348,8 +503,37 @@ def train(
     device = str(resolved_device)
     torch.manual_seed(seed)
     np.random.seed(seed)
+    sampling_profile: dict[str, Any] = {
+        "strategy": "uniform_shuffle",
+        "samples_per_epoch": len(train_dataset),
+        "validation_sampling": "uniform_sequential_unweighted",
+    }
+    train_sampler = None
+    if stage_balanced_sampling:
+        sample_weights, sampling_profile = stage_sampling_profile(
+            train_dataset.rows,
+            grasp_context_frames=grasp_context_frames,
+            grasp_context_weight=grasp_context_weight,
+            closing_weight=closing_weight,
+            transport_weight=transport_weight,
+            closed_threshold=stage_closed_threshold,
+            open_threshold=stage_open_threshold,
+        )
+        generator = torch.Generator()
+        generator.manual_seed(seed)
+        train_sampler = WeightedRandomSampler(
+            torch.as_tensor(sample_weights, dtype=torch.double),
+            num_samples=len(train_dataset),
+            replacement=True,
+            generator=generator,
+        )
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=train_sampler is None,
+        sampler=train_sampler,
+        drop_last=False,
+    )
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
     policy = build_act_policy(8, 7, chunk_size, n_obs_steps, device)
@@ -400,6 +584,7 @@ def train(
         "train_episode_ids": sorted(train_ids),
         "validation_episode_ids": sorted(val_ids),
         "normalization": normalization,
+        "sampling": sampling_profile,
     }
     torch.save(
         {"state_dict": cpu_state_dict(policy), "metadata": metadata},
@@ -457,6 +642,13 @@ def main() -> int:
             validation_fraction=args.validation_fraction,
             cache_root=args.cache_root,
             device=args.device,
+            stage_balanced_sampling=args.stage_balanced_sampling,
+            grasp_context_frames=args.grasp_context_frames,
+            grasp_context_weight=args.grasp_context_weight,
+            closing_weight=args.closing_weight,
+            transport_weight=args.transport_weight,
+            stage_closed_threshold=args.stage_closed_threshold,
+            stage_open_threshold=args.stage_open_threshold,
         )
     except Exception as exc:
         print(f"Training output: {args.output}")

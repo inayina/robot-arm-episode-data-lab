@@ -1,6 +1,11 @@
 # Three-Repo README Audit
 
-阶段 1 审计报告。本文只给出 README 信息架构、措辞、实验数字和资产证据审计结论，不修改 README。
+> **历史审计（阶段 1）**：本文保留 2026-07-14 的 MLP/handoff 基线审计，不再代表当前首页。
+> ACT→Isaac E2/E3/E3.5/E3.6 的当前事实与 README 整理结果，以
+> [EVALUATION_REPORT.md](../EVALUATION_REPORT.md) 和
+> [THREE_REPO_CANONICAL_FACTS.md](THREE_REPO_CANONICAL_FACTS.md) 为准。
+
+阶段 1 审计报告。本文只记录当时的 README 信息架构、措辞、实验数字和资产证据审计结论。
 
 ## A. Cross-Repo Conflict Table
 

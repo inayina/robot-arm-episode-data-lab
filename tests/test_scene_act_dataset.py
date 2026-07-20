@@ -11,8 +11,10 @@ import pytest
 from training.io.scene_cache import SCENE_KEY, SceneFrameCache
 from training.scripts.train_act_lerobot import (
     SceneACTDataset,
+    infer_stage_labels,
     normalization_from_rows,
     split_episode_ids,
+    stage_sampling_profile,
 )
 
 
@@ -89,3 +91,75 @@ def test_episode_split_has_no_frame_leakage() -> None:
     assert val_ids
     assert train_ids.isdisjoint(val_ids)
     assert train_ids | val_ids == set(range(5))
+
+
+def _stage_rows(gripper_commands: list[float], episode: int = 0) -> list[dict]:
+    return [
+        {
+            "episode_index": episode,
+            "frame_index": frame,
+            "action": [0.0] * 6 + [command],
+        }
+        for frame, command in enumerate(gripper_commands)
+    ]
+
+
+def test_stage_labels_follow_close_carry_release_sequence() -> None:
+    rows = _stage_rows([1.0, 1.0, 1.0, 0.8, 0.4, 0.1, 0.1, 0.1, 0.4, 0.8, 1.0, 1.0])
+
+    labels = infer_stage_labels(rows, grasp_context_frames=2)
+
+    assert labels == [
+        "other",
+        "grasp_context",
+        "grasp_context",
+        "closing",
+        "closing",
+        "closing",
+        "closed_transport",
+        "closed_transport",
+        "release",
+        "release",
+        "release",
+        "other",
+    ]
+
+
+def test_stage_sampling_profile_increases_requested_anchor_weights() -> None:
+    rows = _stage_rows([1.0, 1.0, 1.0, 0.8, 0.4, 0.1, 0.1, 0.1, 0.4, 0.8, 1.0, 1.0])
+
+    weights, profile = stage_sampling_profile(
+        rows,
+        grasp_context_frames=2,
+        grasp_context_weight=2.0,
+        closing_weight=4.0,
+        transport_weight=3.0,
+        closed_threshold=0.12,
+        open_threshold=0.95,
+    )
+
+    assert weights.tolist() == [1.0, 2.0, 2.0, 4.0, 4.0, 4.0, 3.0, 3.0, 1.0, 1.0, 1.0, 1.0]
+    assert profile["observed_frames"] == {
+        "other": 2,
+        "grasp_context": 2,
+        "closing": 3,
+        "closed_transport": 2,
+        "release": 3,
+    }
+    assert profile["physical_success_rederived"] is False
+    assert profile["expected_sample_fraction"]["closing"] > profile["observed_fraction"]["closing"]
+
+
+def test_stage_sampling_rejects_dataset_without_close_sequence() -> None:
+    rows = _stage_rows([1.0, 1.0, 1.0])
+
+    with pytest.raises(ValueError, match="no complete close/carry sequence"):
+        stage_sampling_profile(
+            rows,
+            grasp_context_frames=2,
+            grasp_context_weight=2.0,
+            closing_weight=4.0,
+            transport_weight=3.0,
+            closed_threshold=0.12,
+            open_threshold=0.95,
+        )
