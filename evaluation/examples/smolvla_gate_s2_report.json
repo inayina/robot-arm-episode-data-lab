@@ -1,0 +1,222 @@
+{
+  "contract_version": "smolvla_gate_s2_report_v0",
+  "artifact_type": "smolvla_gate_s2_open_loop",
+  "created_at": "2026-07-21T17:19:08Z",
+  "claims_task_success": false,
+  "trained": false,
+  "ran_isaac": false,
+  "uses_panda_data": true,
+  "model_id": "lerobot/smolvla_base",
+  "mapping_hypothesis": "libero6d_pred012_as_xyz_pred5_as_gripper_quat_unmapped",
+  "schema_yaml": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/configs/robot_schemas/smolvla_panda_s2.yaml",
+  "episode_root": "/home/ina/dev/ros2-arm-teleoperation-suite/data/e2_red_500hz_seed52_closelift5_20260720",
+  "episode_index": 0,
+  "frame_indices": [
+    0,
+    20,
+    40,
+    60,
+    80,
+    100,
+    120,
+    140
+  ],
+  "upstream_codebase_version": "v2.1",
+  "s2_interface_status": "pass",
+  "h3_pretrained_vs_absolute_eef": "no_go",
+  "h4_upstream_v21_loader": "pass",
+  "h4_notes": [],
+  "interface_error": null,
+  "gpu_name": "NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU",
+  "vram_total_mib": 5672,
+  "load_seconds": 3.958,
+  "load_peak_vram_mib": 884,
+  "infer_peak_vram_mib": 926,
+  "latency_ms_mean": 240.984,
+  "frame_logs": [
+    {
+      "frame_index": 0,
+      "expert_xyz": [
+        0.3070195700516107,
+        -5.914088668718461e-12,
+        0.4902695582766445
+      ],
+      "pred_xyz": [
+        0.43352124094963074,
+        -0.10257501155138016,
+        0.518817663192749
+      ],
+      "expert_gripper_cmd": 1.0,
+      "pred_gripper_cmd": 0.10436801612377167,
+      "ee_position_l2_m": 0.16534600094300553,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 0
+    },
+    {
+      "frame_index": 20,
+      "expert_xyz": [
+        0.3070195700516107,
+        -5.914088668718461e-12,
+        0.4902695582766445
+      ],
+      "pred_xyz": [
+        0.38191649317741394,
+        -0.05392856150865555,
+        0.5434861183166504
+      ],
+      "expert_gripper_cmd": 1.0,
+      "pred_gripper_cmd": 0.07596367597579956,
+      "ee_position_l2_m": 0.10653563301524521,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 20
+    },
+    {
+      "frame_index": 40,
+      "expert_xyz": [
+        0.307,
+        0.0,
+        0.49
+      ],
+      "pred_xyz": [
+        0.47328466176986694,
+        -0.15971410274505615,
+        0.5379878878593445
+      ],
+      "expert_gripper_cmd": 1.0,
+      "pred_gripper_cmd": 0.022198930382728577,
+      "ee_position_l2_m": 0.23550375949606075,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 40
+    },
+    {
+      "frame_index": 60,
+      "expert_xyz": [
+        0.4218798325173736,
+        0.11065850187762877,
+        0.48161296021019845
+      ],
+      "pred_xyz": [
+        0.4945097267627716,
+        -0.25059476494789124,
+        0.27527979016304016
+      ],
+      "expert_gripper_cmd": 1.0,
+      "pred_gripper_cmd": 0.3552795946598053,
+      "ee_position_l2_m": 0.42231789139452475,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 60
+    },
+    {
+      "frame_index": 80,
+      "expert_xyz": [
+        0.4218798325173736,
+        0.11065850187762877,
+        0.10496409798069993
+      ],
+      "pred_xyz": [
+        0.4916429817676544,
+        -0.10195722430944443,
+        -0.01446338091045618
+      ],
+      "expert_gripper_cmd": 1.0,
+      "pred_gripper_cmd": 0.3057740032672882,
+      "ee_position_l2_m": 0.25364397633232094,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 80
+    },
+    {
+      "frame_index": 100,
+      "expert_xyz": [
+        0.4218798325173736,
+        0.11065850187762877,
+        0.03696409798069993
+      ],
+      "pred_xyz": [
+        0.4612254798412323,
+        -0.005879733711481094,
+        -0.06104462593793869
+      ],
+      "expert_gripper_cmd": 0.9942857142857143,
+      "pred_gripper_cmd": 0.1922532171010971,
+      "ee_position_l2_m": 0.1572734888076063,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 100
+    },
+    {
+      "frame_index": 120,
+      "expert_xyz": [
+        0.4218798325173736,
+        0.11065850187762877,
+        0.03696409798069993
+      ],
+      "pred_xyz": [
+        0.827894389629364,
+        0.045668888837099075,
+        -0.10116513818502426
+      ],
+      "expert_gripper_cmd": 0.4685714285714285,
+      "pred_gripper_cmd": 0.007038190960884094,
+      "ee_position_l2_m": 0.4337639407255171,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 120
+    },
+    {
+      "frame_index": 140,
+      "expert_xyz": [
+        0.4218798325173736,
+        0.11065850187762877,
+        0.03696409798069993
+      ],
+      "pred_xyz": [
+        0.5754306316375732,
+        -0.04665835201740265,
+        0.0360814705491066
+      ],
+      "expert_gripper_cmd": 0.0,
+      "pred_gripper_cmd": 0.38727182149887085,
+      "ee_position_l2_m": 0.21983452745432316,
+      "gripper_correct": 0.0,
+      "absolute_eef_frame_index": 140
+    }
+  ],
+  "open_loop_report": {
+    "contract_version": "vla_open_loop_report_v0",
+    "artifact_type": "vla_open_loop_report",
+    "policy_action_semantics": "absolute_eef_gripper_v0",
+    "metric_lane": "offline_open_loop",
+    "claims_task_success": false,
+    "forbids_act_delta_mixed_table": true,
+    "metrics": {
+      "active_channel_mae": 0.24927740227107545,
+      "active_channel_rmse": 0.2734163848429447,
+      "ee_position_rmse_m": 0.2734163848429447,
+      "quaternion_angular_error_rad": null,
+      "gripper_accuracy": 0.0,
+      "gripper_close_timing_frames": null,
+      "action_smoothness_jerk": 0.33861697458152634,
+      "action_saturation_ratio": 0.0,
+      "padding_channel_anomaly_ratio": 0.0,
+      "inference_latency_ms": 240.98445374511357,
+      "home_no_close_rate": null,
+      "stage_aligned_errors": null
+    },
+    "prohibited_fields": [
+      "act_ee_delta_l1",
+      "act_ee_delta_rmse",
+      "task_success_rate",
+      "place_success_rate"
+    ],
+    "notes": "SmolVLA Gate S2 offline open-loop. mapping=libero6d_pred012_as_xyz_pred5_as_gripper_quat_unmapped. schema=smolvla_panda_s2.yaml. quat unmapped under 6-D hypothesis. Not task success."
+  },
+  "go_no_go": {
+    "gate": "S2",
+    "interface": "pass",
+    "semantic_h3": "no_go",
+    "loader_h4": "pass",
+    "notes": [
+      "S2 pass requires interface=pass and loader_h4=pass.",
+      "H-3 semantic Go is separate; pretrained base expected No-Go.",
+      "Do not enter S3/S4 without new approval."
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": {
+    "no_split_leakage": true,
+    "no_ee_delta7": true,
+    "rgb_complete_rate": 1.0,
+    "quat_order": "xyzw",
+    "quat_normalized": true,
+    "gripper_cmd_in_01": true,
+    "video_parquet_aligned": true,
+    "action_semantics": "absolute_eef_gripper_v0",
+    "refuses_act_delta_release": true
+  },
+  "notes": [
+    "Release is metadata+hash freeze over upstream raw LeRobot v2.1 trees.",
+    "Videos/parquet remain at source paths; AutoDL must sync sources by hash.",
+    "Does not rewrite upstream or ACT ee_delta releases."
+  ]
+}

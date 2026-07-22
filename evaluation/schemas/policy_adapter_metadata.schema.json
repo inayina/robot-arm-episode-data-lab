@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/policy_adapter_metadata.schema.json",
+  "title": "Panda policy adapter metadata",
+  "description": "Frozen identity and per-step interface fields for model-agnostic Policy Adapter reports. Does not authorize task success.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "policy_name",
+    "policy_version",
+    "checkpoint_hash",
+    "dataset_version",
+    "benchmark_version",
+    "observation_schema_version",
+    "action_schema_version",
+    "trace_run_id",
+    "inference_latency_ms",
+    "raw_action",
+    "postprocessed_action",
+    "safety_clipping",
+    "failure_lane"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "policy_adapter_contract_v0"
+    },
+    "artifact_type": {
+      "const": "policy_adapter_metadata"
+    },
+    "policy_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "checkpoint_hash": {
+      "type": "string",
+      "description": "SHA-256 hex of checkpoint bytes, or a documented sentinel for non-checkpoint policies (e.g. oracle).",
+      "pattern": "^([a-f0-9]{64}|none|oracle_scripted_v2b|not_applicable)$"
+    },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "benchmark_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "observation_schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "action_schema_version": {
+      "const": "panda_ee_delta_gripper_v0"
+    },
+    "trace_run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+    },
+    "inference_latency_ms": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "raw_action": {
+      "description": "Model-native action vector, or null when not recorded / not applicable.",
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {"type": "number"}
+        }
+      ]
+    },
+    "postprocessed_action": {
+      "description": "Exported ee_delta_gripper[7], or null when export did not run.",
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {"type": "number"}
+        }
+      ]
+    },
+    "safety_clipping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied", "axes", "notes"],
+      "properties": {
+        "applied": {"type": "boolean"},
+        "axes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "delta_x",
+              "delta_y",
+              "delta_z",
+              "delta_roll",
+              "delta_pitch",
+              "delta_yaw",
+              "gripper",
+              "workspace",
+              "joint_excursion",
+              "none"
+            ]
+          }
+        },
+        "notes": {"type": ["string", "null"], "maxLength": 512}
+      }
+    },
+    "failure_lane": {
+      "enum": [
+        "none",
+        "data_fail",
+        "interface_fail",
+        "behavior_tag",
+        "task_gt",
+        "system_fail"
+      ]
+    },
+    "claims_task_success": {
+      "description": "Must remain false. Task success is owned by upstream continuous GT only.",
+      "const": false
+    }
+  }
+}

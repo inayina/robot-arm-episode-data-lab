@@ -1,11 +1,23 @@
 # E0 Evaluation Contract
 
-状态：**E0 契约与校验夹具已实现；E1 固定动作序列已在 Isaac 实跑，learned-policy
-rollout 尚未执行。**
+状态（2026-07-21）：**E0 契约与校验夹具已实现；E1 Isaac action execution 已实跑；
+learned-policy 有界 rollout 已在 E3/E3.6 执行且为 diagnostic No-Go（task 0/20 与
+close→lift lift 0/5）；E3.5 scripted oracle lift 5/5。下一阶段目标是模型无关评测框架，
+不是把 ACT 调成功。**
 
-本文件固定 Panda 评测的 run、episode 和 summary 三层协议。E0 只新增离线契约，
-不修改上游 recorder raw schema、ACT 训练主线或下游 PyBullet replay。后续 E1 已在上游
-补齐 Isaac action execution infrastructure，但没有改变本契约的三仓职责边界。
+权威运行产物：
+
+- E3：`evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json`
+- E3.5：`evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json`
+- E3.6：`evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json`
+
+本文件固定 Panda 评测的 run、episode、summary 与 Policy Adapter metadata 协议。E0 不修改
+上游 recorder raw schema、ACT 训练主线或下游 PyBullet replay。三仓职责边界不变。
+
+关联：[`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md)、
+[`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md)、
+[`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)、
+[`ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`](ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md)。
 
 ## 1. 机器可读产物
 
@@ -14,6 +26,7 @@ rollout 尚未执行。**
 | `run_manifest.json` | `evaluation/schemas/run_manifest.schema.json` | 运行编排器 | 固定 model/dataset/repository/simulator/suite/seed provenance，以及 QoS、时钟、线程、fail-safe 和 NFR 证据要求 |
 | `episode_results.jsonl` | `evaluation/schemas/episode_result.schema.json` | 上游 runtime evaluator | 每行记录一个 seed 的 runtime ground-truth outcome、subgoal、运动、接触、数据健康、系统性能和证据路径 |
 | `summary.json` | `evaluation/schemas/summary.schema.json` | 中游离线聚合器 | 只聚合 episode labels，输出成功率、置信区间、failure Pareto、repeatability、baseline delta 和建议 |
+| `policy_adapter_metadata.json` | `evaluation/schemas/policy_adapter_metadata.schema.json` | Policy Adapter / Runtime Executor | 模型无关身份卡与 interface 逐步字段；**不得**替代 `outcome.success` |
 
 Schema 使用 JSON Schema Draft 2020-12，并默认 `additionalProperties: false`。当前 nominal
 示例位于 `evaluation/examples/nominal_contract_fixture/`，固定 seeds 为 `101, 202, 303`。
@@ -24,9 +37,9 @@ Schema 使用 JSON Schema Draft 2020-12，并默认 `additionalProperties: false
 
 | 仓库 | E0 职责 | 禁止越界 |
 |---|---|---|
-| `ros2-arm-teleoperation-suite`（上游） | runtime simulator、action execution、ground-truth task/subgoal evaluator、episode evidence | 不负责中游 release/training/aggregation；不得用离线 loss 替代 runtime success |
-| `robot-arm-episode-data-lab`（本仓） | schema 校验、离线聚合、checkpoint/suite 对比、报告 | 不从 `observation.object_pose` 重新推导 lift/place；不启动 ROS/Isaac runtime |
-| `ros2-moveit-pybullet-bridge`（下游） | replay、tracking/distribution/risk review | risk score 不覆盖上游 runtime ground-truth success；PyBullet IK 不复制到 Isaac adapter |
+| `ros2-arm-teleoperation-suite`（上游） | runtime simulator、action execution、Policy Adapter 运行时薄包装、ground-truth task/subgoal evaluator、episode evidence | 不负责中游 release/training/aggregation；不得用离线 loss 替代 runtime success |
+| `robot-arm-episode-data-lab`（本仓） | schema 校验、Policy Adapter 契约、离线聚合、checkpoint/suite 对比、Benchmark 规范、VLA Gate 文档、报告 | 不从 `observation.object_pose` 重新推导 lift/place；不启动 ROS/Isaac runtime |
+| `ros2-moveit-pybullet-bridge`（下游） | replay、tracking/distribution/risk review（`BasePolicy` 对照通道） | risk score 不覆盖上游 runtime ground-truth success；PyBullet IK 不复制到 Isaac adapter；不作为 VLA 主评测宿主 |
 
 物理成功的唯一权威字段是 episode row 的 `outcome.success`，且只在以下条件同时满足时
 有效：
@@ -109,7 +122,20 @@ reset、camera 和 flush 的 worker/callback-group 边界。
 普通 Ubuntu 仿真只能报告实测 latency/jitter/FPS，不能据此声称 hard real-time。
 E0 示例中的 NFR 值全部为 `null`；E1 之后只有带 runtime logs 的字段才可进入报告。
 
-## 7. 校验
+## 7. 六层评测分栏（模型无关）
+
+任何报告必须分栏；离线或 interface 指标 **不得** 外推为 task success。
+
+| 层 | 内容 | 权威生产者 | 禁止当作 |
+|---|---|---|---|
+| **Data** | schema、缺失字段、完整性、时间同步、分布、train/val/bench 泄漏 | 中游 inspect / release / Benchmark 规范 | task success |
+| **Offline** | loss、action L1/RMSE、gripper accuracy、smoothness | 中游 training/eval 脚本 | task success |
+| **Interface** | checkpoint 加载、obs/action 映射、action 数量、latency、clipping、watchdog、E-stop；Adapter metadata | 上游 policy_inference + Adapter metadata | task success |
+| **Behavior** | approach、XY 对准、Z 下降、gripper close timing、lift command | 中游 summarizer 行为标签 | task success |
+| **Task** | reach / grasp / lift / place / overall | **仅**上游 continuous GT → episode_results | — |
+| **System** | CPU/GPU、QoS、topic 频率、timestamp jitter、TF、timeout、cleanup | run_manifest / system_performance / 清理日志 | task success |
+
+## 8. 校验
 
 安装基础依赖后运行：
 
@@ -117,14 +143,16 @@ E0 示例中的 NFR 值全部为 `null`；E1 之后只有带 runtime logs 的字
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_evaluation_contract.py
 ```
 
-测试会检查三份 schema 自身有效、nominal 示例逐项有效、三个 seed 一致、ownership 不冲突，
-并验证 contract fixture 不能伪造 success 或 completed summary。
+测试会检查 run/episode/summary/**policy_adapter_metadata** schema 自身有效、nominal 与
+Adapter fixture 有效、三个 seed 一致、ownership 不冲突，并验证 contract fixture 不能伪造
+success 或 completed summary；Adapter metadata 的 `claims_task_success` 必须为 `false`。
 
-## 8. E0 / E1 状态与边界
+## 9. E0 / E1 / E3 状态与边界
 
 ### 已实现
 
 - run / episode / summary schema；
+- Policy Adapter metadata schema 与 contract fixture；
 - nominal suite 与 3 个固定 seed 的 contract-only 示例；
 - provenance/evidence 路径、ownership、QoS、时钟、plane/thread、fail-safe、NFR 字段；
 - 自动 schema 与跨文件一致性测试。
@@ -135,7 +163,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_evaluation_contract.py
   `evidence/isaac_e1_action_execution_20260718_final/`：5/5 固定 effort sequence、运行中
   health OK、双端 BEST_EFFORT/VOLATILE QoS、104.080 ms 断连 watchdog→zero-effort。
 
-### 已实现（上游 continuous GT，有界）
+### 已实现（上游 continuous GT + learned-policy diagnostic）
 
 - 上游 `synth_data_gen.continuous_evaluator.ContinuousTaskEvaluator`
   （`evaluator_id=panda_continuous_gt_v0`）流式观测 object/EE/gripper，产出
@@ -147,6 +175,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_evaluation_contract.py
 - Isaac policy GT：**v1** `scripts/isaac_continuous_gt_recorder.py` 分离 gripper cmd/state、
   MultiThreadedExecutor drain、`/ft_sensor`；`run_isaac_gt_preflight.sh` 做一致性门禁。
   `evidence/e3_nominal20_home_30ep_20260719/INVALID_EVALUATOR_V0.md` 的 9 行 **不得**计入 E3。
+- E3 nominal20（seeds 2000–2019）：task **0/20**，`go_no_go=no_go`。
+- E3.5 scripted oracle v2b：lift **5/5**，`task_success_claimed=false`。
+- E3.6 close→lift 40-ep ACT：5-seed lift **0/5**，5/5 `HOME_NO_CLOSE`。
 
 边界：batch 物理门禁仍以 `_validate_episode` 为准；continuous 行在 completed 时会把
 `outcome.success` 与该门禁对齐。有界 Isaac ACT smoke 默认 `EPISODE_RESULTS_PATH` 为空
@@ -154,12 +185,12 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_evaluation_contract.py
 「Success Rate / RMSE / Episode Time / Collision / Distribution Shift」的**代码级权威来源**
 见 [`EMBODIED_POLICY_EVALUATION_SOP.md`](EMBODIED_POLICY_EVALUATION_SOP.md) §1.3。
 
-### 尚未实现
+### 尚未实现 / 明确 No-Go
 
-- ACT checkpoint → MoveIt Servo 的 learned-policy online rollout；
-- 多 suite regression、失败视频和 checkpoint A/B report（valid GT v1 nominal20 进行中）；
-- policy online rollout 默认挂载 continuous GT（当前主要挂在 batch/expert + suite 路径）。
+- 统一 Policy Adapter **运行时 ABC**（契约已冻结，代码包装待迭代）；
+- ACT → MoveIt Servo 的 learned-policy online rollout；
+- 完整 E4 100+ 泛化矩阵（blocked：learned-policy 尚无稳定 lift）；
+- VLA 权重下载、官方环境复现（Gate V1+）、Panda 闭环接入（Gate V2/V3）。
 
-E1 只证明 action execution infrastructure。canonical 5-repeat 的 trajectory RMSE 最大
-0.360 rad、终态 L2 最大 1.337 rad，说明 open-loop repeatability 仍有明显风险；不证明
-learned policy、稳定控制、物理任务成功、hard real-time 或 Sim2Real 效果。
+E1 只证明 action execution infrastructure。E3/E3.6 只证明 diagnostic No-Go 与可复现证据链。
+不得声称稳定在线自主抓取、真实 Sim2Real 或离线 loss ≡ 任务成功。

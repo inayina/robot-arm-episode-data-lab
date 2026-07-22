@@ -20,6 +20,10 @@ dataset/v1/
 dataset/lerobot_export/
 data/*
 !data/registry/
+!data/releases/
+data/releases/*
+!data/releases/smolvla_s3_abs_eef_rgb_v0/
+!data/releases/smolvla_s3_abs_eef_rgb_v0/**
 evidence/*
 !evidence/canonical_20260711/
 !evidence/canonical_20260711/**

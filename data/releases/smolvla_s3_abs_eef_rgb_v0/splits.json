@@ -1,0 +1,18 @@
+{
+  "train": [
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000000",
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000001",
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000002",
+    "e2_red_500hz_seed53_closelift5_20260720/episode_000000",
+    "e2_red_500hz_seed53_closelift5_20260720/episode_000001",
+    "e2_red_500hz_seed53_closelift5_20260720/episode_000002"
+  ],
+  "validation": [
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000003",
+    "e2_red_500hz_seed53_closelift5_20260720/episode_000003"
+  ],
+  "benchmark": [
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000004",
+    "e2_red_500hz_seed53_closelift5_20260720/episode_000004"
+  ]
+}

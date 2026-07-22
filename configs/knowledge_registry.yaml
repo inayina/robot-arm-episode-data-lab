@@ -398,7 +398,67 @@ overrides:
       - evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json
       - evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json
       - evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json
-    last_verified: 2026-07-20
+    last_verified: 2026-07-21
+  - repository: robot-arm-episode-data-lab
+    path: docs/POLICY_ADAPTER_CONTRACT.md
+    kind: canonical
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 78
+    authoritative_for: [policy_adapter_contract]
+    component: [canonical_evidence, training]
+    tags: [panda, evaluation, policy_adapter, model_agnostic]
+    depends_on:
+      - evaluation/schemas/policy_adapter_metadata.schema.json
+      - docs/EVALUATION_CONTRACT.md
+    last_verified: 2026-07-21
+  - repository: robot-arm-episode-data-lab
+    path: docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 70
+    authoritative_for: [vla_gate_v0]
+    component: [canonical_evidence]
+    tags: [vla, lingbot, gate, read_only]
+    last_verified: 2026-07-21
+  - repository: robot-arm-episode-data-lab
+    path: docs/VLA_GATE_V05_PANDA_ACTION_CONTRACT.md
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 74
+    authoritative_for: [vla_gate_v05]
+    component: [canonical_evidence]
+    tags: [vla, panda, action_contract, active_channel]
+    depends_on:
+      - configs/robot_schemas/panda.yaml
+      - docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md
+    last_verified: 2026-07-21
+  - repository: robot-arm-episode-data-lab
+    path: docs/SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 72
+    authoritative_for: [single_block_benchmark_spec]
+    component: [canonical_evidence]
+    tags: [benchmark, generalization, spec_only]
+    depends_on:
+      - configs/benchmarks/single_block_controlled_v0.yaml
+    last_verified: 2026-07-21
+  - repository: robot-arm-episode-data-lab
+    path: docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 76
+    authoritative_for: [act_diagnostic_hold]
+    component: [canonical_evidence, training]
+    tags: [act, home_no_close, stop_rule]
+    depends_on:
+      - evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json
+    last_verified: 2026-07-21
   - repository: robot-arm-episode-data-lab
     path: docs/portfolio/CANONICAL_EXPERIMENT.md
     kind: portfolio

@@ -1,0 +1,17 @@
+{
+  "contract_version": "vla_absolute_eef_export_provenance_v0",
+  "artifact_type": "vla_absolute_eef_export_provenance",
+  "source_kind": "parquet",
+  "source_path": "/home/ina/dev/ros2-arm-teleoperation-suite/data/e2_red_500hz_seed52_closelift5_20260720/data/chunk-000/episode_000000.parquet",
+  "output_path": "evaluation/examples/absolute_eef_from_episode52_sample.jsonl",
+  "frame_count": 5,
+  "cmd_neq_measured_count": 5,
+  "policy_action_semantics": "absolute_eef_gripper_v0",
+  "quaternion_order": "xyzw",
+  "claims_task_success": false,
+  "claims_official_layout_verified": false,
+  "notes": [
+    "Scheme B fixture only; not VLA open-loop metrics.",
+    "Refuse midstream ee_delta_gripper[7] as absolute action."
+  ]
+}

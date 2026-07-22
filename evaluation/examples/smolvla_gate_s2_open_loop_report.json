@@ -1,0 +1,29 @@
+{
+  "contract_version": "vla_open_loop_report_v0",
+  "artifact_type": "vla_open_loop_report",
+  "policy_action_semantics": "absolute_eef_gripper_v0",
+  "metric_lane": "offline_open_loop",
+  "claims_task_success": false,
+  "forbids_act_delta_mixed_table": true,
+  "metrics": {
+    "active_channel_mae": 0.24927740227107545,
+    "active_channel_rmse": 0.2734163848429447,
+    "ee_position_rmse_m": 0.2734163848429447,
+    "quaternion_angular_error_rad": null,
+    "gripper_accuracy": 0.0,
+    "gripper_close_timing_frames": null,
+    "action_smoothness_jerk": 0.33861697458152634,
+    "action_saturation_ratio": 0.0,
+    "padding_channel_anomaly_ratio": 0.0,
+    "inference_latency_ms": 240.98445374511357,
+    "home_no_close_rate": null,
+    "stage_aligned_errors": null
+  },
+  "prohibited_fields": [
+    "act_ee_delta_l1",
+    "act_ee_delta_rmse",
+    "task_success_rate",
+    "place_success_rate"
+  ],
+  "notes": "SmolVLA Gate S2 offline open-loop. mapping=libero6d_pred012_as_xyz_pred5_as_gripper_quat_unmapped. schema=smolvla_panda_s2.yaml. quat unmapped under 6-D hypothesis. Not task success."
+}

@@ -37,10 +37,35 @@ def validator(name: str) -> Draft202012Validator:
         "run_manifest.schema.json",
         "episode_result.schema.json",
         "summary.schema.json",
+        "policy_adapter_metadata.schema.json",
+        "policy_registry_index.schema.json",
+        "benchmark_spec.schema.json",
     ],
 )
 def test_evaluation_schemas_are_valid_draft_2020_12(schema_name: str) -> None:
     validator(schema_name)
+
+
+def test_policy_adapter_metadata_fixture_validates_and_forbids_task_claim() -> None:
+    fixture_path = Path("evaluation/examples/policy_adapter_metadata_fixture.json")
+    payload = load_json(fixture_path)
+    validator("policy_adapter_metadata.schema.json").validate(payload)
+
+    assert payload["claims_task_success"] is False
+    assert payload["action_schema_version"] == "panda_ee_delta_gripper_v0"
+    assert payload["contract_version"] == "policy_adapter_contract_v0"
+    assert payload["failure_lane"] == "none"
+
+    payload["claims_task_success"] = True
+    with pytest.raises(ValidationError):
+        validator("policy_adapter_metadata.schema.json").validate(payload)
+
+
+def test_policy_adapter_metadata_rejects_unknown_fields() -> None:
+    payload = load_json(Path("evaluation/examples/policy_adapter_metadata_fixture.json"))
+    payload["uncontracted_field"] = "must fail"
+    with pytest.raises(ValidationError):
+        validator("policy_adapter_metadata.schema.json").validate(payload)
 
 
 def test_nominal_contract_fixture_validates_and_has_fixed_seeds() -> None:
@@ -304,6 +329,22 @@ def test_aggregate_evaluation_summary_produces_valid_runtime_summary(tmp_path: P
     assert summary["go_no_go"]["status"] == "no_go"
     assert len(summary["top_failure_videos"]) == 5
     validator("summary.schema.json").validate(summary)
+
+
+def test_single_block_benchmark_yaml_hard_gate_blocks_ood() -> None:
+    try:
+        import yaml
+    except ImportError:
+        pytest.skip("PyYAML not installed")
+
+    path = Path("configs/benchmarks/single_block_controlled_v0.yaml")
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert payload["benchmark_version"] == "single_block_controlled_v0"
+    assert payload["hard_gate"]["current_learned_policy_lift_verified"] is False
+    assert "full_e4_matrix" in payload["hard_gate"]["forbidden_now"]
+    assert payload["slices"]["ood_position"]["enabled_when"] == (
+        "hard_gate.current_learned_policy_lift_verified"
+    )
 
 
 def test_unknown_fields_are_rejected() -> None:

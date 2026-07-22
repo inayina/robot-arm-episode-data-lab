@@ -17,9 +17,23 @@
 | [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) | **P0** 最小 baseline training / eval / replay pipeline |
 | [TRAINING_METHODS.md](TRAINING_METHODS.md) | **P0/P1** inspection-only、linear smoke、MLP BC、未来训练方式分层 |
 | [INTER_REPO_CONTRACTS.md](INTER_REPO_CONTRACTS.md) | **P0** 三仓交接 gate、handoff、feedback loop 和模板入口 |
-| [EVALUATION_CONTRACT.md](EVALUATION_CONTRACT.md) | **P0** E0 run/episode/summary 评测契约、ownership、QoS/时钟/fail-safe/NFR 边界 |
+| [EVALUATION_CONTRACT.md](EVALUATION_CONTRACT.md) | **P0** E0 run/episode/summary + Policy Adapter metadata 契约、六层指标、ownership |
+| [POLICY_ADAPTER_CONTRACT.md](POLICY_ADAPTER_CONTRACT.md) | **P0** 模型无关 Policy Adapter 方法集与接入映射（契约冻结；运行时 ABC 待迭代） |
+| [POLICY_ADAPTER_QUICKSTART.md](POLICY_ADAPTER_QUICKSTART.md) | **P0** Policy Adapter / 注册表 / Benchmark 三切片一页速查 |
+| [SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md) | **P0** 单方块受控泛化 Benchmark 规范（不跑完整 E4） |
+| [VLA_GATE_V0_COMPATIBILITY_AUDIT.md](VLA_GATE_V0_COMPATIBILITY_AUDIT.md) | **Archived** LingBot-VLA 2.0 Gate V0 兼容性审计（路线 Closed；文档保留） |
+| [VLA_GATE_V05_PANDA_ACTION_CONTRACT.md](VLA_GATE_V05_PANDA_ACTION_CONTRACT.md) | **P0** 模型无关 absolute EEF / channel / execution adapter 契约（LingBot 审计触发） |
+| [VLA_GATE_V1_PREFLIGHT.md](VLA_GATE_V1_PREFLIGHT.md) | **Archived** LingBot Gate V1 本机预检（~6GB No-Go） |
+| [SMOLVLA_GATE_S0_COMPATIBILITY_AUDIT.md](SMOLVLA_GATE_S0_COMPATIBILITY_AUDIT.md) | **P0** SmolVLA Gate S0 只读审计与门禁设计 |
+| [SMOLVLA_GATE_S1_OFFICIAL_REPRO.md](SMOLVLA_GATE_S1_OFFICIAL_REPRO.md) | SmolVLA Gate S1 官方推理复现 |
+| [SMOLVLA_GATE_S2_OPEN_LOOP.md](SMOLVLA_GATE_S2_OPEN_LOOP.md) | SmolVLA Gate S2 Panda open-loop |
+| [SMOLVLA_GATE_S3_READY.md](SMOLVLA_GATE_S3_READY.md) | **P0** SmolVLA S3 Ready（本地冻结） |
+| [SMOLVLA_S3_AUTODL_RUNBOOK.md](SMOLVLA_S3_AUTODL_RUNBOOK.md) | **P0** AutoDL S3 执行顺序 |
+| [SMOLVLA_GATE_S1_OFFICIAL_REPRO.md](SMOLVLA_GATE_S1_OFFICIAL_REPRO.md) | **P0** Gate S1 官方推理复现 |
+| [SMOLVLA_GATE_S2_OPEN_LOOP.md](SMOLVLA_GATE_S2_OPEN_LOOP.md) | **P0** Gate S2 Hold：接口 Pass / base zero-shot absolute-EEF No-Go |
+| [ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md](ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md) | **P0** ACT diagnostic 止损与 HOME_NO_CLOSE 假设—证据矩阵 |
 | [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | **P0** 当前三仓审计结论、E3 0/20、E3.5 oracle 5/5 与 close→lift 5-seed No-Go 总报告 |
-| [EMBODIED_POLICY_EVALUATION_SOP.md](EMBODIED_POLICY_EVALUATION_SOP.md) | **P0** 具身操作模型日常评测 SOP；含 §1.3 五类指标权威来源对照（对齐当前代码，非猜测） |
+| [EMBODIED_POLICY_EVALUATION_SOP.md](EMBODIED_POLICY_EVALUATION_SOP.md) | **P0** 具身操作模型日常评测 SOP；含模型无关入口与指标权威来源对照 |
 | [E2_ACT_BASELINE_PREFLIGHT.md](E2_ACT_BASELINE_PREFLIGHT.md) | E2 真实渲染 5-episode preflight、release 与 ACT 1-epoch GPU 证据；不等同于完整约 50 条 E2 |
 | [E2_E3_MODEL_CARD.md](E2_E3_MODEL_CARD.md) | **P0** E2/E3 最终 checkpoint 选型、sha256、home/warm A/B 与止损结论 |
 | [E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md](E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md) | **P0** E2 单红块续跑接力；E3 止损后下一 ROI |

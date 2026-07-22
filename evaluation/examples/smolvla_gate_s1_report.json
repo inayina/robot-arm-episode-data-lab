@@ -1,0 +1,78 @@
+{
+  "contract_version": "smolvla_gate_s1_report_v0",
+  "artifact_type": "smolvla_gate_s1_official_repro",
+  "created_at": "2026-07-21T17:13:52Z",
+  "claims_task_success": false,
+  "uses_panda_data": false,
+  "dataset_id_for_smoke": "lerobot/libero",
+  "trained": false,
+  "ran_isaac": false,
+  "model_id": "lerobot/smolvla_base",
+  "local_dir": "checkpoints/smolvla_base_gate_s1",
+  "hub_revision_sha": "c83c3163b8ca9b7e67c509fffd9121e66cb96205",
+  "hub_license_field": null,
+  "hub_info_error": null,
+  "license_files": [
+    {
+      "path": "/home/ina/dev/lerobot/LICENSE",
+      "sha256": "0583375a0ec642ec79c447781f34322b0cfa66baff31258214d040f1f6d86d7c",
+      "head": "Copyright 2024 The Hugging Face team. All rights reserved.\n\n                                 Apache License\n                           Version 2.0, January 2004\n                        http://www.apache.org/licenses/\n\n   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION\n\n   1. Definitions.\n\n      \"License\" shall mean the terms and conditions for use, reproduction,\n      and distribution as defined by Sections 1 through 9 of this document.\n\n      \"Licensor\" shall mean the copyright own",
+      "mentions_apache": true
+    }
+  ],
+  "gpu_name": "NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU",
+  "vram_total_mib": 5672,
+  "download_seconds": 0.0,
+  "load_seconds": 3.845,
+  "load_peak_vram_mib": 884,
+  "infer_peak_vram_mib": 925,
+  "infer_mode": "synthetic_frame_select_action",
+  "frame_source": "synthetic_smolvla_base_schema",
+  "infer_error": null,
+  "preprocess_error": null,
+  "dataset_error": "ImportError(\"'av' is required but not installed. Install it with: pip install 'lerobot[dataset]' (or uv pip install 'lerobot[dataset]')\")",
+  "action_shape": [
+    1,
+    6
+  ],
+  "latency_ms": {
+    "runs": [
+      171.619,
+      171.018,
+      171.496
+    ],
+    "p50": 171.496,
+    "mean": 171.378
+  },
+  "policy_config": {
+    "n_obs_steps": 1,
+    "chunk_size": 50,
+    "n_action_steps": 50,
+    "max_state_dim": 32,
+    "max_action_dim": 32,
+    "resize_imgs_with_padding": [
+      512,
+      512
+    ]
+  },
+  "software": {
+    "lerobot_version": "0.5.2",
+    "torch_version": "2.11.0+cu130",
+    "cuda_version": "13.0",
+    "pip_interesting": [
+      "accelerate==1.14.0",
+      "-e git+https://github.com/huggingface/lerobot.git@287c823f13d23d0c7b35eba9cb2b90880cfc5240#egg=lerobot",
+      "torch==2.11.0",
+      "torchvision==0.26.0",
+      "transformers==5.5.4"
+    ]
+  },
+  "go_no_go": {
+    "gate": "S1",
+    "status": "pass",
+    "notes": [
+      "Official smoke only; not Panda open-loop.",
+      "Sample frame source: synthetic_smolvla_base_schema."
+    ]
+  }
+}

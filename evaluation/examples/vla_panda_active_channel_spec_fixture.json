@@ -1,0 +1,71 @@
+{
+  "contract_version": "vla_panda_active_channel_spec_v0",
+  "artifact_type": "vla_panda_active_channel_spec",
+  "spec_version": "panda_absolute_eef_draft_v0",
+  "canonical_dim": 55,
+  "policy_action_semantics": "absolute_eef_gripper_v0",
+  "quaternion_order": "xyzw",
+  "gripper": {
+    "range": [0.0, 1.0],
+    "closed": 0.0,
+    "open": 1.0,
+    "command_vs_state": "action_uses_command_observation_uses_measured"
+  },
+  "channels": {
+    "arm_joints": {
+      "canonical_offset": 0,
+      "canonical_width": 14,
+      "active_width": 7,
+      "padding": "zeros",
+      "field_names": [
+        "panda_joint1",
+        "panda_joint2",
+        "panda_joint3",
+        "panda_joint4",
+        "panda_joint5",
+        "panda_joint6",
+        "panda_joint7"
+      ]
+    },
+    "ee_pose": {
+      "canonical_offset": 14,
+      "canonical_width": 14,
+      "active_width": 7,
+      "padding": "zeros",
+      "field_names": ["x", "y", "z", "qx", "qy", "qz", "qw"]
+    },
+    "gripper": {
+      "canonical_offset": 28,
+      "canonical_width": 2,
+      "active_width": 1,
+      "padding": "zeros",
+      "field_names": ["gripper"]
+    },
+    "padded_groups": ["hand_joints", "waist", "head", "mobility", "reserved"]
+  },
+  "mask_padding": true,
+  "normalization": {
+    "ignore_padding_dims": true,
+    "pad_mean": 0.0,
+    "pad_std": 1.0
+  },
+  "state_active_fields": [
+    "arm_joints[7]",
+    "gripper_measured[1]"
+  ],
+  "action_active_fields": [
+    "ee_target_xyz_xyzw[7]",
+    "gripper_cmd[1]"
+  ],
+  "version_binding": {
+    "active_channel_spec_version": "panda_absolute_eef_draft_v0",
+    "robot_config_id": null,
+    "norm_stats_sha256": null,
+    "checkpoint_sha256": null,
+    "dataset_release_id": null,
+    "panda_schema_id": "panda_ee_delta_gripper_v0",
+    "policy_action_semantics": "absolute_eef_gripper_v0"
+  },
+  "claims_official_layout_verified": false,
+  "notes": "Draft only. Offsets follow LingBot public 55-D segment order; not verified against official robot_configs. ee_delta_gripper is NOT this policy semantics."
+}

@@ -1,0 +1,22 @@
+{
+  "contract_version": "policy_adapter_contract_v0",
+  "artifact_type": "policy_adapter_metadata",
+  "policy_name": "isaac_scripted_oracle",
+  "policy_version": "e3p5_v2b",
+  "checkpoint_hash": "oracle_scripted_v2b",
+  "dataset_version": "n/a",
+  "benchmark_version": "single_block_controlled_v0",
+  "observation_schema_version": "oracle_fsm_pose_v0",
+  "action_schema_version": "panda_ee_delta_gripper_v0",
+  "trace_run_id": "registry_isaac_scripted_oracle_v2b",
+  "inference_latency_ms": null,
+  "raw_action": null,
+  "postprocessed_action": null,
+  "safety_clipping": {
+    "applied": false,
+    "axes": ["none"],
+    "notes": "Physics-chain control; task_success_claimed remains false in oracle_gate."
+  },
+  "failure_lane": "none",
+  "claims_task_success": false
+}

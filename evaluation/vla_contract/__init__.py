@@ -1,0 +1,41 @@
+"""Gate V2 preflight helpers: absolute EEF export, quat, active-channel norm."""
+
+from evaluation.vla_contract.absolute_eef import (
+    CANONICAL_DIM,
+    POLICY_ACTION_SEMANTICS,
+    AbsoluteEefExportError,
+    action_active_mask,
+    apply_norm,
+    compute_active_norm_stats,
+    export_frame,
+    export_frames,
+    gripper_cmd_vs_measured,
+    load_rows_from_jsonl,
+    load_rows_from_parquet,
+    normalize_xyzw,
+    pack_action55,
+    pack_state55,
+    quat_angular_error_rad,
+    state_active_mask,
+    write_frames_jsonl,
+)
+
+__all__ = [
+    "CANONICAL_DIM",
+    "POLICY_ACTION_SEMANTICS",
+    "AbsoluteEefExportError",
+    "action_active_mask",
+    "apply_norm",
+    "compute_active_norm_stats",
+    "export_frame",
+    "export_frames",
+    "gripper_cmd_vs_measured",
+    "load_rows_from_jsonl",
+    "load_rows_from_parquet",
+    "normalize_xyzw",
+    "pack_action55",
+    "pack_state55",
+    "quat_angular_error_rad",
+    "state_active_mask",
+    "write_frames_jsonl",
+]

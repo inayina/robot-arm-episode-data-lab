@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/policy_registry_index.schema.json",
+  "title": "Policy metadata registry index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "artifact_type", "benchmark_version", "policies"],
+  "properties": {
+    "contract_version": {"const": "policy_adapter_contract_v0"},
+    "artifact_type": {"const": "policy_registry_index"},
+    "benchmark_version": {"type": "string", "minLength": 1},
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "registry_id",
+          "implementation_status",
+          "runtime_owner_repository",
+          "metadata_path",
+          "evidence_refs",
+          "notes"
+        ],
+        "properties": {
+          "registry_id": {
+            "enum": [
+              "scene_act_lerobot_e3_nominal",
+              "isaac_scripted_oracle_v2b",
+              "moveit_rule_baseline"
+            ]
+          },
+          "implementation_status": {
+            "enum": [
+              "implemented_and_verified",
+              "implemented_not_fully_verified",
+              "documented_plan_only",
+              "not_supported"
+            ]
+          },
+          "runtime_owner_repository": {
+            "enum": [
+              "ros2-arm-teleoperation-suite",
+              "robot-arm-episode-data-lab",
+              "ros2-moveit-pybullet-bridge"
+            ]
+          },
+          "metadata_path": {"type": "string", "minLength": 1},
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          },
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

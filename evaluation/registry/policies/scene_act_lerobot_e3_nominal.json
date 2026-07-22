@@ -1,0 +1,22 @@
+{
+  "contract_version": "policy_adapter_contract_v0",
+  "artifact_type": "policy_adapter_metadata",
+  "policy_name": "scene_act_lerobot",
+  "policy_version": "e3_nominal_diagnostic_baseline",
+  "checkpoint_hash": "948e2949ae8af099f8347837969f596018bbf68a18cc703b6bc09abd01a92501",
+  "dataset_version": "e2_500hz_random30_descend_20260719",
+  "benchmark_version": "single_block_controlled_v0",
+  "observation_schema_version": "scene_act_state8_rgb224_v0",
+  "action_schema_version": "panda_ee_delta_gripper_v0",
+  "trace_run_id": "registry_scene_act_lerobot_e3_nominal",
+  "inference_latency_ms": null,
+  "raw_action": null,
+  "postprocessed_action": null,
+  "safety_clipping": {
+    "applied": false,
+    "axes": ["none"],
+    "notes": "Frozen E3 ACT identity card; runtime clipping owned by upstream bound_ee_delta_gripper."
+  },
+  "failure_lane": "none",
+  "claims_task_success": false
+}

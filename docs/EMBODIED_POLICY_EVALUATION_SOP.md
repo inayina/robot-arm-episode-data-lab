@@ -1,11 +1,16 @@
-# 具身操作模型评测 SOP（Panda / ACT → Isaac 有界评测）
+# 具身操作模型评测 SOP（Panda / 模型无关 → Isaac 有界评测）
 
-**版本**：v1.5（2026-07-20）<br>
+**版本**：v1.6（2026-07-21）<br>
 **适用岗位能力映射**：具身操作模型评测工程师（仿真评测主路径；真机为 readiness，不虚构已部署）<br>
 **仓库边界**：三仓闭环；本 SOP 以中游编排 + 上游 Isaac runtime 证据为主
+**下一阶段目标**：模型无关评测框架（ACT 为 diagnostic baseline，不是调通目标）
 **关联**：
 
-- 契约层：[`EVALUATION_CONTRACT.md`](EVALUATION_CONTRACT.md)（E0 run/episode/summary schema）
+- 契约层：[`EVALUATION_CONTRACT.md`](EVALUATION_CONTRACT.md)（E0 run/episode/summary + Adapter metadata）
+- Policy Adapter：[`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md)
+- 单方块 Benchmark：[`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md)
+- VLA Gate V0：[`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)
+- ACT HOME_NO_CLOSE：[`ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`](ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md)
 - 实验证据：[`E2_ACT_BASELINE_PREFLIGHT.md`](E2_ACT_BASELINE_PREFLIGHT.md)
 - 岗位对齐：[`portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md`](portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md)
 - 上游入口：`ros2-arm-teleoperation-suite/scripts/run_isaac_act_smoke.sh`
@@ -69,9 +74,20 @@
 
 | 角色 | 仓库 | 做什么 | 禁止 |
 |---|---|---|---|
-| Runtime Executor | 上游 `ros2-arm-teleoperation-suite` | Isaac backend、policy_inference、safety、pose/object dump | 不改中游 schema；不用 loss 判任务成功 |
-| Eval Orchestrator | 中游 `robot-arm-episode-data-lab` | release 身份、汇总 `summary.json`、止损与增采建议 | 不从 `object_pose` 重推 lift/place 物理门禁 |
-| Risk / Replay Reviewer | 下游 `ros2-moveit-pybullet-bridge` | handoff replay、risk（可选对照） | risk 不覆盖上游 runtime success |
+| Runtime Executor | 上游 `ros2-arm-teleoperation-suite` | Isaac backend、policy_inference / oracle、Policy Adapter 运行时薄包装、safety、pose/object dump、continuous GT | 不改中游 schema；不用 loss 判任务成功；VLA Gate V2 前禁止外部模型 export 进 Isaac |
+| Eval Orchestrator | 中游 `robot-arm-episode-data-lab` | release 身份、Adapter 契约、Benchmark 规范、V0 兼容性矩阵、汇总 `summary.json`、止损与增采建议 | 不从 `object_pose` 重推 lift/place 物理门禁；不下载大权重 |
+| Risk / Replay Reviewer | 下游 `ros2-moveit-pybullet-bridge` | handoff replay、risk（可选对照）；`BasePolicy` 作 Sim2Sim 对照通道 | risk 不覆盖上游 runtime success；不作 VLA 主评测宿主 |
+
+### 2.1 模型无关入口（v1.6）
+
+比较 ACT / oracle / 规则基线 / 未来 VLA 时：
+
+1. 冻结 [`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md) 身份字段；
+2. 选用 [`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md) 切片（learned-policy 无稳定 lift 前只允许 Baseline/小诊断）；
+3. 按 Data / Offline / Interface / Behavior / Task / System 六栏报告（见 `EVALUATION_CONTRACT.md` §7）；
+4. VLA 必须先过 Gate V0（只读），再 V1→V2→V3；本 SOP **不**授权跳过 Gate。
+
+ACT 当前为 **diagnostic baseline**：保留 E3 0/20、E3.6 HOME_NO_CLOSE 与 oracle 5/5 对照；禁止盲训、普通下降扩采、盲扫 stage weight、完整 E4。
 
 物理任务成功的权威来源只能是：**已完成执行 + runtime ground-truth evaluator**（契约层）。
 本 SOP 的有界 Isaac smoke 默认 `runtime_ground_truth_evaluator=false`，task 栏最多给**端点检查 / 行为诊断标签**，不得写成“抓取成功率”。

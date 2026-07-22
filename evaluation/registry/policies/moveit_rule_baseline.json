@@ -1,0 +1,22 @@
+{
+  "contract_version": "policy_adapter_contract_v0",
+  "artifact_type": "policy_adapter_metadata",
+  "policy_name": "moveit_rule_baseline",
+  "policy_version": "documented_plan_only_v0",
+  "checkpoint_hash": "not_applicable",
+  "dataset_version": "n/a",
+  "benchmark_version": "single_block_controlled_v0",
+  "observation_schema_version": "teleop_servo_cartesian_v0",
+  "action_schema_version": "panda_ee_delta_gripper_v0",
+  "trace_run_id": "registry_moveit_rule_baseline",
+  "inference_latency_ms": null,
+  "raw_action": null,
+  "postprocessed_action": null,
+  "safety_clipping": {
+    "applied": false,
+    "axes": ["none"],
+    "notes": "Documented plan only; E3 control suite not frozen. Uses upstream teleop/servo path when implemented."
+  },
+  "failure_lane": "none",
+  "claims_task_success": false
+}

@@ -1,0 +1,71 @@
+{
+  "contract_version": "smolvla_s3_release_manifest_v0",
+  "release_id": "smolvla_s3_abs_eef_rgb_v0",
+  "schema_version": "smolvla_s3_abs_eef_rgb_v0",
+  "created_at": "2026-07-22T07:40:29Z",
+  "policy_action_semantics": "absolute_eef_gripper_v0",
+  "quaternion_order": "xyzw",
+  "claims_task_success": false,
+  "trained": false,
+  "ran_isaac": false,
+  "immutable": true,
+  "overwrites_upstream": false,
+  "overwrites_act_delta_release": false,
+  "source_commit_midstream": "2c7c1e8e822ca92b62c7cc7de7551f5d0efa7400",
+  "source_commit_upstream": "3f8bba4b3e326358ab0290df3d6d3093322e1f78",
+  "num_episodes": 10,
+  "num_frames": 2052,
+  "splits": {
+    "train": [
+      "e2_red_500hz_seed52_closelift5_20260720/episode_000000",
+      "e2_red_500hz_seed52_closelift5_20260720/episode_000001",
+      "e2_red_500hz_seed52_closelift5_20260720/episode_000002",
+      "e2_red_500hz_seed53_closelift5_20260720/episode_000000",
+      "e2_red_500hz_seed53_closelift5_20260720/episode_000001",
+      "e2_red_500hz_seed53_closelift5_20260720/episode_000002"
+    ],
+    "validation": [
+      "e2_red_500hz_seed52_closelift5_20260720/episode_000003",
+      "e2_red_500hz_seed53_closelift5_20260720/episode_000003"
+    ],
+    "benchmark": [
+      "e2_red_500hz_seed52_closelift5_20260720/episode_000004",
+      "e2_red_500hz_seed53_closelift5_20260720/episode_000004"
+    ]
+  },
+  "scene_rgb_complete_rate": 1.0,
+  "fields": {
+    "joint_state": "observation.state[7]",
+    "gripper_measured": "observation.gripper[1]",
+    "gripper_cmd": "action[7]",
+    "absolute_eef_xyz": "action[0:3]",
+    "quaternion_xyzw": "action[3:7]",
+    "language_instruction": "language_instruction",
+    "camera": "observation.images.scene mp4 @ 10Hz",
+    "timestamps": "timestamp",
+    "action_chunk_indices": "action_delta_indices constructed chunk_size=50",
+    "valid_mask": "all-true for accepted episodes"
+  },
+  "normalization_stats_file": "norm_stats.json",
+  "episode_index_file": "episode_index.jsonl",
+  "validation_report_file": "validation_report.json",
+  "file_sha256": {
+    "episode_index.jsonl": "1b38cc8d9cc800a1484253fb7fa96b7f414268e9b93cf37f18450d61e967615d",
+    "splits.json": "671c4a87bade58d9bd9370fbf6dee3fdd239eebe2498089b71335975afc17840",
+    "norm_stats.json": "deb55221ab97705be4c4ba62b43fe6ab623f8b6590b5fe5c4fb15f5d3d7ca9ee",
+    "validation_report.json": "37d3511f587e008aa6e7434c42a03eb99bac0936da71720ac10c688543c1689f",
+    "SOURCES.md": "0154bb0dce8a06a744b441c3579f594494fdebc60d11d4b7588f94b7cd85ee69",
+    "preflight_subset.json": "94b505d6c04b2e303f0536f10241859d46e1af21b6daa39dc6d0bcd6592df837",
+    "manifest.json": "26edf776334ed34c9d428f429db5c21975f7d00eccaca3782976ba16ec0abeec"
+  },
+  "source_dataset_roots": [
+    "/home/ina/dev/ros2-arm-teleoperation-suite/data/e2_red_500hz_seed52_closelift5_20260720",
+    "/home/ina/dev/ros2-arm-teleoperation-suite/data/e2_red_500hz_seed53_closelift5_20260720"
+  ],
+  "s2_baseline_ref": {
+    "ee_rmse_m": 0.2734163848429447,
+    "gripper_accuracy": 0.0,
+    "report": "evaluation/examples/smolvla_gate_s2_report.json"
+  },
+  "go_no_go": "go"
+}

@@ -17,8 +17,15 @@ reach/grasp 各失败一半，**无有效 lift**。继续跑同一 ACT 无收益
 | 优先动作 | 入口 | 通过条件 |
 |---|---|---|
 | ~~E3.5 scripted oracle~~ | 上游 `scripts/run_isaac_scripted_oracle.sh` | **已通过** ≥4/5 lift（v2b 5/5） |
-| **下一 ROI** | 5-seed **未过**（lift 0/5，`HOME_NO_CLOSE`）→ 继续修 home→对准→闭合，**不开 E4** | — |
-| 禁止 | 普通下降扩采 / 完整 E4 100+ / 盲扫权重 | — |
+| **下一 ROI** | **模型无关评测框架**（Adapter 契约 / Benchmark 规范 / VLA V0）；ACT 仅 diagnostic hold | 见下方链接；**不开 E4、不盲训** |
+| 禁止 | 普通下降扩采 / 完整 E4 100+ / 盲扫权重 / 下载 VLA 大权重 | — |
+
+框架文档入口：
+
+- [`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md)
+- [`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md)
+- [`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)
+- [`ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`](ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md)
 
 **Closelift 数据/模型（已落地）**
 

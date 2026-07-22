@@ -27,6 +27,10 @@ interface、safety、behavior 与 task outcome 分开评估。
 - Isaac scripted oracle：修复物理链后 **lift 5/5，Pass**；
 - close→lift 定向数据新模型：interface 5/5 PASS，但真实 lift **0/5**，因此停止扩大评测，
   **不进入完整 E4**。
+- LingBot-VLA 2.0：完成 V0/V0.5 兼容性与 Panda 动作契约审计；因本机资源及 55-D 适配成本判定当前路线 **Closed**，审计结论用于选择 SmolVLA 并完善通用 Policy Adapter。
+- SmolVLA：S2 已完成，Panda 数据与推理接口 **Pass**；base zero-shot 在 absolute EEF open-loop 上 **No-Go**，尚未 LoRA、尚未运行 Isaac。
+- SmolVLA **S3 Ready**（本地）：canonical abs-EEF+RGB release、LoRA 配置与 AutoDL 入口已冻结；正式训练需外部 ≥16GB GPU + 人工批准；未过 open-loop 不得进 Isaac。
+- **当前优先**：模型无关评测框架（Policy Adapter、数据健康度、open-loop 门禁）；ACT 保留为 diagnostic baseline，不盲训。
 
 > 项目范围：Panda 多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证。<br>
 > 不声称真实机械臂部署、completed Sim2Real、稳定在线自主抓取；offline loss 不等于任务成功率。
@@ -38,7 +42,7 @@ interface、safety、behavior 与 task outcome 分开评估。
 | 做了什么？ | 数据 gate、immutable release、ACT、Isaac 有界 rollout、continuous GT、失败视频、评测器预检和 scripted oracle |
 | 最关键的工程判断？ | interface PASS ≠ task PASS；oracle 5/5 证明 ACT 失败不是“Isaac 根本抓不起来” |
 | 当前模型效果？ | 权威 E3 nominal 为 0/20；close→lift 新模型 5-seed 仍 lift 0/5 |
-| 为什么不继续堆数据/跑 E4？ | 已出现 floor effect；问题仍是 home→对准→闭合，扩大 suite 不能改善归因 |
+| 为什么不继续堆数据/跑 E4？ | 已出现 floor effect；下一 ROI 是模型无关评测框架，不是扩 suite |
 | 求职价值？ | 展示评测契约、失败归因、实验止损、跨仓边界、可复现报告与诚实结论 |
 
 ## 评测逻辑
@@ -80,8 +84,15 @@ flowchart LR
 | **E3.5** | scripted oracle | v1 lift 0/5 → 修 pick/PD gripper/摩擦/GT threshold → v2b lift 5/5 | **Pass** |
 | **E3.6** | close→lift 定向模型 | 40 episodes；5-seed interface 5/5，reach/grasp/lift 0/0/0 | **No-Go** |
 | **E4** | object/visual/camera/dynamics 矩阵 | 规划为 100+ bounded rollouts | **未执行，不启动** |
+| **框架** | 模型无关评测 | Adapter 契约 + Benchmark；LingBot V0/V0.5 **已归档**（契约保留）；SmolVLA **S0–S2 + S3 Ready** | **契约已冻结**；正式 S3 LoRA/S4 Isaac 未执行 |
 
-完整审计报告：[docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md)
+完整审计报告：[docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md)  
+框架入口：[docs/POLICY_ADAPTER_CONTRACT.md](docs/POLICY_ADAPTER_CONTRACT.md) ·
+[docs/SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md](docs/SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md) ·
+[docs/portfolio/THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md) ·
+[docs/SMOLVLA_GATE_S2_OPEN_LOOP.md](docs/SMOLVLA_GATE_S2_OPEN_LOOP.md) ·
+[docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md](docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md)（LingBot **Closed / Archived**） ·
+[docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md](docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md)
 
 ## 三次关键实验决策
 
@@ -215,12 +226,18 @@ interface execution, safety, behavior, and simulator-ground-truth task outcomes.
 | E3.5 scripted oracle | v1 lift 0/5; after physics/contact fixes, **lift 5/5** |
 | Targeted close→lift model | 40 episodes; offline training PASS; 5-seed interface 5/5 but **lift 0/5** |
 | E4 generalization matrix | Planned, not executed; blocked by the zero-lift gate |
+| LingBot-VLA 2.0 | V0/V0.5 audits done; local V1 **No-Go**; route **Closed / Archived** (contracts retained) |
+| SmolVLA | S0–S2 done; Panda interface **Pass**; base zero-shot absolute-EEF open-loop **No-Go**; **S3 Ready** locally (no LoRA train / no Isaac yet) |
 
 The central result is diagnostic: Isaac can lift the nominal cube with a scripted oracle, while both learned
 policies fail before contact. The remaining bottleneck is the learned home→alignment→closure behavior, not
 proof that the simulator is physically incapable of grasping.
 
 See [the evaluation audit report](docs/EVALUATION_REPORT.md),
+[canonical facts / VLA route table](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md),
+[SmolVLA Gate S2](docs/SMOLVLA_GATE_S2_OPEN_LOOP.md),
+[SmolVLA Gate S3 Ready](docs/SMOLVLA_GATE_S3_READY.md),
+[SmolVLA S3 AutoDL Runbook](docs/SMOLVLA_S3_AUTODL_RUNBOOK.md),
 [the evaluation SOP](docs/EMBODIED_POLICY_EVALUATION_SOP.md), and
 [the scripted-oracle experiment](docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md).
 

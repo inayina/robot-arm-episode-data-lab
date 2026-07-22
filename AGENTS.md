@@ -5,7 +5,8 @@ Canonical 三仓 Agent 总览。各仓实现映射见：
 - 上游：`ros2-arm-teleoperation-suite/docs/AGENTS.md`
 - 下游：`ros2-moveit-pybullet-bridge/docs/AGENTS.md`
 - 闭环跑法：`docs/CLOSED_LOOP_RUNBOOK.md`
-- E2 单红块续跑：`docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md`
+- E2 单红块续跑（止损后转评测框架）：`docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md`
+- 模型无关评测：`docs/POLICY_ADAPTER_CONTRACT.md`、`docs/SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`
 
 ---
 
@@ -268,7 +269,23 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 - 已完成真实 Sim2Real；
 - 已实现稳定在线自主抓取；
 - 离线 loss 提升等同于任务成功率提升；
-- 文档中出现的规划功能已经全部实现。
+- 文档中出现的规划功能已经全部实现；
+- LingBot-VLA 为本仓第一后训练策略或已完成 Gate V1；
+- SmolVLA 已适配 Panda / 已完成 VLA 抓取 / 已验证任务成功；
+- SmolVLA S2 接口 Pass 等同于可进入 Isaac 或 S3 LoRA；
+- SmolVLA **S3 Ready** 等同于已完成 LoRA / 任务成功 / 可进 Isaac。
+
+**VLA / 评测接力硬禁止（防 Codex 误推进）**：
+
+- 不得自动恢复 LingBot Gate V1；
+- 不得下载 LingBot 6B 权重；
+- 不得把 55-D 通道切片视为 Panda 执行映射；
+- 不得因 SmolVLA S2 接口 Pass 或 S3 Ready 而进入 Isaac；
+- SmolVLA S3 正式 LoRA 需要人工批准和外部 GPU；未过 preflight 不得训练；未过 open-loop Pass 不得进 S4；
+- ACT 保持冻结诊断基线，不继续盲目训练；
+- 当前优先事项：AutoDL 上执行 S3 preflight → 一次 LoRA → open-loop（见 `docs/SMOLVLA_GATE_S3_READY.md`）。
+
+权威路线表：中游 `docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`「VLA 候选路线状态」。
 
 Legacy PyBullet/KUKA 实现不得与 Panda 主线混用。
 
@@ -333,9 +350,28 @@ graph TD
 
 #### 9.2.2 中游：数据转换与模型训练
 * **路径**：`~/robot-sim-lab/robot-arm-episode-data-lab` （Conda 虚拟环境运行）
-* **当前 E2 单红块 +10、阶段均衡 ACT 与 Isaac A/B 接力**：
-  `docs/E2_SINGLE_RED_DATA_EXPANSION_RUNBOOK.md`。接手的 AI 必须从该文档“当前接力点”继续，
-  不得从零重跑、混入旧 1000 Hz 数据或继续盲扫权重。
+* **当前接力点（2026-07-22）**：SmolVLA **S3 Ready**（见 `docs/SMOLVLA_GATE_S3_READY.md`、`docs/SMOLVLA_S3_AUTODL_RUNBOOK.md`）。
+  SmolVLA 为**唯一活动预训练候选**；本地已冻结 release/config/入口；**正式 LoRA 未执行**。
+  LingBot-VLA 2.0 执行路线 **CLOSED / ARCHIVED**（审计保留：`docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md`）。
+  ACT 为 frozen diagnostic baseline（`docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`）。
+  接手 AI 必须从 `docs/SMOLVLA_GATE_S3_READY.md` 与
+  `docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`「VLA 候选路线状态」继续。
+  **硬禁止（防误推进）**：
+  - 不得自动恢复 LingBot Gate V1；
+  - 不得下载 LingBot 6B 权重；
+  - 不得把 55-D 通道切片视为已验证的 Panda 执行映射；
+  - 不得因 SmolVLA S2 接口 Pass 或 S3 Ready 而进入 Isaac / 跳过 preflight；
+  - SmolVLA S3 正式 LoRA 需要人工批准和外部 ≥16GB GPU；未过 open-loop Pass 不得进 S4；
+  - ACT 保持冻结诊断基线，不继续盲目训练 / 不启动完整 E4；
+  - 不得从零重跑、混入旧 1000 Hz 数据、盲扫 stage weight；
+  - 不得用 ACT `ee_delta` release 作为 VLA S3 训练标签。
+* **S3 本地入口**：
+  ```bash
+  ./scripts/run_smolvla_s3_preflight.sh          # 默认 mock-preflight
+  # AutoDL real: S3_PREFLIGHT_MODE=preflight ./scripts/run_smolvla_s3_preflight.sh
+  # Formal train only after REAL preflight + human confirm:
+  # S3_I_UNDERSTAND_BILLING=1 SMOLVLA_S3_EXECUTE_TRAIN=1 ./scripts/run_smolvla_s3_train.sh
+  ```
 * **一键运行三仓闭环数据流水线（Adapted -> Release -> Smoke Train -> Handoff）**：
   ```bash
   # 运行离线数据闭环，生成 handoff 压缩包

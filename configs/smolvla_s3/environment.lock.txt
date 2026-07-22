@@ -1,0 +1,37 @@
+# SmolVLA S3 environment lock (AutoDL / conda or venv)
+# Generated for S3 Ready freeze 2026-07-22.
+# Install ONLY into a project env — never system Python.
+#
+# Host midstream snapshot (reference, not a pip freeze of CUDA wheels):
+#   python: use 3.10 or 3.11
+#   lerobot==0.5.2
+#   transformers==5.5.4 (host) — AutoDL may use 4.4x–5.x within tested range
+#   torch host was 2.11+cu130 laptop; AutoDL should install CUDA wheel matching instance driver
+#
+# Pin policy:
+# - Prefer exact pins below for Python packages where stable.
+# - Torch/torchvision CUDA builds are preflight-bound: install the wheel matching
+#   `nvidia-smi` driver / CUDA toolkit on the instance, then record versions into
+#   runs/smolvla_s3/<run_id>/env_versions.json.
+
+lerobot==0.5.2
+transformers>=4.40,<5.6
+tokenizers>=0.19
+datasets>=5.0
+huggingface_hub>=0.23
+einops>=0.8
+safetensors>=0.4
+peft>=0.11,<0.16
+accelerate>=0.30
+numpy>=1.24
+pyarrow>=14.0
+PyYAML>=6.0
+Pillow>=10.0
+opencv-python-headless>=4.8
+jsonschema>=4.20,<5.0
+pytest>=8.0,<9.0
+
+# Install torch separately in autodl_setup_smolvla_s3.sh after CUDA check, e.g.:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#
+# DO NOT commit Hugging Face tokens or AutoDL passwords.

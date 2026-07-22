@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/vla_panda_active_channel_spec.schema.json",
+  "title": "VLA Panda active-channel specification (draft)",
+  "description": "Separates canonical channel selection from policy semantics and execution conversion. Not a claim of LingBot official layout verification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "spec_version",
+    "canonical_dim",
+    "policy_action_semantics",
+    "quaternion_order",
+    "gripper",
+    "channels",
+    "mask_padding",
+    "normalization",
+    "version_binding",
+    "claims_official_layout_verified"
+  ],
+  "properties": {
+    "contract_version": {"const": "vla_panda_active_channel_spec_v0"},
+    "artifact_type": {"const": "vla_panda_active_channel_spec"},
+    "spec_version": {"type": "string", "minLength": 1},
+    "canonical_dim": {"const": 55},
+    "policy_action_semantics": {
+      "enum": ["absolute_eef_gripper_v0", "joint_abs_gripper_v0"]
+    },
+    "quaternion_order": {"enum": ["xyzw", "wxyz"]},
+    "gripper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["range", "closed", "open", "command_vs_state"],
+      "properties": {
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "number"}
+        },
+        "closed": {"type": "number"},
+        "open": {"type": "number"},
+        "command_vs_state": {
+          "const": "action_uses_command_observation_uses_measured"
+        }
+      }
+    },
+    "channels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arm_joints", "ee_pose", "gripper", "padded_groups"],
+      "properties": {
+        "arm_joints": {"$ref": "#/$defs/channel_group"},
+        "ee_pose": {"$ref": "#/$defs/channel_group"},
+        "gripper": {"$ref": "#/$defs/channel_group"},
+        "padded_groups": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "mask_padding": {"type": "boolean"},
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ignore_padding_dims", "pad_mean", "pad_std"],
+      "properties": {
+        "ignore_padding_dims": {"type": "boolean"},
+        "pad_mean": {"type": "number"},
+        "pad_std": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "state_active_fields": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "action_active_fields": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "version_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_channel_spec_version",
+        "robot_config_id",
+        "panda_schema_id",
+        "policy_action_semantics"
+      ],
+      "properties": {
+        "active_channel_spec_version": {"type": "string"},
+        "robot_config_id": {"type": ["string", "null"]},
+        "norm_stats_sha256": {"type": ["string", "null"]},
+        "checkpoint_sha256": {"type": ["string", "null"]},
+        "dataset_release_id": {"type": ["string", "null"]},
+        "panda_schema_id": {"type": "string"},
+        "policy_action_semantics": {"type": "string"}
+      }
+    },
+    "claims_official_layout_verified": {
+      "const": false
+    },
+    "notes": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "channel_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_offset", "canonical_width", "active_width", "padding"],
+      "properties": {
+        "canonical_offset": {"type": "integer", "minimum": 0},
+        "canonical_width": {"type": "integer", "minimum": 1},
+        "active_width": {"type": "integer", "minimum": 0},
+        "padding": {"enum": ["zeros", "none"]},
+        "field_names": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  }
+}

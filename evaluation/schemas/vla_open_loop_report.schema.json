@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/vla_open_loop_report.schema.json",
+  "title": "VLA Gate V2 open-loop report (fixture / design)",
+  "description": "Offline open-loop metrics only. Must not mix ACT ee_delta metrics in the same score table. Does not authorize task success.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "policy_action_semantics",
+    "metric_lane",
+    "claims_task_success",
+    "forbids_act_delta_mixed_table",
+    "metrics"
+  ],
+  "properties": {
+    "contract_version": {"const": "vla_open_loop_report_v0"},
+    "artifact_type": {"const": "vla_open_loop_report"},
+    "policy_action_semantics": {
+      "enum": ["absolute_eef_gripper_v0", "joint_abs_gripper_v0"]
+    },
+    "metric_lane": {"const": "offline_open_loop"},
+    "claims_task_success": {"const": false},
+    "forbids_act_delta_mixed_table": {"const": true},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_channel_mae",
+        "active_channel_rmse",
+        "ee_position_rmse_m",
+        "quaternion_angular_error_rad",
+        "gripper_accuracy",
+        "gripper_close_timing_frames",
+        "action_smoothness_jerk",
+        "action_saturation_ratio",
+        "padding_channel_anomaly_ratio",
+        "inference_latency_ms"
+      ],
+      "properties": {
+        "active_channel_mae": {"type": ["number", "null"], "minimum": 0},
+        "active_channel_rmse": {"type": ["number", "null"], "minimum": 0},
+        "ee_position_rmse_m": {"type": ["number", "null"], "minimum": 0},
+        "quaternion_angular_error_rad": {"type": ["number", "null"], "minimum": 0},
+        "gripper_accuracy": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "gripper_close_timing_frames": {"type": ["number", "null"]},
+        "action_smoothness_jerk": {"type": ["number", "null"], "minimum": 0},
+        "action_saturation_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "padding_channel_anomaly_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "inference_latency_ms": {"type": ["number", "null"], "minimum": 0},
+        "home_no_close_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "stage_aligned_errors": {
+          "type": ["object", "null"],
+          "additionalProperties": {"type": "number"}
+        }
+      }
+    },
+    "prohibited_fields": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "act_ee_delta_l1",
+          "act_ee_delta_rmse",
+          "task_success_rate",
+          "place_success_rate"
+        ]
+      }
+    },
+    "notes": {"type": ["string", "null"]}
+  }
+}

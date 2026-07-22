@@ -1,0 +1,40 @@
+{
+  "contract_version": "vla_execution_adapter_contract_v0",
+  "artifact_type": "vla_execution_adapter_contract",
+  "pipeline": [
+    "vla_raw_output",
+    "select_active_channels",
+    "semantic_validation",
+    "denormalize_target",
+    "lookup_measured_state",
+    "convert_to_bounded_command",
+    "apply_limits",
+    "watchdog_estop",
+    "isaac_execution",
+    "record_measured_feedback"
+  ],
+  "tensor_roles": {
+    "vla_raw_output": "Normalized or raw 55-D model output; not executable.",
+    "selected_active_channels": "Masked/sliced Panda-relevant dims after channel selection.",
+    "denormalized_target": "Absolute EE xyz+xyzw + gripper_cmd (scheme B) in physical units.",
+    "bounded_command": "Incremental or rate-limited command for the existing control stack; not equal to denormalized_target.",
+    "measured_state": "Simulator feedback joints/ee/gripper; ground for open-loop logs and continuous GT only."
+  },
+  "forbidden_equivalences": [
+    "vla_raw_output != ee_delta_gripper",
+    "selected_active_channels != reversible_map_to_delta",
+    "denormalized_target != bounded_command",
+    "bounded_command != task_success",
+    "interface_pass != task_success"
+  ],
+  "safety": {
+    "workspace_limits": true,
+    "joint_limits": true,
+    "gripper_limits": true,
+    "watchdog": true,
+    "estop": true
+  },
+  "claims_task_success": false,
+  "implementation_status": "documented_plan_only",
+  "notes": "Design-only. Must not be used to authorize Gate V1/V2/V3 execution."
+}

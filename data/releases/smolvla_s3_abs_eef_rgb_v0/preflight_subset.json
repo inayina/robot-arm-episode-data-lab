@@ -1,0 +1,9 @@
+{
+  "episode_ids": [
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000000",
+    "e2_red_500hz_seed52_closelift5_20260720/episode_000001"
+  ],
+  "max_frames_per_episode": 32,
+  "approx_train_steps": "20-50",
+  "purpose": "S3 preflight only"
+}

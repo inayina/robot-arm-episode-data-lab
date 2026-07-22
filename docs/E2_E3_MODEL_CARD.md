@@ -129,7 +129,11 @@ lift 5/5）；对准→闭合→抬升阶段数据已补，但下方 §6.1 新 c
 
 **Provenance 规则**：对外与模型卡一律写 **40 episodes**；目录名 `random35` 仅作历史路径别名，不改 checkpoint 路径以免破坏引用。
 
-**止损**：5-seed 未出现真实 lift → **不开完整 E4**；下一 ROI 仍在 home→对准→闭合策略/数据，而非扩 suite。
+**止损**：5-seed 未出现真实 lift → **不开完整 E4**；下一 ROI 转为**模型无关评测框架**
+（见 [`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md)），而非继续盲训/扩采。
+HOME_NO_CLOSE 假设—证据矩阵：[`ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`](ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md)。
+
+本 checkpoint **保留**为 diagnostic baseline：不删除、不覆盖 evidence、不把 0/5 隐藏。
 
 ---
 

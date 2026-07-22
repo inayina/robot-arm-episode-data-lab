@@ -1,0 +1,29 @@
+# Thin feature map: upstream Panda LeRobot v2.1 → SmolVLA Gate S2 open-loop adapter.
+# Not a claim that SmolVLA-native action == absolute_eef_gripper_v0.
+robot_type: panda
+gate: smolvla_s2
+policy_action_semantics: absolute_eef_gripper_v0
+claims_task_success: false
+mapping_hypothesis: libero6d_pred012_as_xyz_pred5_as_gripper_quat_unmapped
+
+upstream:
+  codebase_version: v2.1
+  state: observation.state[7]  # joints
+  ee_pose: observation.ee_pose[7]  # xyz + xyzw
+  gripper_measured: observation.gripper[1]
+  action_expert: action[8]  # ee_pose_gripper absolute; reject dim=7 delta
+  image: observation.images.scene  # single RGB video @ fps
+  language: language_instruction | task
+
+smolvla_base_adapter:
+  observation.state: "concat(ee_pose[:3], joints[:3]) -> float32[6]"
+  observation.image: "scene frame resized 256x256, float01 CHW"
+  observation.image2: "duplicate scene (single-camera upstream)"
+  observation.image3: "duplicate scene"
+  task: language_instruction
+  action_pred: "float32[6] libero-shaped; NOT native absolute_eef[8]"
+
+forbidden:
+  - treat_smolvla_output_as_ee_delta_gripper
+  - mix_act_delta_metrics_in_open_loop_table
+  - claim_task_success_from_open_loop

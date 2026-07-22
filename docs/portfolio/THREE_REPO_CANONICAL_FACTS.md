@@ -42,9 +42,31 @@
 | Close→lift release | release_id 路径含 `random35`，权威 manifest 为 40 episodes / 9,779 frames | `implemented_and_verified` with provenance alias | `data/releases/e2_500hz_random35_closelift_20260720/manifest.json`, `PROVENANCE.md` |
 | E3.6 close→lift model | 5-seed interface 5/5；reach/grasp/lift 0/0/0；5/5 `HOME_NO_CLOSE` | `implemented_and_verified` runtime No-Go | `evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json` |
 | E4 | 四类 shift、100+ bounded rollout | `documented_plan_only`; blocked by zero-lift gate | `docs/portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md` |
+| Model-agnostic Policy Adapter contract | 方法集 + metadata schema + fixture + 中游薄 ABC/`FixturePolicyAdapter` + 三策略注册表；上游运行时包装未挂 | `implemented_and_verified` for midstream contract/registry；upstream wrapper `documented_plan_only` | `docs/POLICY_ADAPTER_CONTRACT.md`, `docs/POLICY_ADAPTER_QUICKSTART.md`, `evaluation/policies/`, `evaluation/registry/policies/` |
+| Single-block controlled Benchmark spec | Baseline/ID/OOD-position schema + fixture；完整矩阵未跑 | `documented_plan_only` for execution；spec frozen | `docs/SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`, `evaluation/schemas/benchmark_spec.schema.json`, `evaluation/examples/benchmark_spec_baseline_id_ood_fixture.json` |
+| VLA Gate V0 | LingBot-VLA 2.0 只读兼容性矩阵；不下权重；HOLD-2 已纠正（禁止「可逆 delta 映射」表述）；**路线 CLOSED / ARCHIVED** | `implemented_and_verified` as audit doc (archived route) | `docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md` |
+| VLA Gate V0.5 | Panda 字段审计；推荐 absolute EEF；active-channel + execution adapter；**absolute_eef 导出 fixture 已实现**；**模型无关契约保留**；LingBot 执行路线不进 V1 | `implemented_and_verified` as audit + offline export fixture | `docs/VLA_GATE_V05_PANDA_ACTION_CONTRACT.md`, `evaluation/vla_contract/absolute_eef.py`, `tests/test_absolute_eef_export.py` |
+| LingBot Gate V1 | 本机 RTX PRO 500 / 6113 MiB；**No-Go**；未下 6B 权重；**CLOSED / ARCHIVED** | `implemented_and_verified` preflight (archived route) | `docs/VLA_GATE_V1_PREFLIGHT.md` |
+| SmolVLA Gate S0 | 活动候选起点；obs/action/data 矩阵；本机 LoRA No-Go；S1–S4 设计冻结 | `implemented_and_verified` as audit doc | `docs/SMOLVLA_GATE_S0_COMPATIBILITY_AUDIT.md` |
+| SmolVLA Gate S1 | 官方 `smolvla_base` 加载+`select_action`：**pass**（peak ≈925 MiB / ~171 ms；合成帧；非 Panda） | `implemented_and_verified` | `docs/SMOLVLA_GATE_S1_OFFICIAL_REPRO.md`, `evaluation/examples/smolvla_gate_s1_report.json` |
+| SmolVLA Gate S2 | Panda v2.1 RGB+abs EEF open-loop：**interface pass / H-4 pass / H-3 no_go**（EE RMSE≈0.27 m；gripper acc 0；非任务成功） | `implemented_and_verified` | `docs/SMOLVLA_GATE_S2_OPEN_LOOP.md`, `evaluation/examples/smolvla_gate_s2_report.json` |
+| SmolVLA Gate S3 Ready | 本地冻结：canonical abs-EEF+RGB release、LoRA 配置、AutoDL 脚本、preflight/train 入口、open-loop 门禁；**未**正式训练 / **未** Isaac | `implemented_and_verified` local prep；GPU train `not_supported` yet | `docs/SMOLVLA_GATE_S3_READY.md`, `docs/SMOLVLA_S3_AUTODL_RUNBOOK.md`, `data/releases/smolvla_s3_abs_eef_rgb_v0/manifest.json` |
+| ACT HOME_NO_CLOSE hold | 假设—证据矩阵；禁止盲训/扩采/E4 | `implemented_and_verified` decision | `docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md` |
+
+### VLA 候选路线状态（2026-07-22）
+
+| 候选 | 已完成 Gate | 当前结果 | 当前状态 | 后续条件 |
+| --- | --- | --- | --- | --- |
+| LingBot-VLA 2.0 | V0、V0.5 | 动作契约完成；本机 V1 资源 No-Go；未下权重/未训练/未跑 Isaac VLA | **Closed / Archived**（路线关闭） | 未来仅在 ≥24GB 资源与明确多本体需求下人工复审；不得自动恢复 V1 |
+| SmolVLA | S0–S2 + **S3 Ready** | 管线/接口 Pass；base zero-shot absolute-EEF open-loop No-Go（EE RMSE≈0.27 m，gripper acc 0）；S3 本地数据/配置/入口已冻结 | **Active / S3 Ready**（唯一活动预训练路线；待外部 GPU + 人工批准执行） | AutoDL ≥16GB：preflight → 人工批准 → 一次 LoRA → open-loop；**未过 open-loop Pass 不得进 S4 Isaac** |
+| ACT | E2–E3.6 | nominal 0/20；定向模型 lift 0/5 | **Frozen diagnostic baseline**（失败诊断基线） | 不再盲目训练；不启动完整 E4 |
+| Scripted oracle | E3.5 | lift 5/5 | **Active system reference**（系统上界参考） | 用于物理链与 GT 校验 |
+
+状态标签含义：路线关闭 ≠ 删除审计；S3 Ready ≠ 已训练成功；活动候选 ≠ 已适配/已成功；失败诊断基线 ≠ 可部署策略；系统上界参考 ≠ learned-policy 成功。
 
 结论：ACT diagnostic training 与 Isaac bounded evaluation 已有可追溯产物；**learned-policy task
-success 未验证且当前为 No-Go**。不得把“ACT run 已完成”写成“ACT 抓取成功”。
+success 未验证且当前为 No-Go**。LingBot **执行路线已归档**；SmolVLA 为**唯一活动预训练候选**，现处于 **S3 Ready**（本地准备完成，正式 LoRA/Isaac 未执行）。不是 ACT 重训，也不是 VLA 抓取已验证。
+不得把“ACT run 已完成”写成“ACT 抓取成功”；不得把“S2 接口 Pass”或“S3 Ready”写成“SmolVLA 已适配 Panda / 任务成功”。
 
 ## Historical MLP / Handoff Baseline
 

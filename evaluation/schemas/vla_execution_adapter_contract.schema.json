@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/vla_execution_adapter_contract.schema.json",
+  "title": "VLA execution adapter contract (design-only)",
+  "description": "Separates VLA raw output, active channels, denormalized target, bounded command, and measured state. Does not authorize Isaac control.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "artifact_type",
+    "pipeline",
+    "tensor_roles",
+    "safety",
+    "claims_task_success",
+    "implementation_status"
+  ],
+  "properties": {
+    "contract_version": {"const": "vla_execution_adapter_contract_v0"},
+    "artifact_type": {"const": "vla_execution_adapter_contract"},
+    "pipeline": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "enum": [
+          "vla_raw_output",
+          "select_active_channels",
+          "semantic_validation",
+          "denormalize_target",
+          "lookup_measured_state",
+          "convert_to_bounded_command",
+          "apply_limits",
+          "watchdog_estop",
+          "isaac_execution",
+          "record_measured_feedback"
+        ]
+      }
+    },
+    "tensor_roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vla_raw_output",
+        "selected_active_channels",
+        "denormalized_target",
+        "bounded_command",
+        "measured_state"
+      ],
+      "properties": {
+        "vla_raw_output": {"type": "string"},
+        "selected_active_channels": {"type": "string"},
+        "denormalized_target": {"type": "string"},
+        "bounded_command": {"type": "string"},
+        "measured_state": {"type": "string"}
+      }
+    },
+    "forbidden_equivalences": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_limits", "joint_limits", "gripper_limits", "watchdog", "estop"],
+      "properties": {
+        "workspace_limits": {"type": "boolean"},
+        "joint_limits": {"type": "boolean"},
+        "gripper_limits": {"type": "boolean"},
+        "watchdog": {"type": "boolean"},
+        "estop": {"type": "boolean"}
+      }
+    },
+    "claims_task_success": {"const": false},
+    "implementation_status": {"const": "documented_plan_only"},
+    "notes": {"type": ["string", "null"]}
+  }
+}

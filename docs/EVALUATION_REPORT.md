@@ -161,11 +161,23 @@ Legacy `agents/`、`core/` 和 KUKA/PyBullet 图片不属于当前 Panda ACT 主
 | 继续均匀扩到 50 条 | No-Go | 已有止损证据；需验证定向数据 |
 | 新 close→lift checkpoint 继续扩大评测 | No-Go | 5-seed lift 0/5，`HOME_NO_CLOSE` |
 | 直接启动完整 E4 100+ | No-Go | nominal 和定向模型均无 learned-policy lift；存在 floor effect |
+| 模型无关评测框架（Adapter 契约 / Benchmark 规范 / VLA V0–V0.5 契约） | Go（文档与 schema；LingBot 执行路线 Archived） | 见 `POLICY_ADAPTER_CONTRACT.md`、`THREE_REPO_CANONICAL_FACTS.md`；不自动训、不恢复 LingBot V1、不跑 E4 |
+| 继续盲训 ACT / 普通下降扩采 / 盲扫 stage weight | No-Go | `ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md` |
+| LingBot-VLA 2.0 本机 Gate V1（6B） | **No-Go / Closed / Archived** | 本机 ~6GB；见 `VLA_GATE_V1_PREFLIGHT.md`；不得自动恢复 |
+| SmolVLA（当前活动预训练候选） | **Active / S3 Ready** | S0–S2 完成；S3 本地冻结；正式 LoRA/Isaac 未执行 |
+| SmolVLA Gate S1（官方推理复现） | **Go / pass** | peak ≈925 MiB，~171 ms；见 `SMOLVLA_GATE_S1_OFFICIAL_REPRO.md` |
+| SmolVLA Gate S2（Panda open-loop） | **Interface Go；H-3 No-Go** | EE RMSE≈0.27 m，gripper acc 0；见 `SMOLVLA_GATE_S2_OPEN_LOOP.md` |
+| SmolVLA Gate S3 Ready（本地准备） | **Go / ready** | release+config+AutoDL 入口；见 `SMOLVLA_GATE_S3_READY.md` |
+| 自动进入 SmolVLA 正式 S3 训练 / S4 Isaac | No-Go（本轮） | 须人工批准 + 外部 ≥16GB + preflight Pass；open-loop Pass 后才可议 Isaac |
 
 ## 8. 可对外陈述与边界
 
 **可以陈述**：实现了 Panda 多仓数据、ACT 训练、Isaac 有界 rollout、continuous GT、失败视频、
-评测器预检、scripted oracle 和数据回流的评测闭环；通过 oracle 将物理问题与策略问题分离。
+评测器预检、scripted oracle 和数据回流的评测闭环；通过 oracle 将物理问题与策略问题分离；
+已冻结模型无关 Policy Adapter 契约与单方块 Benchmark 规范（执行矩阵未跑）；LingBot V0/V0.5
+审计已完成并归档执行路线；SmolVLA 为当前活动预训练候选（S2 Hold）。
 
 **必须同时陈述**：当前 learned-policy nominal 为 0/20；新定向 checkpoint 的 5-seed smoke
-仍为 lift 0/5；没有真实机械臂部署、completed Sim2Real 或稳定在线自主抓取。
+仍为 lift 0/5；没有真实机械臂部署、completed Sim2Real 或稳定在线自主抓取；LingBot **未**作为
+后训练策略推进；SmolVLA **S2 接口 Pass ≠ 已适配 Panda / 任务成功**；base zero-shot open-loop
+No-Go；**尚未 LoRA、尚未 Isaac VLA**。

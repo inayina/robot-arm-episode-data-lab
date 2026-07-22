@@ -1,0 +1,93 @@
+# SmolVLA S3 open-loop Pass / Hold / No-Go gate (base vs LoRA paired)
+# Thresholds derived from S2 baseline + expert train-split scales in
+# data/releases/smolvla_s3_abs_eef_rgb_v0/norm_stats.json
+# and evaluation/examples/smolvla_gate_s2_report.json
+#
+# Not task-success. Not Isaac. Open-loop must Pass before any S4 Isaac attempt.
+
+contract_version: smolvla_s3_eval_gate_v0
+paired_eval: true
+claims_task_success: false
+ran_isaac: false
+
+baselines:
+  s2_report: evaluation/examples/smolvla_gate_s2_report.json
+  s2_ee_rmse_m: 0.2734163848429447
+  s2_gripper_accuracy: 0.0
+  s2_quat_angular_error_rad: null
+  expert_ee_xyz_span_m: [0.1148798325173736, 0.21836670487629917, 0.45330546029594454]
+  expert_ee_span_l2_m: 0.516  # ||span||2
+  expert_ee_step_l2_p90_m: 0.0145
+  derivation_notes:
+    - "Pass EE RMSE ≤ min(0.35 * S2, 0.20 * span_L2) ≈ min(0.0957, 0.103) → 0.096 m (rounded gate 0.100)."
+    - "Hold EE RMSE ≤ 0.75 * S2 ≈ 0.205 m (must improve ≥25% vs S2)."
+    - "No-Go EE if RMSE ≥ 0.90 * S2 ≈ 0.246 m (almost no improvement)."
+    - "Gripper Pass ≥0.70 / Hold ≥0.40 / No-Go ≤0.15 (binary tol 0.25 as S2)."
+    - "Quat Pass ≤0.35 rad (~20°) when measurable; null quat does not grant Pass alone."
+
+metrics_required:
+  - ee_position_rmse_m
+  - quaternion_angular_error_rad
+  - gripper_accuracy
+  - gripper_close_timing_error_frames
+  - action_smoothness_ee_step_l2_p90
+  - saturation_or_clip_ratio
+  - home_no_close_detected
+  - id_validation_slice
+  - ood_position_slice
+  - inference_latency_ms
+  - per_episode_raw_results
+
+slices:
+  id_validation:
+    split: validation
+    episode_ids_from_release: true
+  ood_position:
+    split: benchmark
+    episode_ids_from_release: true
+    note: "Benchmark episodes held out from train; treat as OOD-position proxy until dedicated OOD suite."
+
+thresholds:
+  pass:
+    ee_position_rmse_m_max: 0.100
+    relative_ee_improvement_vs_s2_min: 0.50
+    quaternion_angular_error_rad_max: 0.35
+    gripper_accuracy_min: 0.70
+    gripper_close_timing_error_frames_max: 5
+    action_smoothness_ee_step_l2_p90_max: 0.05  # ~3.4× expert p90
+    saturation_or_clip_ratio_max: 0.10
+    home_no_close_detected_max_rate: 0.20
+    require_consistent_stage_timing: true
+  hold:
+    ee_position_rmse_m_max: 0.205
+    relative_ee_improvement_vs_s2_min: 0.25
+    quaternion_angular_error_rad_max: 0.70
+    gripper_accuracy_min: 0.40
+    home_no_close_detected_max_rate: 0.50
+    max_data_fix_retries: 1
+    note: "Partial EE/grip improvement; stage/gripper still wrong → Hold, at most one explicit data fix."
+  no_go:
+    ee_position_rmse_m_min: 0.246
+    gripper_accuracy_max: 0.15
+    home_no_close_detected_min_rate: 0.80
+    near_static_ee_step_l2_p90_max: 0.002
+    saturation_or_clip_ratio_min: 0.50
+    nan_or_inf_any: true
+    severe_overfit_val_vs_train_gap_hint: "val EE RMSE >> train open-loop by >2× with grip still failing"
+
+decision_rules:
+  - "Evaluate LoRA against the same protocol as base (paired)."
+  - "Pass only if position, rotation (when available), gripper, and stage timing all show consistent credible improvement vs S2/base."
+  - "Hold if some metrics improve but gripper or stage behavior remains wrong; at most one data-fix retry."
+  - "No-Go if metrics barely move, gripper stuck open, near-static, abnormal outputs, or severe overfit."
+  - "Open-loop must Pass before any S4 Isaac attempt. Hold/No-Go must not enter Isaac."
+
+report_fields:
+  - release_id
+  - config_sha256
+  - base_checkpoint_revision
+  - lora_checkpoint_path
+  - gpu_name
+  - peak_vram_mib
+  - per_episode_raw_results
+  - gate_decision  # pass | hold | no_go

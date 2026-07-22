@@ -1,0 +1,99 @@
+{
+  "contract_version": "benchmark_spec_v0",
+  "artifact_type": "benchmark_spec",
+  "benchmark_version": "single_block_controlled_v0",
+  "task": "pick_specified_block_place_fixed_bin",
+  "robot": "panda",
+  "action_schema_version": "panda_ee_delta_gripper_v0",
+  "observation_schema_ref": "configs/robot_schemas/panda.yaml",
+  "hard_gate": {
+    "require_learned_policy_lift_before_ood": true,
+    "current_learned_policy_lift_verified": false,
+    "evidence_refs": [
+      "evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json",
+      "evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json",
+      "evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json"
+    ],
+    "allowed_now": [
+      "baseline_smoke",
+      "oracle_physics_control",
+      "read_only_diagnostics"
+    ],
+    "forbidden_now": [
+      "full_e4_matrix",
+      "ood_position_large",
+      "ood_appearance_large",
+      "ood_composition_large",
+      "blind_stage_weight_sweep",
+      "uniform_descend_data_expansion"
+    ]
+  },
+  "factors": [
+    "block_position_xy",
+    "block_yaw",
+    "block_color",
+    "block_size",
+    "lighting",
+    "camera_offset",
+    "distractor",
+    "language_paraphrase"
+  ],
+  "slices": {
+    "baseline": {
+      "slice_id": "baseline",
+      "split_role": ["train_optional", "validation_optional", "benchmark_smoke"],
+      "benchmark_exclusive": false,
+      "min_rollouts": 3,
+      "suggested_seeds": [3000, 3001, 3002],
+      "episode_suite_id_map": "nominal",
+      "enabled": true,
+      "enabled_when": null,
+      "go_no_go": {
+        "interface_system_pass_required": true,
+        "oracle_lift_control_required": true,
+        "learned_min_grasp_or_lift_before_expand": 1
+      }
+    },
+    "id": {
+      "slice_id": "id",
+      "split_role": ["train_in_distribution", "validation", "benchmark"],
+      "benchmark_exclusive": false,
+      "min_rollouts": 10,
+      "suggested_seed_range": [3100, 3119],
+      "episode_suite_id_map": "nominal",
+      "enabled": false,
+      "enabled_when": "hard_gate.current_learned_policy_lift_verified",
+      "go_no_go": {
+        "require_lift_count_ge": 1,
+        "or_place_rate_threshold": 0.5
+      }
+    },
+    "ood_position": {
+      "slice_id": "ood_position",
+      "split_role": ["benchmark"],
+      "benchmark_exclusive": true,
+      "train_allowed": false,
+      "validation_allowed": false,
+      "min_rollouts": 20,
+      "suggested_seed_range": [3200, 3219],
+      "held_out_factors": ["block_position_xy", "block_yaw"],
+      "episode_suite_id_map": "object_pose",
+      "enabled": false,
+      "enabled_when": "hard_gate.current_learned_policy_lift_verified",
+      "go_no_go": {
+        "require_prior_id_lift": true
+      }
+    }
+  },
+  "leakage_rules": [
+    "benchmark_factor_combinations_must_not_appear_in_train_release",
+    "held_out_values_must_be_listed_in_suite_manifest",
+    "benchmark_language_paraphrases_must_not_be_used_for_training_sampling",
+    "training_split_only_filter_does_not_replace_benchmark_leak_checks"
+  ],
+  "reporting": {
+    "metric_lanes": ["data", "offline", "interface", "behavior", "task", "system"],
+    "task_authority": "upstream_runtime_ground_truth",
+    "interface_pass_is_not_task_pass": true
+  }
+}

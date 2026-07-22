@@ -1,0 +1,233 @@
+{
+  "contract_version": "act_home_no_close_diag_v0",
+  "artifact_type": "act_home_no_close_diagnostic",
+  "claims_task_success": false,
+  "mutates_evidence": false,
+  "frames_path": "data/releases/e2_500hz_random35_closelift_20260720/frames.jsonl",
+  "frame_count": 5000,
+  "action_distribution": {
+    "stage_counts": {
+      "home_like": 2966,
+      "close_like": 1570,
+      "transition": 464
+    },
+    "stages": {
+      "home_like": {
+        "count": 2966,
+        "gripper_cmd": {
+          "mean": 0.9995594515200812,
+          "min": 0.95333331823349,
+          "max": 1.0,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.2,
+              0.4,
+              0.55,
+              0.7,
+              0.85,
+              0.95,
+              1.01
+            ],
+            "counts": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2966
+            ],
+            "n": 2966
+          }
+        },
+        "delta_xyzrpy_l2": {
+          "mean": 0.015042622421028811,
+          "near_zero_lt_1e-3_count": 1490,
+          "near_zero_lt_1e-3_frac": 0.50236008091706,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.0001,
+              0.001,
+              0.005,
+              0.01,
+              0.02,
+              0.05,
+              1.0
+            ],
+            "counts": [
+              1233,
+              257,
+              262,
+              232,
+              231,
+              426,
+              325
+            ],
+            "n": 2966
+          }
+        }
+      },
+      "close_like": {
+        "count": 1570,
+        "gripper_cmd": {
+          "mean": 0.10878131659048948,
+          "min": 0.0,
+          "max": 0.54666668176651,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.2,
+              0.4,
+              0.55,
+              0.7,
+              0.85,
+              0.95,
+              1.01
+            ],
+            "counts": [
+              1168,
+              231,
+              171,
+              0,
+              0,
+              0,
+              0
+            ],
+            "n": 1570
+          }
+        },
+        "delta_xyzrpy_l2": {
+          "mean": 0.015513018564423787,
+          "near_zero_lt_1e-3_count": 95,
+          "near_zero_lt_1e-3_frac": 0.06050955414012739,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.0001,
+              0.001,
+              0.005,
+              0.01,
+              0.02,
+              0.05,
+              1.0
+            ],
+            "counts": [
+              0,
+              95,
+              663,
+              307,
+              115,
+              224,
+              166
+            ],
+            "n": 1570
+          }
+        }
+      },
+      "transition": {
+        "count": 464,
+        "gripper_cmd": {
+          "mean": 0.7528448273138754,
+          "min": 0.5533333420753479,
+          "max": 0.9466666579246521,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.2,
+              0.4,
+              0.55,
+              0.7,
+              0.85,
+              0.95,
+              1.01
+            ],
+            "counts": [
+              0,
+              0,
+              0,
+              173,
+              170,
+              121,
+              0
+            ],
+            "n": 464
+          }
+        },
+        "delta_xyzrpy_l2": {
+          "mean": 0.0010927289018961286,
+          "near_zero_lt_1e-3_count": 303,
+          "near_zero_lt_1e-3_frac": 0.6530172413793104,
+          "histogram": {
+            "edges": [
+              0.0,
+              0.0001,
+              0.001,
+              0.005,
+              0.01,
+              0.02,
+              0.05,
+              1.0
+            ],
+            "counts": [
+              145,
+              158,
+              143,
+              14,
+              4,
+              0,
+              0
+            ],
+            "n": 464
+          }
+        }
+      }
+    }
+  },
+  "deploy_n_action_steps": {
+    "matches": [
+      {
+        "log_path": "evidence/e3p6_closelift40_5seed_home_20260720/seeds/seed_2200/policy.log",
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50
+      },
+      {
+        "log_path": "evidence/e3p6_closelift40_5seed_home_20260720/seeds/seed_2201/policy.log",
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50
+      },
+      {
+        "log_path": "evidence/e3p6_closelift40_5seed_home_20260720/seeds/seed_2202/policy.log",
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50
+      },
+      {
+        "log_path": "evidence/e3p6_closelift40_5seed_home_20260720/seeds/seed_2203/policy.log",
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50
+      },
+      {
+        "log_path": "evidence/e3p6_closelift40_5seed_home_20260720/seeds/seed_2204/policy.log",
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50
+      }
+    ],
+    "unique_pairs": [
+      {
+        "deploy_n_action_steps": 8,
+        "chunk_size": 50,
+        "count": 5
+      }
+    ]
+  },
+  "hypotheses_touched": [
+    "home_vs_close_gripper_cmd_distribution",
+    "home_vs_close_delta_near_zero",
+    "deploy_n_action_steps_from_smoke_logs"
+  ],
+  "notes": [
+    "Read-only diagnostic for ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md §3.",
+    "Does not authorize retraining or E4."
+  ]
+}

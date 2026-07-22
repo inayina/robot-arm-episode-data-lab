@@ -1,0 +1,38 @@
+{
+  "contract_version": "policy_adapter_contract_v0",
+  "artifact_type": "policy_registry_index",
+  "benchmark_version": "single_block_controlled_v0",
+  "policies": [
+    {
+      "registry_id": "scene_act_lerobot_e3_nominal",
+      "implementation_status": "implemented_and_verified",
+      "runtime_owner_repository": "ros2-arm-teleoperation-suite",
+      "metadata_path": "evaluation/registry/policies/scene_act_lerobot_e3_nominal.json",
+      "evidence_refs": [
+        "docs/E2_E3_MODEL_CARD.md",
+        "evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json"
+      ],
+      "notes": "Diagnostic ACT baseline; E3 overall 0/20 No-Go. Does not claim task success."
+    },
+    {
+      "registry_id": "isaac_scripted_oracle_v2b",
+      "implementation_status": "implemented_and_verified",
+      "runtime_owner_repository": "ros2-arm-teleoperation-suite",
+      "metadata_path": "evaluation/registry/policies/isaac_scripted_oracle_v2b.json",
+      "evidence_refs": [
+        "evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json"
+      ],
+      "notes": "Physics-chain control; lift 5/5; task_success_claimed=false."
+    },
+    {
+      "registry_id": "moveit_rule_baseline",
+      "implementation_status": "documented_plan_only",
+      "runtime_owner_repository": "ros2-arm-teleoperation-suite",
+      "metadata_path": "evaluation/registry/policies/moveit_rule_baseline.json",
+      "evidence_refs": [
+        "docs/POLICY_ADAPTER_CONTRACT.md"
+      ],
+      "notes": "Rule/MoveIt baseline identity reserved; not an E3 control suite yet."
+    }
+  ]
+}

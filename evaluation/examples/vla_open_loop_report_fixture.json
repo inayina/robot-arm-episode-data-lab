@@ -1,0 +1,29 @@
+{
+  "contract_version": "vla_open_loop_report_v0",
+  "artifact_type": "vla_open_loop_report",
+  "policy_action_semantics": "absolute_eef_gripper_v0",
+  "metric_lane": "offline_open_loop",
+  "claims_task_success": false,
+  "forbids_act_delta_mixed_table": true,
+  "metrics": {
+    "active_channel_mae": null,
+    "active_channel_rmse": null,
+    "ee_position_rmse_m": null,
+    "quaternion_angular_error_rad": null,
+    "gripper_accuracy": null,
+    "gripper_close_timing_frames": null,
+    "action_smoothness_jerk": null,
+    "action_saturation_ratio": null,
+    "padding_channel_anomaly_ratio": null,
+    "inference_latency_ms": null,
+    "home_no_close_rate": null,
+    "stage_aligned_errors": null
+  },
+  "prohibited_fields": [
+    "act_ee_delta_l1",
+    "act_ee_delta_rmse",
+    "task_success_rate",
+    "place_success_rate"
+  ],
+  "notes": "Contract fixture only. Populate metrics after Gate V1+ open-loop runs. Never mix ACT delta scores in this table."
+}
