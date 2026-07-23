@@ -55,8 +55,7 @@
     "norm_stats.json": "deb55221ab97705be4c4ba62b43fe6ab623f8b6590b5fe5c4fb15f5d3d7ca9ee",
     "validation_report.json": "37d3511f587e008aa6e7434c42a03eb99bac0936da71720ac10c688543c1689f",
     "SOURCES.md": "0154bb0dce8a06a744b441c3579f594494fdebc60d11d4b7588f94b7cd85ee69",
-    "preflight_subset.json": "94b505d6c04b2e303f0536f10241859d46e1af21b6daa39dc6d0bcd6592df837",
-    "manifest.json": "26edf776334ed34c9d428f429db5c21975f7d00eccaca3782976ba16ec0abeec"
+    "preflight_subset.json": "94b505d6c04b2e303f0536f10241859d46e1af21b6daa39dc6d0bcd6592df837"
   },
   "source_dataset_roots": [
     "/home/ina/dev/ros2-arm-teleoperation-suite/data/e2_red_500hz_seed52_closelift5_20260720",
@@ -67,5 +66,6 @@
     "gripper_accuracy": 0.0,
     "report": "evaluation/examples/smolvla_gate_s2_report.json"
   },
-  "go_no_go": "go"
+  "go_no_go": "go",
+  "release_content_sha256": "965b5ffc0064a1631514acbee34466e5938626e377090f7805397fe31147518d"
 }

@@ -1,0 +1,87 @@
+# SmolVLA S3 Recovery v3 — scene-only phaseaware50 schema / collection map.
+#
+# release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+# Authorized by human (2026-07-23): collect 36+4+10 and build immutable release.
+# NOT authorized: formal LoRA train, Isaac.
+
+contract_version: smolvla_s3_v3_phaseaware50_v0
+release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+cameras: [scene]
+enable_wrist_camera: false
+grasp_assist_enabled: false
+policy_action_semantics: absolute_eef_gripper_v0
+state_contract: observation.state[15]
+split_policy: phaseaware50
+splits:
+  train: 36
+  validation: 4
+  benchmark: 10
+
+# Geometric-ish timing (env mapped in collection script; not full event FSM).
+timing:
+  pre_close_hold_s: 0.4
+  close_duration_s: 0.8
+  grasp_pause_s: 0.5
+  hover_duration_s: 3.0
+  descend_duration_s: 6.0
+  lift_duration_s: 8.0
+  post_lift_hold_s: 4.0
+
+# Distractors parked clear of red target (≥0.10 m).
+park_distractors:
+  object_blue_cylinder: [0.52, -0.14]
+  object_green_sphere: [0.52, 0.14]
+
+positions:
+  P0:
+    role: train_val
+    seed: 60
+    xy: [0.36, -0.10]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P1:
+    role: train_val
+    seed: 61
+    xy: [0.40, 0.10]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P2:
+    role: train_val
+    seed: 62
+    xy: [0.44, -0.06]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P3:
+    role: train_val
+    seed: 63
+    xy: [0.38, 0.06]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P4:
+    role: benchmark_ood
+    seed: 64
+    xy: [0.48, 0.00]
+    accepted: 10
+    train: 0
+    validation: 0
+    benchmark: 10
+
+qa_profile: phaseaware50
+phaseaware_thresholds:
+  expert_binary_close_transitions: 1
+  reopen_count_max: 0
+  gripper_cmd_min: 0.0
+  gripper_cmd_max: 1.0
+  close_ramp_frames_min: 5
+  close_ramp_frames_max: 15
+  max_ee_step_l2_p90_m: 0.012
+  pick_xy_tolerance_m: 0.02
+  pick_z_relative_max_m: 0.03

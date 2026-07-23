@@ -39,13 +39,19 @@ if command -v conda >/dev/null 2>&1; then
   # shellcheck disable=SC1091
   source "$(conda info --base)/etc/profile.d/conda.sh"
   if ! conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
-    conda create -y -n "$ENV_NAME" python=3.11
+    # lerobot>=0.5.0 requires Python>=3.12; do not create 3.10/3.11 envs.
+    conda create -y -n "$ENV_NAME" python=3.12
   fi
   conda activate "$ENV_NAME"
 else
   VENV="$HOME/autodl-tmp/venvs/$ENV_NAME"
   if [[ ! -d "$VENV" ]]; then
-    python3 -m venv "$VENV"
+    # Prefer python3.12 when available on the instance image.
+    if command -v python3.12 >/dev/null 2>&1; then
+      python3.12 -m venv "$VENV"
+    else
+      python3 -m venv "$VENV"
+    fi
   fi
   # shellcheck disable=SC1091
   source "$VENV/bin/activate"
@@ -54,7 +60,18 @@ fi
 python - <<'PY'
 import sys
 print("python", sys.version)
-assert not sys.prefix.startswith("/usr") or "venv" in sys.prefix or ".conda" in sys.prefix or "miniconda" in sys.prefix or "miniforge" in sys.prefix or "autodl-tmp" in sys.prefix, sys.prefix
+assert sys.version_info[:2] >= (3, 12), (
+    f"SmolVLA S3 requires Python>=3.12 for lerobot>=0.5; got {sys.version}. "
+    "Recreate conda/venv with python=3.12."
+)
+assert (
+    not sys.prefix.startswith("/usr")
+    or "venv" in sys.prefix
+    or ".conda" in sys.prefix
+    or "miniconda" in sys.prefix
+    or "miniforge" in sys.prefix
+    or "autodl-tmp" in sys.prefix
+), sys.prefix
 PY
 
 python -m pip install -U pip setuptools wheel
@@ -92,23 +109,33 @@ else
 fi
 
 python - <<PY
-import json, os, subprocess, torch
+import importlib.metadata
+import json
+import os
+import platform
+import torch
 from pathlib import Path
 out = Path(os.path.expanduser("~/autodl-tmp/smolvla_s3/env_versions.json"))
 info = {
+  "python": platform.python_version(),
   "torch": torch.__version__,
   "cuda_available": torch.cuda.is_available(),
   "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
   "vram_total_mib": int(torch.cuda.get_device_properties(0).total_memory/1024/1024) if torch.cuda.is_available() else None,
   "hf_home": os.environ.get("HF_HOME"),
 }
-try:
-  import peft, transformers, lerobot
-  info["peft"] = peft.__version__
-  info["transformers"] = transformers.__version__
-  info["lerobot"] = getattr(lerobot, "__version__", "unknown")
-except Exception as e:
-  info["import_error"] = str(e)
+for package in (
+  "lerobot",
+  "torchvision",
+  "transformers",
+  "peft",
+  "accelerate",
+  "safetensors",
+):
+  try:
+    info[package] = importlib.metadata.version(package)
+  except importlib.metadata.PackageNotFoundError:
+    info[package] = None
 out.write_text(json.dumps(info, indent=2) + "\n")
 print("wrote", out)
 PY

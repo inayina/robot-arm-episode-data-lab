@@ -1,0 +1,16 @@
+# Copy to a run-specific file only after selecting a new independent held-out set.
+# Do not fill this template with the 14 Recovery v3 threshold-design episodes.
+
+contract_version: smolvla_s3_prospective_eval_manifest_v1
+evaluation_id: REPLACE_WITH_UNIQUE_ID
+created_at_utc: REPLACE_AFTER_2026-07-23T15:54:31Z
+human_authorized_run: false
+thresholds_frozen_before_evaluation: true
+gate_path: configs/smolvla_s3/eval_gate_v2.yaml
+gate_sha256: REPLACE_WITH_FROZEN_GATE_SHA256
+release_splits_sha256: REPLACE_WITH_SPLITS_JSON_SHA256
+evaluation_episode_refs: []
+notes:
+  - "The listed episodes must exactly match the evaluator input."
+  - "They must have zero overlap with train and v2 threshold-design episodes."
+  - "Setting human_authorized_run=true authorizes this prospective open-loop run only, not Isaac."

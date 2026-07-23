@@ -19,6 +19,18 @@ from typing import Any
 
 import numpy as np
 
+# Optional Recovery imports (state[15] / PEFT live in training.smolvla_s3).
+import sys as _sys
+_ROOT = Path(__file__).resolve().parents[2]
+if str(_ROOT) not in _sys.path:
+    _sys.path.insert(0, str(_ROOT))
+from training.smolvla_s3.state15 import (
+    STATE15_DIM,
+    compose_state15_from_row,
+    rewrite_parquet_observation_state15,
+    state15_contract_dict,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SOURCES = [
     Path(
@@ -104,6 +116,8 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
 
         actions = []
         states = []
+        ee_poses = []
+        states15 = []
         grips_m = []
         grips_c = []
         quats = []
@@ -119,8 +133,13 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             state = np.asarray(
                 table.column("observation.state")[row_i].as_py(), dtype=np.float64
             )
-            if state.shape[0] != 7:
+            if state.shape[0] not in (7, 15):
                 raise ValueError(f"state dim {state.shape[0]}")
+            ee_pose = np.asarray(
+                table.column("observation.ee_pose")[row_i].as_py(), dtype=np.float64
+            ).reshape(-1)
+            if ee_pose.shape[0] != 7:
+                raise ValueError(f"ee_pose dim {ee_pose.shape[0]}")
             grip_m = float(
                 np.asarray(
                     table.column("observation.gripper")[row_i].as_py(), dtype=np.float64
@@ -129,6 +148,19 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             q = _normalize_xyzw(action[3:7].copy())
             actions.append(action.tolist())
             states.append(state.tolist())
+            ee_poses.append(ee_pose.tolist())
+            if state.shape[0] == 15:
+                states15.append(state.astype(np.float32).tolist())
+            else:
+                states15.append(
+                    compose_state15_from_row(
+                        {
+                            "observation.state": state,
+                            "observation.ee_pose": ee_pose,
+                            "observation.gripper": grip_m,
+                        }
+                    ).tolist()
+                )
             grips_m.append(grip_m)
             grips_c.append(float(action[7]))
             quats.append(q.tolist())
@@ -174,6 +206,7 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
                 "rgb_complete": True,
                 "action_dim": 8,
                 "state_dim": 7,
+                "state15_dim": STATE15_DIM,
                 "language_instructions": sorted(langs),
                 "gripper_cmd_min": float(min(grips_c)),
                 "gripper_cmd_max": float(max(grips_c)),
@@ -193,6 +226,8 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
                 "valid_mask_all_true": True,
                 "_actions": actions,
                 "_states": states,
+                "_ee_poses": ee_poses,
+                "_states15": states15,
                 "_grips_m": grips_m,
             }
         )
@@ -200,30 +235,42 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
 
 
 def _assign_splits(episodes: list[dict[str, Any]]) -> dict[str, list[str]]:
-    """Deterministic split with no leakage. 10 eps → train6 / val2 / bench2."""
+    """Deterministic split with no leakage.
+
+    Per source:
+    - 5 eps → train3 / val1 / bench1 (seed52/53 legacy)
+    - 10 eps → train6 / val2 / bench2 (grip-timing packs)
+    - other → ~60/20/20
+    """
     if len(episodes) < 6:
         raise ValueError(f"need >=6 episodes for S3 split, got {len(episodes)}")
     ids = [e["episode_id"] for e in episodes]
-    # Prefer last episode of each source as benchmark when two sources of 5.
     train, val, bench = [], [], []
     by_source: dict[str, list[str]] = {}
     for e in episodes:
         by_source.setdefault(e["source_name"], []).append(e["episode_id"])
     for _src, ep_ids in sorted(by_source.items()):
         ep_ids = sorted(ep_ids)
-        if len(ep_ids) >= 5:
+        n = len(ep_ids)
+        if n == 5:
             train.extend(ep_ids[:3])
             val.append(ep_ids[3])
             bench.append(ep_ids[4])
+        elif n == 10:
+            train.extend(ep_ids[:6])
+            val.extend(ep_ids[6:8])
+            bench.extend(ep_ids[8:10])
         else:
-            # fallback round-robin
-            for j, eid in enumerate(ep_ids):
-                if j % 5 <= 2:
-                    train.append(eid)
-                elif j % 5 == 3:
-                    val.append(eid)
-                else:
-                    bench.append(eid)
+            n_train = max(1, int(round(n * 0.6)))
+            n_val = max(1, int(round(n * 0.2))) if n >= 5 else 0
+            n_bench = n - n_train - n_val
+            if n_bench < 0:
+                n_train = n
+                n_val = 0
+                n_bench = 0
+            train.extend(ep_ids[:n_train])
+            val.extend(ep_ids[n_train : n_train + n_val])
+            bench.extend(ep_ids[n_train + n_val :])
     # uniqueness
     all_ids = train + val + bench
     if len(all_ids) != len(set(all_ids)):
@@ -233,18 +280,73 @@ def _assign_splits(episodes: list[dict[str, Any]]) -> dict[str, list[str]]:
     return {"train": train, "validation": val, "benchmark": bench}
 
 
-def _norm_stats(episodes: list[dict[str, Any]], train_ids: set[str]) -> dict[str, Any]:
+def _assign_splits_phaseaware50(
+    episodes: list[dict[str, Any]],
+    *,
+    position_by_source: dict[str, str],
+) -> dict[str, list[str]]:
+    """P0–P3: 9 train + 1 validation each; P4: 10 benchmark (held-out)."""
+    train: list[str] = []
+    val: list[str] = []
+    bench: list[str] = []
+    by_source: dict[str, list[dict[str, Any]]] = {}
+    for e in episodes:
+        by_source.setdefault(e["source_name"], []).append(e)
+    for src, rows in sorted(by_source.items()):
+        pos = position_by_source.get(src)
+        if pos is None:
+            # Infer from source name tokens like ..._P0_... or ...seed60_p0_...
+            upper = src.upper()
+            for cand in ("P0", "P1", "P2", "P3", "P4"):
+                if f"_{cand}_" in f"_{upper}_" or f"SEED{60 + int(cand[1])}" in upper.replace("_", ""):
+                    pos = cand
+                    break
+        if pos is None:
+            raise ValueError(f"phaseaware50: cannot map source to position: {src}")
+        ep_ids = [e["episode_id"] for e in sorted(rows, key=lambda r: r["episode_index"])]
+        if len(ep_ids) != 10:
+            raise ValueError(f"phaseaware50 expects 10 eps for {src}/{pos}, got {len(ep_ids)}")
+        if pos == "P4":
+            bench.extend(ep_ids)
+        elif pos in {"P0", "P1", "P2", "P3"}:
+            train.extend(ep_ids[:9])
+            val.append(ep_ids[9])
+        else:
+            raise ValueError(f"unknown position id: {pos}")
+    all_ids = train + val + bench
+    if len(all_ids) != len(set(all_ids)):
+        raise ValueError("phaseaware50 split leakage")
+    if set(all_ids) != {e["episode_id"] for e in episodes}:
+        raise ValueError("phaseaware50 split does not cover all episodes")
+    if not (len(train) == 36 and len(val) == 4 and len(bench) == 10):
+        raise ValueError(
+            f"phaseaware50 expected 36/4/10, got {len(train)}/{len(val)}/{len(bench)}"
+        )
+    return {"train": train, "validation": val, "benchmark": bench}
+
+
+def _norm_stats(
+    episodes: list[dict[str, Any]],
+    train_ids: set[str],
+    *,
+    compose_state15: bool = False,
+) -> dict[str, Any]:
     actions = []
     states8 = []
+    states15 = []
     for e in episodes:
         if e["episode_id"] not in train_ids:
             continue
-        for a, s, g in zip(e["_actions"], e["_states"], e["_grips_m"], strict=True):
+        for a, s, g, s15 in zip(
+            e["_actions"], e["_states"], e["_grips_m"], e["_states15"], strict=True
+        ):
             actions.append(a)
-            states8.append(list(s) + [g])
+            states8.append(list(s[:7]) + [g])
+            states15.append(s15)
     A = np.asarray(actions, dtype=np.float64)
     S = np.asarray(states8, dtype=np.float64)
-    return {
+    S15 = np.asarray(states15, dtype=np.float64)
+    out = {
         "policy_action_semantics": POLICY_ACTION_SEMANTICS,
         "computed_on_split": "train",
         "action8": {
@@ -294,6 +396,19 @@ def _norm_stats(episodes: list[dict[str, Any]], train_ids: set[str]) -> dict[str
             "gripper_cmd_range": [float(A[:, 7].min()), float(A[:, 7].max())],
         },
     }
+    if compose_state15:
+        out["state_contract"] = state15_contract_dict()
+        out["state15"] = {
+            "mean": S15.mean(axis=0).tolist(),
+            "std": np.maximum(S15.std(axis=0), 1e-6).tolist(),
+            "names": (
+                [f"joint_{i}" for i in range(7)]
+                + ["ee_x", "ee_y", "ee_z", "quat_x", "quat_y", "quat_z", "quat_w"]
+                + ["gripper_measured"]
+            ),
+        }
+        out["policy_state"] = "observation.state[15]"
+    return out
 
 
 def main() -> int:
@@ -304,15 +419,47 @@ def main() -> int:
         default=ROOT / "data" / "releases" / RELEASE_ID,
     )
     parser.add_argument(
+        "--release-id",
+        type=str,
+        default=RELEASE_ID,
+        help="Immutable release id (also used as schema_version label).",
+    )
+    parser.add_argument(
         "--source",
         type=Path,
         action="append",
         default=None,
         help="Upstream LeRobot v2.1 dataset root (repeatable).",
     )
+    parser.add_argument(
+        "--split-policy",
+        choices=("legacy", "phaseaware50"),
+        default="legacy",
+        help="legacy=per-source 60/20/20 packs; phaseaware50=36/4/10 by P0–P4.",
+    )
+    parser.add_argument(
+        "--compose-state15",
+        action="store_true",
+        help="Record state[15] contract + norms; materialize rewritten parquets.",
+    )
+    parser.add_argument(
+        "--position-map-json",
+        type=Path,
+        default=None,
+        help='JSON map {"source_name":"P0",...} for phaseaware50 splits.',
+    )
+    parser.add_argument(
+        "--cameras",
+        default="scene",
+        help="Comma-separated camera keys for manifest (default: scene).",
+    )
     args = parser.parse_args()
     sources = args.source or DEFAULT_SOURCES
     out: Path = args.output_dir
+    release_id = str(args.release_id).strip() or RELEASE_ID
+    schema_version = release_id
+    compose_state15 = bool(args.compose_state15)
+    cameras = [c.strip() for c in str(args.cameras).split(",") if c.strip()]
     if out.exists() and any(out.iterdir()):
         # immutable: refuse overwrite unless only regenerating identical release id folder empty of foreign files
         raise SystemExit(
@@ -324,15 +471,22 @@ def main() -> int:
     for src in sources:
         episodes.extend(_load_episodes(Path(src)))
 
-    splits = _assign_splits(episodes)
+    position_by_source: dict[str, str] = {}
+    if args.position_map_json is not None:
+        position_by_source = {
+            str(k): str(v)
+            for k, v in __import__("json").loads(
+                args.position_map_json.read_text(encoding="utf-8")
+            ).items()
+        }
+    if args.split_policy == "phaseaware50":
+        splits = _assign_splits_phaseaware50(
+            episodes, position_by_source=position_by_source
+        )
+    else:
+        splits = _assign_splits(episodes)
     train_ids = set(splits["train"])
-    norms = _norm_stats(episodes, train_ids)
-
-    # strip private arrays before writing index
-    index_rows = []
-    for e in episodes:
-        row = {k: v for k, v in e.items() if not k.startswith("_")}
-        index_rows.append(row)
+    norms = _norm_stats(episodes, train_ids, compose_state15=compose_state15)
 
     mid_head = _git_head(ROOT)
     up_head = _git_head(Path("/home/ina/dev/ros2-arm-teleoperation-suite"))
@@ -364,6 +518,38 @@ def main() -> int:
 
     file_hashes = {}
     out.mkdir(parents=True, exist_ok=False)
+    materialized_state15: list[dict] = []
+    if compose_state15:
+        lerobot_root = out / "lerobot_state15"
+        for e in episodes:
+            src_parquet = Path(e["parquet_path"])
+            dst = (
+                lerobot_root
+                / e["source_name"]
+                / "data"
+                / "chunk-000"
+                / f"episode_{int(e['episode_index']):06d}.parquet"
+            )
+            meta = rewrite_parquet_observation_state15(src_parquet, dst)
+            e["state15_parquet_path"] = str(dst)
+            e["state15_parquet_sha256"] = _sha256_file(dst)
+            e["state_dim"] = STATE15_DIM
+            materialized_state15.append(meta)
+        (out / "state15_materialization.json").write_text(
+            json.dumps(
+                {
+                    "contract": state15_contract_dict(),
+                    "episodes": materialized_state15,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    index_rows = []
+    for e in episodes:
+        row = {k: v for k, v in e.items() if not k.startswith("_")}
+        index_rows.append(row)
     (out / "episode_index.jsonl").write_text(
         "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in index_rows),
         encoding="utf-8",
@@ -380,7 +566,7 @@ def main() -> int:
     sources_md = [
         "# SmolVLA S3 release sources",
         "",
-        f"release_id: `{RELEASE_ID}`",
+        f"release_id: `{release_id}`",
         "",
         "Upstream trees (do not modify):",
         "",
@@ -390,13 +576,16 @@ def main() -> int:
     sources_md.append("")
     (out / "SOURCES.md").write_text("\n".join(sources_md) + "\n", encoding="utf-8")
 
-    for name in (
+    hash_names = [
         "episode_index.jsonl",
         "splits.json",
         "norm_stats.json",
         "validation_report.json",
         "SOURCES.md",
-    ):
+    ]
+    if compose_state15:
+        hash_names.append("state15_materialization.json")
+    for name in hash_names:
         file_hashes[name] = _sha256_file(out / name)
 
     # preflight subset: first two train episodes, first 32 frames conceptually
@@ -413,8 +602,8 @@ def main() -> int:
 
     manifest = {
         "contract_version": "smolvla_s3_release_manifest_v0",
-        "release_id": RELEASE_ID,
-        "schema_version": SCHEMA_VERSION,
+        "release_id": release_id,
+        "schema_version": schema_version,
         "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "policy_action_semantics": POLICY_ACTION_SEMANTICS,
         "quaternion_order": QUAT_ORDER,
@@ -431,17 +620,32 @@ def main() -> int:
         "splits": splits,
         "scene_rgb_complete_rate": 1.0,
         "fields": {
-            "joint_state": "observation.state[7]",
+            "joint_state": (
+                "observation.state[15]" if compose_state15 else "observation.state[7]"
+            ),
+            "policy_state": (
+                "observation.state[15]=joint[7]+ee_pose_xyzw[7]+gripper[1]"
+                if compose_state15
+                else "observation.state[7]"
+            ),
             "gripper_measured": "observation.gripper[1]",
             "gripper_cmd": "action[7]",
             "absolute_eef_xyz": "action[0:3]",
             "quaternion_xyzw": "action[3:7]",
             "language_instruction": "language_instruction",
-            "camera": "observation.images.scene mp4 @ 10Hz",
+            "camera": (
+                ", ".join(f"observation.images.{c}" for c in cameras)
+                + " mp4 @ 10Hz"
+            ),
             "timestamps": "timestamp",
             "action_chunk_indices": "action_delta_indices constructed chunk_size=50",
             "valid_mask": "all-true for accepted episodes",
         },
+        "split_policy": args.split_policy,
+        "cameras": cameras,
+        "state_contract": state15_contract_dict() if compose_state15 else None,
+        "compose_state15": compose_state15,
+        "grasp_assist_enabled": False,
         "normalization_stats_file": "norm_stats.json",
         "episode_index_file": "episode_index.jsonl",
         "validation_report_file": "validation_report.json",
@@ -454,11 +658,13 @@ def main() -> int:
         },
         "go_no_go": "go" if validation["passed"] else "no_go",
     }
-    (out / "manifest.json").write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
-    manifest["file_sha256"]["manifest.json"] = _sha256_file(out / "manifest.json")
-    # rewrite with self hash
+    # Fingerprint of sibling artifacts only. Do not embed manifest.json self-hash
+    # (circular). AutoDL should verify release_content_sha256 + on-disk sha256sum.
+    content_h = hashlib.sha256()
+    for name in sorted(file_hashes):
+        content_h.update(name.encode("utf-8"))
+        content_h.update(file_hashes[name].encode("utf-8"))
+    manifest["release_content_sha256"] = content_h.hexdigest()
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -466,11 +672,13 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "release_id": RELEASE_ID,
+                "release_id": release_id,
                 "output_dir": str(out),
                 "num_episodes": manifest["num_episodes"],
                 "num_frames": manifest["num_frames"],
                 "go_no_go": manifest["go_no_go"],
+                "release_content_sha256": manifest["release_content_sha256"],
+                "manifest_sha256": _sha256_file(out / "manifest.json"),
                 "splits": splits,
             },
             ensure_ascii=False,

@@ -1,0 +1,87 @@
+# SmolVLA S3 Recovery severity-aware gripper gate — PROPOSAL ONLY.
+#
+# This file is independent from eval_gate.yaml (v1). It was proposed after
+# observing Recovery v3 predictions and therefore MUST NOT retrospectively
+# promote the frozen v1 Hold. Approval requires a prospective evaluation.
+
+contract_version: smolvla_s3_eval_gate_v2_proposal
+status: proposal_not_approved
+parent_gate: configs/smolvla_s3/eval_gate.yaml
+parent_gate_sha256: d8330c68e6b3eb0086ce4f948236daac0a572752bbf347fcaf6dd94b1eee723e
+evaluator_contract_version_required: smolvla_s3_open_loop_evaluator_v3_not_implemented
+claims_task_success: false
+ran_isaac: false
+
+governance:
+  forbid_overwrite_parent_gate: true
+  forbid_retroactive_v1_reclassification: true
+  current_recovery_v3_v1_decision: hold
+  current_recovery_v3_v2_decision: not_evaluated_not_approved
+  approval_required_before_activation: true
+  prospective_evaluation_required: true
+  note: >
+    Thresholds were proposed after inspecting the Recovery v3 canonical/K5
+    reports. They are diagnostic until frozen before a new independent
+    evaluation; current predictions cannot be relabeled Pass under v2.
+
+sampling_contract:
+  canonical_stride_frames: 1
+  canonical_max_frames_per_episode: 0
+  require_full_episode_for_pass: true
+  canonical_inference_mode: canonical_first_action
+  diagnostic_inference_mode: queued_diagnostic
+  queued_diagnostic_gate_eligible: false
+
+gripper_contract:
+  physical_command_range: [0.0, 1.0]
+  closed_if_le: 0.5
+  close_debounce_source_frames: 3
+  model_output_normalization: MEAN_STD
+  postprocessor_behavior: unnormalize_only_no_range_clamp
+  execution_adapter_behavior: clamp_to_physical_range
+  require_mapped_command_in_range: true
+  require_clip_classification_invariant: true
+  require_clip_close_timing_invariant: true
+
+gripper_range_severity_contract:
+  rationale: >
+    Exact-bound OOB ratio treats arbitrarily small floating-point/regression
+    overshoot the same as a dangerous command. V2 retains exact OOB as a
+    diagnostic and gates on overshoot magnitude plus behavioral invariants.
+  epsilon: 0.05
+  metrics_required:
+    - raw_gripper_oob_ratio
+    - raw_gripper_oob_beyond_epsilon_ratio
+    - gripper_clip_adjustment_mae
+    - gripper_clip_adjustment_max_abs
+    - gripper_clip_classification_change_ratio
+    - gripper_clip_close_timing_change_frames_max_abs
+    - mapped_gripper_command_in_range
+  thresholds:
+    oob_beyond_epsilon_ratio_max: 0.01
+    clip_adjustment_mae_max: 0.01
+    clip_adjustment_max_abs_max: 0.10
+    raw_gripper_min: -0.10
+    raw_gripper_max: 1.10
+    clip_classification_change_ratio_max: 0.0
+    clip_close_timing_change_frames_max: 0
+
+# All non-gripper thresholds remain identical to v1. Activation must copy and
+# verify them in an implemented evaluator_v3 rather than silently falling back.
+inherited_v1_pass_thresholds:
+  ee_position_rmse_m_max: 0.100
+  relative_ee_improvement_vs_s2_min: 0.50
+  quaternion_angular_error_rad_max: 0.35
+  gripper_balanced_accuracy_min: 0.70
+  gripper_close_timing_error_frames_max: 5
+  action_smoothness_ee_step_l2_p90_max: 0.05
+  home_no_close_detected_max_rate: 0.20
+  require_consistent_stage_timing: true
+
+decision_rules:
+  - "This proposal cannot be passed by the current evaluator_v2."
+  - "Queued diagnostics remain ineligible for canonical Pass."
+  - "Exact raw OOB frequency remains reported; severity metrics do not hide it."
+  - "Any non-finite value, mapped command outside [0,1], classification change, or timing change is No-Go."
+  - "Activation requires human approval, evaluator_v3 tests, and a prospective independent evaluation."
+  - "No v2 proposal or audit authorizes Isaac."

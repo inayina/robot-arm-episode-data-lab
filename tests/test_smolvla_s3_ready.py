@@ -27,6 +27,9 @@ def test_release_manifest_and_hashes() -> None:
     assert manifest["go_no_go"] == "go"
     assert manifest["trained"] is False
     assert manifest["ran_isaac"] is False
+    assert manifest["release_content_sha256"] == (
+        "965b5ffc0064a1631514acbee34466e5938626e377090f7805397fe31147518d"
+    )
     for name, expected in manifest["file_sha256"].items():
         if name == "manifest.json":
             continue
@@ -90,6 +93,17 @@ def test_lora_config_frozen_fields() -> None:
     assert cfg["train"]["no_architecture_change"] is True
     assert cfg["gates"]["forbid_auto_start_train_from_preflight"] is True
     assert cfg["gates"]["forbid_isaac_until_open_loop_pass"] is True
+    assert "3.12" in str(cfg["dependency_versions_expected"]["python"])
+    assert "0.5.1" in str(cfg["dependency_versions_expected"]["lerobot"])
+
+
+def test_autodl_setup_requires_python_312() -> None:
+    setup = (ROOT / "scripts/autodl_setup_smolvla_s3.sh").read_text(encoding="utf-8")
+    assert "python=3.12" in setup
+    assert "python=3.11" not in setup
+    lock = (ROOT / "configs/smolvla_s3/environment.lock.txt").read_text(encoding="utf-8")
+    assert "3.12" in lock
+    assert "lerobot>=" in lock or "lerobot==" in lock
 
 
 def test_eval_gate_thresholds_derived_from_s2() -> None:
@@ -99,8 +113,10 @@ def test_eval_gate_thresholds_derived_from_s2() -> None:
     assert gate["thresholds"]["pass"]["ee_position_rmse_m_max"] == 0.100
     assert gate["thresholds"]["hold"]["ee_position_rmse_m_max"] == 0.205
     assert gate["thresholds"]["no_go"]["ee_position_rmse_m_min"] == 0.246
-    assert gate["thresholds"]["pass"]["gripper_accuracy_min"] == 0.70
-    assert "home_no_close_detected" in gate["metrics_required"]
+    assert gate["thresholds"]["pass"]["gripper_balanced_accuracy_min"] == 0.70
+    assert gate["sampling_contract"]["canonical_stride_frames"] == 1
+    assert gate["sampling_contract"]["canonical_max_frames_per_episode"] == 0
+    assert "home_no_close_detected_rate" in gate["metrics_required"]
     assert "ood_position_slice" in gate["metrics_required"]
 
 

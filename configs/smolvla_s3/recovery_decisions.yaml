@@ -1,0 +1,218 @@
+# SmolVLA S3 Recovery — frozen Phase-0 human decisions (2026-07-23)
+#
+# Authorized: adopt these contracts for subsequent Recovery work.
+# Human (2026-07-23): authorized Phase-2 scene-only collect + immutable v3 release.
+# Human (2026-07-23): after AutoDL REAL Recovery preflight Pass on v3, authorized
+# one formal LoRA train via configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.yaml.
+# NOT authorized: Isaac (needs open-loop Pass).
+
+contract_version: smolvla_s3_recovery_decisions_v0
+status: phase3_5_openloop_v1_hold_eval_v2_proposed
+updated_at: "2026-07-23"
+parent_release_id: smolvla_s3_abs_eef_rgb_v2_griptiming_lateclose
+
+authorized_to_train: true
+authorized_train_config: configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.yaml
+authorized_to_build_v3_release: true
+authorized_to_collect_v3_phaseaware50: true
+authorized_phase1_wrist_smoke: true
+authorized_isaac: false
+v3_release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+v3_camera_variant: scene_only
+
+state_contract:
+  name: observation.state[15]
+  status: adopted_for_v3_recovery
+  layout:
+    - joint_position[7]          # observation.state from recorder
+    - ee_pose_xyzw[7]            # observation.ee_pose (FK / runtime; not sim GT)
+    - measured_gripper[1]        # observation.gripper
+  exclude_from_policy_state:
+    - observation.object_pose    # sim privilege; breaks Sim2Real-readiness
+    - observation.ft             # needs real sync/calibration first
+  pads_to_max_state_dim: 32
+  upstream_evidence: src/lerobot_recorder/lerobot_recorder/recorder_node.py:341
+  notes: >
+    v1/v2 checkpoints declared observation.state[6] while release joint state is [7]
+    and ee_pose/gripper were dropped by the preprocessor. Recovery v3 must compose
+    state[15] explicitly into dataset + preprocessor before any new LoRA.
+
+peft:
+  status: adopted_for_v3_recovery
+  method_type: LORA
+  r: 64
+  lora_alpha: 64
+  lora_dropout: 0.05
+  bias: none
+  # Official SmolVLA default PEFT scope on pinned LeRobot 0.5.x
+  # (modeling_smolvla.SmolVLAPolicy._get_default_peft_targets).
+  target_modules: >-
+    (model\.vlm_with_expert\.lm_expert\..*\.(q|v)_proj|model\.(state_proj|action_in_proj|action_out_proj|action_time_mlp_in|action_time_mlp_out))
+  full_training_modules: []
+  freeze_vision_encoder: true
+  freeze_base_vlm: true
+  rejected_alternatives:
+    - plain_list_qv_and_projections  # suffix match can hit vision/language towers
+    - qv_lora_plus_full_training_modules  # small-data overfitting risk; departs from official default
+
+local_inference_contract:
+  status: implemented_empty_padding_eliminated_not_gpu_profiled
+  camera_variant: scene_only
+  policy_input_features:
+    observation.state: [15]
+    observation.images.camera1: [3, 240, 320]
+  policy_output_features:
+    action: [8]
+  train_action_chunk_size: 10
+  inference_action_steps: 5
+  empty_cameras: 0
+  empty_cameras_status: disabled_no_missing_configured_visual_features
+  expected_empty_cameras_appended: 0
+  canonical_mode: canonical_first_action
+  diagnostic_mode: queued_diagnostic
+  queued_diagnostic_gate_eligible: false
+  async_double_buffer_runtime_implemented: false
+  evidence:
+    - scripts/run_smolvla_s3_train.sh
+    - training/scripts/run_smolvla_s3_control.py
+    - training/scripts/run_smolvla_s3_open_loop.py
+    - tests/test_smolvla_s3_entrypoints.py
+
+autodl_recovery_preflight:
+  status: passed_v3_config_for_train
+  run_id: recovery_v3_preflight_20260723T124310Z
+  gpu: NVIDIA GeForce RTX 4090 D
+  steps: 32
+  used_full_smolvla_weights: true
+  live_peft_resolve_probe_passed: true
+  resolved_trainable_parameter_count: 74
+  lora_params_updated: true
+  adapter_save_ok: true
+  oom: false
+  peak_vram_mib: 939.986328125
+  step_time_ms_mean: 23.036023369058967
+  policy_forward_executed: false
+  inference_latency_measured: false
+  formal_train_authorized: true
+  train_config: configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.yaml
+  train_max_steps: 5705
+  train_budget_note: "ceil(9122/8)*5 epochs; re-preflight against resolved train YAML SHA before execute"
+  environment_warning: null
+  environment_contract_reconciled: true
+  dependency_version_audit_passed: true
+  preflight_qualified_versions:
+    python: 3.12.13
+    lerobot: 0.5.1
+    torch: 2.6.0+cu124
+    torchvision: 0.21.0+cu124
+    transformers: 4.57.6
+    peft: 0.19.1
+    accelerate: 1.14.0
+    safetensors: 0.8.0
+  prior_draft_probe_evidence: runs/smolvla_s3/recovery_v3_preflight_20260723T124310Z/preflight_report.json
+  evidence: runs/smolvla_s3/recovery_v3_preflight_20260723T124310Z/preflight_report.json
+
+phase1_wrist_smoke:
+  status: completed_hold_scene_only
+  accepted_episodes: 4
+  positions: 2
+  repeats_per_position: 2
+  cameras: [scene, wrist]
+  resolution: [320, 240]
+  fps: 10.0
+  grasp_assist_enabled: false
+  enable_wrist_camera: true
+  builds_release: false
+  triggers_train: false
+  audit_focus:
+    - last_3cm_visibility
+    - fingertip_occlusion
+    - motion_blur
+    - dual_stream_sync
+    - inference_latency_gpu_profiler
+  entrypoint_upstream: scripts/run_smolvla_s3_phase1_wrist_smoke.sh
+  audit_entrypoint_midstream: training/scripts/audit_smolvla_s3_phase1_wrist_smoke.py
+  result:
+    camera_variant_for_v3: scene_only
+    original_four_episode_gate: hold
+    orientation_flip_p0_gate: hold
+    orientation_flip_p1_skipped: true
+    reason: >
+      The original wrist view did not show the red target. A bounded P0 retry
+      flipped only the camera viewing axis, but then showed the parked blue
+      cylinder/bin and still had zero red-target visibility in the final 3 cm.
+      Stop camera tuning and keep Recovery v3 scene-only.
+    evidence:
+      - runs/smolvla_s3/phase1_wrist_smoke_20260723/wrist_smoke_reaudit_target_visibility.json
+      - runs/smolvla_s3/phase1_wrist_flip_smoke1_20260723/p0_audit.json
+
+formal_recovery_v3:
+  status: trained_and_canonical_openloop_hold
+  train_run: recovery_v3_lora_20260723T125632Z
+  train_steps: 5705
+  train_only_episodes: 36
+  checkpoint_audit_passed: true
+  checkpoint: runs/smolvla_s3/recovery_v3_lora_20260723T125632Z/lerobot_run/checkpoints/005705/pretrained_model
+  canonical_openloop:
+    run_id: openloop_recovery_v3_20260723T142240Z
+    inference_mode: canonical_first_action
+    episodes: 14
+    frames: 3413
+    full_episode_coverage: true
+    gate_contract: smolvla_s3_eval_gate_v1
+    gate_decision: hold
+    pass_failures: [sat]
+    ee_position_rmse_m: 0.037900082791005346
+    gripper_balanced_accuracy: 0.993587002992732
+    gripper_close_timing_error_frames: 2.142857142857143
+    action_smoothness_ee_step_l2_p90: 0.026814
+    raw_gripper_oob_ratio: 0.33606797538822153
+    ran_isaac: false
+    evidence: runs/smolvla_s3/openloop_recovery_v3_20260723T142240Z/s3_open_loop_report.json
+  queued_k5:
+    run_id: openloop_recovery_v3_k5_20260723T151853Z_retry1
+    inference_mode: queued_diagnostic
+    gate_eligible: false
+    gate_decision: hold
+    pass_failures: [sat, temporal_coverage]
+    evidence: runs/smolvla_s3/openloop_recovery_v3_k5_20260723T151853Z_retry1/s3_open_loop_report.json
+
+gripper_range_clip_audit:
+  status: passed_cpu_saved_prediction_audit
+  changes_eval_gate_v1_decision: false
+  canonical_v1_decision_remains: hold
+  normalization_contract_passed: true
+  postprocessor_behavior: unnormalize_only_no_range_clamp
+  execution_adapter_behavior: clamp_to_physical_range
+  canonical:
+    raw_range: [-0.0637199878692627, 1.0834543704986572]
+    exact_oob_ratio: 0.33606797538822153
+    oob_beyond_0_05_ratio: 0.007031936712569587
+    clip_adjustment_mae: 0.004357633983987606
+    clip_adjustment_max_abs: 0.08345437049865723
+    clip_classification_change_ratio: 0.0
+    clip_close_timing_change_frames_max_abs: 0
+  queued_k5:
+    raw_range: [-0.06705158948898315, 1.094851016998291]
+    exact_oob_ratio: 0.3269850571344858
+    oob_beyond_0_05_ratio: 0.004980955171403457
+    clip_adjustment_mae: 0.004078329866874822
+    clip_adjustment_max_abs: 0.09485101699829102
+    clip_classification_change_ratio: 0.0
+    clip_close_timing_change_frames_max_abs: 0
+  eval_gate_v2:
+    proposal_path: configs/smolvla_s3/eval_gate_v2_proposal.yaml
+    path: configs/smolvla_s3/eval_gate_v2.yaml
+    lock_path: configs/smolvla_s3/eval_gate_v2.lock.json
+    status: approved_frozen
+    gate_sha256: 31101fce204f6be6584635f52c6af4a88450412d39db0cf0bb60796d096daa0a
+    thresholds_frozen: true
+    retrospective_v1_reclassification_forbidden: true
+    prospective_evaluation_required: true
+    evaluator_v3_implemented: true
+    prospective_eval_run_authorized: false
+    isaac_authorized: false
+  evidence:
+    - docs/SMOLVLA_S3_GRIPPER_RANGE_CLIP_AUDIT.md
+    - runs/smolvla_s3/gripper_range_clip_audit_20260723/gripper_range_clip_audit.json
+    - runs/smolvla_s3/gripper_range_clip_audit_20260723/v2_historical_reclassification_audit.json

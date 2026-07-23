@@ -3,6 +3,8 @@
 
 注意：本脚本名称含 "act" 仅为历史原因，实际使用的是岭回归线性策略，
 并非真正的 ACT（Action Chunking Transformer）。
+Canonical 项目事实：本 smoke 入口及其产物不代表 ACT canonical 训练完成，
+也不证明 learned-policy task success。
 
 如需训练真实语言条件 ACT 模型，请使用（需要 lerobot conda 环境）：
     conda run -n lerobot python training/scripts/train_act_lerobot.py \\

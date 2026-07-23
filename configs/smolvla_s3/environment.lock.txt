@@ -3,8 +3,8 @@
 # Install ONLY into a project env — never system Python.
 #
 # Host midstream snapshot (reference, not a pip freeze of CUDA wheels):
-#   python: use 3.10 or 3.11
-#   lerobot==0.5.2
+#   python: use 3.12 (lerobot>=0.5.0 requires Python>=3.12)
+#   lerobot: prefer 0.5.1+ (Aliyun may lack 0.5.2; install from pypi.org if needed)
 #   transformers==5.5.4 (host) — AutoDL may use 4.4x–5.x within tested range
 #   torch host was 2.11+cu130 laptop; AutoDL should install CUDA wheel matching instance driver
 #
@@ -13,15 +13,17 @@
 # - Torch/torchvision CUDA builds are preflight-bound: install the wheel matching
 #   `nvidia-smi` driver / CUDA toolkit on the instance, then record versions into
 #   runs/smolvla_s3/<run_id>/env_versions.json.
+# - AutoDL: conda create -n smolvla_s3 python=3.12
 
-lerobot==0.5.2
+lerobot>=0.5.1,<0.6
 transformers>=4.40,<5.6
 tokenizers>=0.19
 datasets>=5.0
 huggingface_hub>=0.23
 einops>=0.8
 safetensors>=0.4
-peft>=0.11,<0.16
+# LeRobot 0.5.1 metadata and the qualified AutoDL Recovery stack use PEFT 0.19.x.
+peft>=0.18,<0.20
 accelerate>=0.30
 numpy>=1.24
 pyarrow>=14.0

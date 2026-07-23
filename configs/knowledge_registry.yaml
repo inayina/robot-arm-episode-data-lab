@@ -460,6 +460,46 @@ overrides:
       - evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json
     last_verified: 2026-07-21
   - repository: robot-arm-episode-data-lab
+    path: docs/SMOLVLA_GATE_S3_READY.md
+    kind: canonical
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 88
+    authoritative_for: [smolvla_s3_ready]
+    component: [canonical_evidence, training]
+    tags: [smolvla, s3, ready, no_train_yet]
+    depends_on:
+      - data/releases/smolvla_s3_abs_eef_rgb_v0/manifest.json
+      - configs/smolvla_s3/lora_train.yaml
+      - docs/SMOLVLA_S3_AUTODL_RUNBOOK.md
+      - evaluation/examples/smolvla_gate_s2_report.json
+    last_verified: 2026-07-22
+  - repository: robot-arm-episode-data-lab
+    path: docs/SMOLVLA_S3_AUTODL_RUNBOOK.md
+    kind: current_doc
+    status: current
+    enabled_modes: [fact, debug, runbook]
+    evidence_priority: 84
+    authoritative_for: [smolvla_s3_autodl]
+    component: [canonical_evidence, training]
+    tags: [smolvla, s3, autodl, runbook]
+    depends_on:
+      - docs/SMOLVLA_GATE_S3_READY.md
+      - scripts/autodl_setup_smolvla_s3.sh
+    last_verified: 2026-07-22
+  - repository: robot-arm-episode-data-lab
+    path: data/releases/smolvla_s3_abs_eef_rgb_v0/manifest.json
+    kind: run_artifact
+    status: current
+    enabled_modes: [fact, debug, runbook, portfolio]
+    evidence_priority: 96
+    authoritative_for: [smolvla_s3_release]
+    component: [canonical_evidence, data_schema]
+    tags: [smolvla, s3, release, absolute_eef]
+    depends_on:
+      - evaluation/examples/smolvla_gate_s2_report.json
+    last_verified: 2026-07-22
+  - repository: robot-arm-episode-data-lab
     path: docs/portfolio/CANONICAL_EXPERIMENT.md
     kind: portfolio
     status: derivative

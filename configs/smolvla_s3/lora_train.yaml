@@ -24,12 +24,13 @@ environment_lock:
   notes: "Install via scripts/autodl_setup_smolvla_s3.sh into a fresh conda/venv; never system Python."
 
 dependency_versions_expected:
-  # Recorded from midstream host (2026-07-22). AutoDL must match lock file.
-  lerobot: "0.5.2"
+  # Align with configs/smolvla_s3/environment.lock.txt (AutoDL may lack 0.5.2 on mirrors).
+  # The formal entry and checkpoint audit target the verified 0.5.x CLI/schema.
+  lerobot: ">=0.5.1,<0.6"
   torch: ">=2.0,<2.8"  # preflight-bound within CUDA wheel family
   transformers: ">=4.40"
   peft: ">=0.11,<0.16"
-  python: "3.10|3.11"
+  python: ">=3.12"  # lerobot>=0.5.0 requires >=3.12; 3.10/3.11 cannot install
 
 peft:
   method_type: LORA

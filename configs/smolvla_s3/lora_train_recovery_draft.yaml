@@ -1,0 +1,148 @@
+# SmolVLA S3 Recovery PEFT config — Phase-0 decisions frozen.
+#
+# Authorized contract for a future Recovery LoRA (not this run).
+# Do NOT point run_smolvla_s3_train.sh here until Phase 1 camera decision +
+# live PEFT resolve probe + human train approval.
+
+contract_version: smolvla_s3_recovery_peft_v0
+status: phase2_v3_ready_awaiting_autodl_preflight_and_train
+experiment_id: smolvla_s3_recovery_v3_phaseaware50
+release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+release_manifest: data/releases/smolvla_s3_panda_abs_eef_scene_v3_phaseaware50/manifest.json
+parent_release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+policy_action_semantics: absolute_eef_gripper_v0
+quaternion_order: xyzw
+claims_task_success: false
+# Formal train stays fail-closed until AutoDL REAL preflight Pass against this
+# exact config SHA (v3 + state15 + empty_cameras=0) and human flips this flag.
+authorized_to_train: false
+authorized_to_collect_v3_phaseaware50: true
+authorized_collection_scope: scene_only_50_accepted_and_immutable_v3_release
+decisions_file: configs/smolvla_s3/recovery_decisions.yaml
+
+base_checkpoint:
+  model_id: lerobot/smolvla_base
+  revision: main
+  revision_pin_rule: "Set SMOLVLA_BASE_REVISION to the exact cached 40-hex commit."
+  local_dir_env: SMOLVLA_BASE_DIR
+
+environment_lock:
+  file: configs/smolvla_s3/environment.lock.txt
+  notes: "Base install constraints only; the exact preflight-qualified runtime below is the Recovery execution gate."
+
+dependency_versions_expected:
+  lerobot: ">=0.5.1,<0.6"
+  torch: ">=2.0,<2.8"
+  transformers: ">=4.40"
+  peft: ">=0.18,<0.20"
+  python: ">=3.12"
+
+# Exact stack observed in the successful no-training AutoDL Recovery preflight.
+# A changed stack must pass a new explicitly approved preflight; it must not
+# inherit authorization from recovery_preflight_nont_20260723T123500Z.
+dependency_versions_preflight_qualified:
+  python: "==3.12.13"
+  lerobot: "==0.5.1"
+  torch: "==2.6.0+cu124"
+  torchvision: "==0.21.0+cu124"
+  transformers: "==4.57.6"
+  peft: "==0.19.1"
+  accelerate: "==1.14.0"
+  safetensors: "==0.8.0"
+
+peft:
+  method_type: LORA
+  r: 64
+  lora_alpha: 64
+  lora_dropout: 0.05
+  bias: none
+  # Exact official SmolVLA PEFT regex (LeRobot 0.5.x modeling_smolvla).
+  target_modules: >-
+    (model\.vlm_with_expert\.lm_expert\..*\.(q|v)_proj|model\.(state_proj|action_in_proj|action_out_proj|action_time_mlp_in|action_time_mlp_out))
+  full_training_modules: []
+
+freeze:
+  strategy: official_smolvla_peft_regex
+  train_base_weights: false
+  train_vision_encoder: false
+  freeze_base_vlm: true
+
+state_contract:
+  name: observation.state[15]
+  dim: 15
+  status: adopted_for_v3_recovery
+  layout:
+    - joint_position[7]
+    - ee_pose_xyzw[7]
+    - measured_gripper[1]
+  exclude_from_policy_state:
+    - observation.object_pose
+    - observation.ft
+  pads_to_max_state_dim: 32
+
+train_budget_candidate:
+  action_chunk_size: 10
+  inference_action_steps_initial: 5
+  effective_epochs_initial: 5
+  effective_epochs_max: 10
+  notes: "Do not hard-code 1000 steps; compute from train-only frame count."
+
+# Complete enough for a no-training preflight. max_steps=0 is deliberate:
+# formal training stays fail-closed until train-only state15 frame count, a
+# stable AutoDL batch, and explicit human approval resolve the final budget.
+train:
+  seed: 42
+  batch_size: 8
+  gradient_accumulation_steps: 1
+  precision: bf16
+  learning_rate: 1.0e-3
+  lr_scheduler: cosine
+  lr_warmup_steps: 50
+  weight_decay: 1.0e-4
+  max_steps: 0
+  logging_steps: 10
+  eval_every_steps: 100
+  save_every_steps: 100
+  max_grad_norm: 1.0
+  dataloader_workers: 2
+  action_chunk_size: 10
+  entrypoint: lerobot-train
+  no_architecture_change: true
+  no_new_loss: true
+  no_auto_hparam_search: true
+
+inference:
+  action_steps: 5
+  empty_cameras: 0
+  camera_variant: scene_only
+  canonical_mode: canonical_first_action
+  diagnostic_mode: queued_diagnostic
+  async_double_buffer: false
+  notes: >
+    Recovery config declares exactly one visual feature (camera1), and the
+    runtime provides camera1. LeRobot 0.5.1 therefore has no missing configured
+    image feature to pad; empty_cameras=0 makes that contract explicit. Queued
+    diagnostic is never canonical-gate eligible. Full-forward latency remains a
+    separate no-training GPU measurement.
+
+output:
+  root: runs/smolvla_s3
+  run_id_template: "{experiment_id}_{timestamp_utc}"
+  require_fresh_dir: true
+  save_optimizer: true
+  save_lora_adapters: true
+
+eval_gate_config: configs/smolvla_s3/eval_gate.yaml
+
+gates:
+  require_preflight_pass: true
+  require_human_confirm_for_full_train: true
+  forbid_auto_start_train_from_preflight: true
+  require_phase0_split_materialization_pass: true
+  require_phase0_policy_input_audit: true
+  require_live_peft_resolve_probe: true
+  require_dependency_version_match: true
+  require_preflight_config_sha256_match: true
+  require_phase1_wrist_smoke_decision: true
+  forbid_auto_train: true
+  forbid_isaac: true

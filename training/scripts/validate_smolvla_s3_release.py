@@ -45,6 +45,18 @@ def validate_release(release_dir: Path) -> dict[str, Any]:
     ]
 
     # hashes (except self-hash of manifest which includes itself — verify others)
+    # Optional content fingerprint over sibling hashes (excludes circular manifest self-hash).
+    if "release_content_sha256" in manifest:
+        content_h = hashlib.sha256()
+        for name in sorted(k for k in manifest.get("file_sha256", {}) if k != "manifest.json"):
+            content_h.update(name.encode("utf-8"))
+            content_h.update(manifest["file_sha256"][name].encode("utf-8"))
+        got_fp = content_h.hexdigest()
+        if got_fp != manifest["release_content_sha256"]:
+            errors.append(
+                f"release_content_sha256 mismatch: expected {manifest['release_content_sha256'][:12]}… got {got_fp[:12]}…"
+            )
+
     for name, expected in manifest.get("file_sha256", {}).items():
         if name == "manifest.json":
             continue
@@ -145,6 +157,17 @@ def validate_release(release_dir: Path) -> dict[str, Any]:
         if key not in fields:
             errors.append(f"fields missing {key}")
 
+    if manifest.get("compose_state15"):
+        if fields.get("joint_state") != "observation.state[15]":
+            errors.append("compose_state15 requires fields.joint_state=observation.state[15]")
+        if not (release_dir / "state15_materialization.json").is_file():
+            errors.append("compose_state15 missing state15_materialization.json")
+        contract = manifest.get("state_contract") or {}
+        if contract.get("dim") != 15:
+            errors.append("state_contract.dim must be 15 for compose_state15 releases")
+        if "state15" not in norms:
+            errors.append("norm_stats missing state15 block")
+
     return {
         "passed": len(errors) == 0,
         "errors": errors,
@@ -160,8 +183,41 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-dir", type=Path, default=DEFAULT_RELEASE)
     parser.add_argument("--json-out", type=Path, default=None)
+    parser.add_argument(
+        "--train-root",
+        type=Path,
+        default=None,
+        help="Optional LeRobot train root to cross-check against splits.json",
+    )
+    parser.add_argument(
+        "--include-split",
+        default="train",
+        help="Split expected to be materialized in --train-root (default: train)",
+    )
     args = parser.parse_args()
     report = validate_release(args.release_dir)
+    if args.train_root is not None:
+        import importlib.util
+
+        merge_path = Path(__file__).resolve().parent / "prepare_smolvla_s3_merged_v30.py"
+        spec = importlib.util.spec_from_file_location(
+            "prepare_smolvla_s3_merged_v30", merge_path
+        )
+        assert spec and spec.loader
+        merge = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(merge)
+        train_report = merge.validate_train_root_against_splits(
+            args.train_root.resolve(),
+            (args.release_dir / "splits.json").resolve(),
+            include_split=args.include_split,
+        )
+        report["train_root_validation"] = train_report
+        if not train_report["passed"]:
+            report["passed"] = False
+            report["go_no_go"] = "no_go"
+            report["errors"] = list(report.get("errors") or []) + [
+                f"train_root: {err}" for err in train_report.get("errors", [])
+            ]
     text = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

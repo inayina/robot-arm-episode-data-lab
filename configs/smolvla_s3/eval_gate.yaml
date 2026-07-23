@@ -5,10 +5,26 @@
 #
 # Not task-success. Not Isaac. Open-loop must Pass before any S4 Isaac attempt.
 
-contract_version: smolvla_s3_eval_gate_v0
+contract_version: smolvla_s3_eval_gate_v1
+evaluator_contract_version: smolvla_s3_open_loop_evaluator_v2
 paired_eval: true
 claims_task_success: false
 ran_isaac: false
+
+sampling_contract:
+  canonical_stride_frames: 1
+  canonical_max_frames_per_episode: 0  # 0 = complete episode
+  require_full_episode_for_pass: true
+  canonical_inference_mode: canonical_first_action
+  diagnostic_inference_mode: queued_diagnostic
+  canonical_executes_action_chunk_queue: false
+  queued_diagnostic_gate_eligible: false
+
+gripper_contract:
+  closed_if_le: 0.5
+  close_debounce_source_frames: 3
+  gate_metric: gripper_balanced_accuracy
+  report_continuous_tolerance: 0.25
 
 baselines:
   s2_report: evaluation/examples/smolvla_gate_s2_report.json
@@ -22,17 +38,26 @@ baselines:
     - "Pass EE RMSE ≤ min(0.35 * S2, 0.20 * span_L2) ≈ min(0.0957, 0.103) → 0.096 m (rounded gate 0.100)."
     - "Hold EE RMSE ≤ 0.75 * S2 ≈ 0.205 m (must improve ≥25% vs S2)."
     - "No-Go EE if RMSE ≥ 0.90 * S2 ≈ 0.246 m (almost no improvement)."
-    - "Gripper Pass ≥0.70 / Hold ≥0.40 / No-Go ≤0.15 (binary tol 0.25 as S2)."
+    - "Gripper gate uses threshold-classification balanced accuracy: Pass ≥0.70 / Hold ≥0.40 / No-Go ≤0.15."
+    - "Continuous |pred-expert|≤0.25 accuracy is retained as a diagnostic only."
     - "Quat Pass ≤0.35 rad (~20°) when measurable; null quat does not grant Pass alone."
 
 metrics_required:
   - ee_position_rmse_m
   - quaternion_angular_error_rad
-  - gripper_accuracy
+  - gripper_balanced_accuracy
+  - gripper_binary_accuracy
+  - gripper_tolerance_accuracy
+  - gripper_closed_f1
   - gripper_close_timing_error_frames
+  - gripper_close_timing_offset_frames_signed
+  - gripper_close_timing_offset_seconds_signed
   - action_smoothness_ee_step_l2_p90
-  - saturation_or_clip_ratio
-  - home_no_close_detected
+  - expert_smoothness_ee_step_l2_p90
+  - raw_gripper_oob_ratio
+  - full_episode_coverage
+  - temporal_metrics_gate_eligible
+  - home_no_close_detected_rate
   - id_validation_slice
   - ood_position_slice
   - inference_latency_ms
@@ -52,31 +77,33 @@ thresholds:
     ee_position_rmse_m_max: 0.100
     relative_ee_improvement_vs_s2_min: 0.50
     quaternion_angular_error_rad_max: 0.35
-    gripper_accuracy_min: 0.70
+    gripper_balanced_accuracy_min: 0.70
     gripper_close_timing_error_frames_max: 5
     action_smoothness_ee_step_l2_p90_max: 0.05  # ~3.4× expert p90
-    saturation_or_clip_ratio_max: 0.10
+    raw_gripper_oob_ratio_max: 0.10
     home_no_close_detected_max_rate: 0.20
     require_consistent_stage_timing: true
   hold:
     ee_position_rmse_m_max: 0.205
     relative_ee_improvement_vs_s2_min: 0.25
     quaternion_angular_error_rad_max: 0.70
-    gripper_accuracy_min: 0.40
+    gripper_balanced_accuracy_min: 0.40
     home_no_close_detected_max_rate: 0.50
     max_data_fix_retries: 1
     note: "Partial EE/grip improvement; stage/gripper still wrong → Hold, at most one explicit data fix."
   no_go:
     ee_position_rmse_m_min: 0.246
-    gripper_accuracy_max: 0.15
+    gripper_balanced_accuracy_max: 0.15
     home_no_close_detected_min_rate: 0.80
     near_static_ee_step_l2_p90_max: 0.002
-    saturation_or_clip_ratio_min: 0.50
+    raw_gripper_oob_ratio_min: 0.50
     nan_or_inf_any: true
     severe_overfit_val_vs_train_gap_hint: "val EE RMSE >> train open-loop by >2× with grip still failing"
 
 decision_rules:
   - "Evaluate LoRA against the same protocol as base (paired)."
+  - "Pass requires stride=1 and complete-episode coverage; diagnostic subsampling can only Hold/No-Go."
+  - "Timing is debounced and reported as signed source-frame/second offset; negative means early close."
   - "Pass only if position, rotation (when available), gripper, and stage timing all show consistent credible improvement vs S2/base."
   - "Hold if some metrics improve but gripper or stage behavior remains wrong; at most one data-fix retry."
   - "No-Go if metrics barely move, gripper stuck open, near-static, abnormal outputs, or severe overfit."

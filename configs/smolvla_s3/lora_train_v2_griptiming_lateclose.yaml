@@ -1,0 +1,99 @@
+# SmolVLA S3 Round-2 LoRA config.
+# Independent from the immutable v0/v1 training lineage. Formal execution is
+# allowed only after a real AutoDL preflight against the v2 release.
+
+contract_version: smolvla_s3_lora_config_v0
+experiment_id: smolvla_s3_lora_abs_eef_rgb_v2_griptiming_lateclose
+release_id: smolvla_s3_abs_eef_rgb_v2_griptiming_lateclose
+release_manifest: data/releases/smolvla_s3_abs_eef_rgb_v2_griptiming_lateclose/manifest.json
+policy_action_semantics: absolute_eef_gripper_v0
+quaternion_order: xyzw
+
+base_checkpoint:
+  model_id: lerobot/smolvla_base
+  revision: main
+  revision_pin_rule: "Set SMOLVLA_BASE_REVISION to the exact cached 40-hex commit."
+  local_dir_env: SMOLVLA_BASE_DIR
+  default_local_hint: checkpoints/smolvla_base_s3
+
+environment_lock:
+  file: configs/smolvla_s3/environment.lock.txt
+  notes: "Use scripts/autodl_setup_smolvla_s3.sh in Python >=3.12; never system Python."
+
+dependency_versions_expected:
+  lerobot: ">=0.5.1,<0.6"
+  torch: ">=2.0,<2.8"
+  transformers: ">=4.40"
+  peft: ">=0.11,<0.16"
+  python: ">=3.12"
+
+peft:
+  method_type: LORA
+  r: 64
+  lora_alpha: 64
+  lora_dropout: 0.05
+  bias: none
+  target_modules:
+    - q_proj
+    - v_proj
+
+freeze:
+  strategy: peft_lora_only
+  train_base_weights: false
+  train_vision_encoder: false
+  notes: "No full fine-tune. No new heads."
+
+train:
+  seed: 42
+  batch_size: 4
+  gradient_accumulation_steps: 1
+  precision: bf16
+  learning_rate: 1.0e-3
+  lr_scheduler: cosine
+  lr_warmup_steps: 50
+  weight_decay: 1.0e-4
+  max_steps: 1000
+  logging_steps: 10
+  eval_every_steps: 100
+  save_every_steps: 200
+  max_grad_norm: 1.0
+  dataloader_workers: 2
+  action_chunk_size: 50
+  entrypoint: lerobot-train
+  no_architecture_change: true
+  no_new_loss: true
+  no_auto_hparam_search: true
+
+resume:
+  allowed: true
+  rule: "Resume only inside the same output_dir with matching release/config hashes."
+  require_matching_config_sha256: true
+
+output:
+  root: runs/smolvla_s3
+  run_id_template: "{experiment_id}_{timestamp_utc}"
+  require_fresh_dir: true
+  save_optimizer: true
+  save_lora_adapters: true
+
+logging:
+  stdout: true
+  jsonl: train_log.jsonl
+  metadata_json: run_metadata.json
+  resource_sample_seconds: 30
+  capture:
+    - gpu_name
+    - vram_peak_mib
+    - step_time_ms
+    - torch_version
+    - cuda_version
+    - peft_version
+
+gates:
+  require_preflight_pass: true
+  require_human_confirm_for_full_train: true
+  forbid_auto_start_train_from_preflight: true
+  forbid_isaac_until_open_loop_pass: true
+  forbid_overwrite_s2_evidence: true
+
+eval_gate_config: configs/smolvla_s3/eval_gate.yaml

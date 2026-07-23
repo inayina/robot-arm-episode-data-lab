@@ -1,0 +1,147 @@
+# SmolVLA S3 Recovery severity-aware open-loop gate.
+#
+# Human-approved and frozen on 2026-07-23. This is independent from the
+# immutable eval_gate.yaml (v1). Approval covers the gate design, local
+# evaluator-v3 implementation, and threshold freeze only. It does not approve
+# a prospective GPU run or Isaac.
+
+contract_version: smolvla_s3_eval_gate_v2
+evaluator_contract_version: smolvla_s3_open_loop_evaluator_v3
+status: approved_frozen
+approved_at_utc: "2026-07-23T15:54:31Z"
+frozen_at_utc: "2026-07-23T15:54:31Z"
+approved_scope: gate_design_evaluator_v3_and_threshold_freeze
+thresholds_frozen: true
+claims_task_success: false
+ran_isaac: false
+authorized_isaac: false
+
+parent_gate: configs/smolvla_s3/eval_gate.yaml
+parent_gate_sha256: d8330c68e6b3eb0086ce4f948236daac0a572752bbf347fcaf6dd94b1eee723e
+proposal_gate: configs/smolvla_s3/eval_gate_v2_proposal.yaml
+proposal_gate_sha256: 30d0e96af6070482121258d153c00382b5ec0f5cedff8df882fe004785a39408
+
+sampling_contract:
+  canonical_stride_frames: 1
+  canonical_max_frames_per_episode: 0
+  require_full_episode_for_pass: true
+  canonical_inference_mode: canonical_first_action
+  diagnostic_inference_mode: queued_diagnostic
+  canonical_executes_action_chunk_queue: false
+  queued_diagnostic_gate_eligible: false
+
+prospective_evaluation_contract:
+  manifest_contract_version: smolvla_s3_prospective_eval_manifest_v1
+  manifest_required_for_pass: true
+  require_gate_sha256_match: true
+  require_splits_sha256_match: true
+  require_manifest_created_after_gate_freeze: true
+  require_thresholds_frozen_before_evaluation: true
+  require_human_authorized_run: true
+  require_evaluation_refs_exact_match: true
+  require_zero_train_overlap: true
+  require_zero_threshold_design_overlap: true
+  forbid_saved_report_reclassification: true
+  threshold_design_reports:
+    - path: runs/smolvla_s3/openloop_recovery_v3_20260723T142240Z/s3_open_loop_report.json
+      sha256: caf22b9e2ccca7476cf39fea28afb0b2b354b24e1828e8d489a4fbc95fe7ccb0
+    - path: runs/smolvla_s3/openloop_recovery_v3_k5_20260723T151853Z_retry1/s3_open_loop_report.json
+      sha256: 6416bba69d5dc07fee6d598de3807afdcff9caafe77471dc091d3b9d485c2a74
+  threshold_design_episode_refs:
+    - e2_red_500hz_seed60_v3_P0_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed61_v3_P1_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed62_v3_P2_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed63_v3_P3_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000000
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000001
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000002
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000003
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000004
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000005
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000006
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000007
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000008
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000009
+
+gripper_contract:
+  physical_command_range: [0.0, 1.0]
+  closed_if_le: 0.5
+  close_debounce_source_frames: 3
+  gate_metric: gripper_balanced_accuracy
+  report_continuous_tolerance: 0.25
+  model_output_normalization: MEAN_STD
+  postprocessor_behavior: unnormalize_only_no_range_clamp
+  execution_adapter_behavior: clamp_to_physical_range
+
+baselines:
+  s2_report: evaluation/examples/smolvla_gate_s2_report.json
+  s2_ee_rmse_m: 0.2734163848429447
+  s2_gripper_accuracy: 0.0
+
+metrics_required:
+  - ee_position_rmse_m
+  - quaternion_angular_error_rad
+  - gripper_balanced_accuracy
+  - gripper_close_timing_error_frames
+  - action_smoothness_ee_step_l2_p90
+  - home_no_close_detected_rate
+  - temporal_metrics_gate_eligible
+  - raw_gripper_oob_ratio
+  - raw_gripper_oob_beyond_epsilon_ratio
+  - gripper_clip_adjustment_mae
+  - gripper_clip_adjustment_max_abs
+  - raw_gripper_min
+  - raw_gripper_max
+  - gripper_clip_classification_change_ratio
+  - gripper_clip_close_timing_change_frames_max_abs
+  - mapped_gripper_command_in_range
+  - mapped_gripper_matches_clip_max_abs
+  - prospective_eval_eligible
+
+gripper_range_severity_contract:
+  epsilon: 0.05
+  thresholds:
+    oob_beyond_epsilon_ratio_max: 0.01
+    clip_adjustment_mae_max: 0.01
+    clip_adjustment_max_abs_max: 0.10
+    raw_gripper_min: -0.10
+    raw_gripper_max: 1.10
+    clip_classification_change_ratio_max: 0.0
+    clip_close_timing_change_frames_max: 0
+    mapped_gripper_matches_clip_max_abs_max: 0.0000001
+
+thresholds:
+  pass:
+    ee_position_rmse_m_max: 0.100
+    relative_ee_improvement_vs_s2_min: 0.50
+    quaternion_angular_error_rad_max: 0.35
+    gripper_balanced_accuracy_min: 0.70
+    gripper_close_timing_error_frames_max: 5
+    action_smoothness_ee_step_l2_p90_max: 0.05
+    home_no_close_detected_max_rate: 0.20
+    require_consistent_stage_timing: true
+  hold:
+    ee_position_rmse_m_max: 0.205
+    relative_ee_improvement_vs_s2_min: 0.25
+    quaternion_angular_error_rad_max: 0.70
+    gripper_balanced_accuracy_min: 0.40
+    home_no_close_detected_max_rate: 0.50
+    max_data_fix_retries: 1
+  no_go:
+    ee_position_rmse_m_min: 0.246
+    gripper_balanced_accuracy_max: 0.15
+    home_no_close_detected_min_rate: 0.80
+    near_static_ee_step_l2_p90_max: 0.002
+    nan_or_inf_any: true
+    mapped_command_out_of_range_any: true
+    mapped_command_not_equal_clip_any: true
+    clip_classification_change_any: true
+    clip_close_timing_change_any: true
+
+decision_rules:
+  - "Exact raw OOB remains diagnostic; Pass gates on bounded overshoot magnitude and clip behavior."
+  - "Missing/non-finite severity metrics fail closed."
+  - "Mapped command range/mismatch or clip classification/timing changes are No-Go."
+  - "Pass requires canonical stride=1, full episodes, and an eligible prospective manifest."
+  - "Queued diagnostics and saved historical reports cannot Pass."
+  - "A v2 open-loop Pass is only an Isaac-readiness candidate; Isaac still needs separate human approval."
