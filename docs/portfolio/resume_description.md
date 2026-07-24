@@ -9,19 +9,21 @@
 
 *   **项目名称**：Franka Panda 机械臂具身智能多仓协同与闭环仿真验证系统（独立研发）
 *   **项目角色**：独立设计与开发者（全栈研发）
-*   **技术栈**：ROS 2 (Jazzy), MoveIt Servo, MuJoCo, PyBullet, PyTorch, PyArrow (Parquet), Python, C++
+*   **技术栈**：ROS 2 (Jazzy), MoveIt Servo, MuJoCo, Isaac Sim, PyBullet, PyTorch, LeRobot/SmolVLA (LoRA/PEFT), PyArrow (Parquet), Python, C++
 
 ### **项目描述**：
-针对具身智能研发中“实时运动控制、离线AI策略训练、下游物理仿真评估”开发流程繁琐、调试环境臃肿的问题，**独立设计并实现了一套三仓解耦的具身闭环仿真与数据治理系统**。自主打通了从人类遥操作示范到仿真物理验证的端到端数据-物理双向循环。
+针对具身智能研发中“实时运动控制、离线AI策略训练、下游物理仿真评估”开发流程繁琐、调试环境臃肿的问题，**独立设计并实现了一套三仓解耦的具身闭环仿真与数据治理系统**。自主打通了从人类遥操作示范到仿真物理验证的端到端数据-物理双向循环，并完成 SmolVLA Recovery 的独立 prospective open-loop Pass 与有界 Isaac S4 就绪合同（诚实区分 open-loop 与任务成功）。
 
 ### **核心工作与技术实现（STAR法则）**：
-*   **【系统架构与契约设计】** 自主设计了三仓解耦架构，制定了统一的机器人描述协议 [panda.yaml](../../configs/robot_schemas/panda.yaml)，规范了 8 维状态（State）与 7 维末端动作（Action）的数学语义。从架构源头上将“物理校验”与“数据治理”解耦，消除多仓接口定义冲突。
+*   **【系统架构与契约设计】** 自主设计了三仓解耦架构，制定了统一的机器人描述协议 [panda.yaml](../../configs/robot_schemas/panda.yaml)，规范了状态与动作的数学语义（含 ACT 的 `ee_delta` 与 VLA 的 `absolute_eef_gripper[8]`）。从架构源头上将“物理校验”与“数据治理”解耦，消除多仓接口定义冲突。
 *   **【高频控制与多模态采集】** 基于 **ROS 2 (Jazzy)** 与 **MoveIt Servo** 自主搭建末端笛卡尔伺服与阻抗控制层（仿真主线 **500 Hz**，真机路径设计为 **1 kHz**），加入关节限位与急停安全保护；在 **MuJoCo** 中实现遥操作示范的多模态轨迹录制，并以 **Parquet** 持久化。
-*   **【中游数据治理与策略训练】** 独立开发了静态数据质量校验网关 (Quality Gate)，编写了 [inspect_dataset.py](../../training/scripts/inspect_dataset.py) 基于关节步长 P99 限值与反向运动率自动过滤抖动与丢帧坏帧。使用 **PyTorch** 训练端到端行为克隆策略网络（MLP BC），实现离线 Loss 在 $10^{-4}$ 量级稳定收敛。
-*   **【下游解耦重放与验证】** 创新构建了中立动作流交接管道 (Handoff Pipeline)，编写了 [prepare_bridge_handoff.py](../../training/scripts/prepare_bridge_handoff.py) 将模型预测出的动作解耦打包为无 ROS 依赖的轻量化 `jsonl` 动作包；在 **PyBullet** 中搭建物理重放与执行监控沙盒，评估轨迹偏差 (RMSE)，并利用机械臂雅可比矩阵（SVD 奇异值分解）在线监测关节奇异性风险，同时实时监控包含关节数据分布漂移（KL散度/Wasserstein距离）、关节速度突变与软限位触发等 Sim2Real 安全就绪度指标。
+*   **【中游数据治理与策略训练】** 独立开发了静态数据质量校验网关 (Quality Gate)，编写了 [inspect_dataset.py](../../training/scripts/inspect_dataset.py) 基于关节步长 P99 限值与反向运动率自动过滤抖动与丢帧坏帧。使用 **PyTorch** 训练端到端行为克隆策略网络（MLP BC / ACT 诊断基线），并完成 **SmolVLA Recovery LoRA**（train-only split、`state[15]`、scene-only、官方 PEFT 正则、5,705 steps）。
+*   **【评测门禁与执行语义】** 设计冻结 prospective open-loop 门禁：独立 held-out 10 条 / 2,593 帧在 `eval_gate_v3` 下 **Pass**（EE RMSE **0.0253 m**，夹爪 balanced accuracy **0.994**）；将开爪边 raw 过冲降级为诊断项，保留关爪边与 clip 分类/时序不变式为硬安全项。落地 S4 action-queue 合同（chunk10/K5/10Hz/`clip(raw,0,1)`）与 abs-EEF 执行夹紧。
+*   **【下游解耦重放与验证】** 创新构建了中立动作流交接管道 (Handoff Pipeline)，编写了 [prepare_bridge_handoff.py](../../training/scripts/prepare_bridge_handoff.py) 将模型预测出的动作解耦打包为无 ROS 依赖的轻量化 `jsonl` 动作包；在 **PyBullet** 中搭建物理重放与执行监控沙盒；在 **Isaac** 上完成 scripted oracle 物理链门禁（lift 5/5）与 ACT 有界 rollout 诊断。
 
 ### **项目业绩（量化成果）**：
-*   **闭环验证**：基于 30 条真实遥操作示范轨迹（7.1万帧）独立跑通了“采集-清洗-训练-回放-评估”的系统大循环，回放末端均方根误差 (RMSE) 达到毫米级。
+*   **闭环验证**：基于 30 条真实遥操作示范轨迹（7.1万帧）独立跑通了“采集-清洗-训练-回放-评估”的系统大循环；SmolVLA Recovery 独立 prospective open-loop **Pass**（相对 S2 EE 基线改善约 **90%**）。
+*   **评测工程化**：E3.5 Isaac scripted oracle 从 lift 0/5 triage 到 5/5 物理链通过；评测漏斗区分 interface / behavior / task GT，避免把离线 loss 或 open-loop Pass 写成任务成功。
 *   **调试效率提升**：通过中立动作交接机制，实现中游深度学习环境与下游 ROS 控制、物理仿真的完全解耦，**本地联调与故障定位除错效率提升 90% 以上**。
 
 ---
@@ -33,13 +35,19 @@
 *   **核心贡献**：
     1. **解耦架构设计**：独立设计三仓架构，制定机器人描述契约（Schema），解决多仓坐标系与接口定义冲突。
     2. **高频采集与控制**：基于 **ROS 2 (Jazzy) + MoveIt Servo** 搭建末端伺服与阻抗控制（仿真 **500 Hz** / 真机路径 **1 kHz**），并在 **MuJoCo** 中捕获多模态 Parquet 轨迹。
-    3. **静态质量网关 (Quality Gate)**：通过关节步长 P99 限值过滤遥操作抖动帧，并使用 **PyTorch** 训练行为克隆策略模型。
-    4. **中立动作重放**：设计 Handoff 交接管线，在下游 **PyBullet** 中实现免 ROS 环境依赖的轻量化轨迹重放，实时监控轨迹偏差 (RMSE)、关节奇异性风险（基于雅可比最小奇异值检测）与关节数据分布漂移（KL散度、速度跳变、软限位触发等）。
-*   **成果业绩**：独立跑通 30-Episode 仿真物理双向环流；使多仓联合调试与奇异点定位除错效率提升 **90%**。
+    3. **静态质量网关 + VLA Recovery**：Quality Gate 过滤抖动帧；SmolVLA LoRA（state[15]/scene）完成独立 prospective open-loop **Pass**（EE 2.5 cm 级、grip BA 0.99）。
+    4. **中立动作重放 / Isaac 物理链**：Handoff→PyBullet；Isaac oracle lift 5/5；S4 有界 runtime 合同已冻结（未声称任务成功）。
+*   **成果业绩**：独立跑通 30-Episode 仿真物理双向环流；SmolVLA Recovery prospective Pass；多仓联调效率提升 **90%**。
 
 ---
 
 ## 3. 面试核心话术与 Q&A
+
+### Q0：SmolVLA 现在到哪一步了？能不能说已经抓起来了？
+*   **回答话术**：
+    > “只能说 **Isaac-readiness 的 open-loop 门禁过了**，不能说抓取成功。Recovery v3 在独立 10 条 held-out 全帧评测上 EE 约 2.5 cm、夹爪分类约 0.99，并且我们按执行侧 `clip(raw,0,1)` 修订了严重度门禁。有界 Isaac S4（≤5 seeds）已经批准，但本机当前没有可用的 Isaac GPU，所以 **`ran_isaac=false`**，我不会在简历里写任务成功率。”
+    >
+    > 一页纸：[`SMOLVLA_RECOVERY_V3_PORTFOLIO.md`](SMOLVLA_RECOVERY_V3_PORTFOLIO.md)
 
 ### Q1：为什么你要分三个仓库开发，直接在一个仓库里把 AI 训练和物理引擎写在一起不好吗？
 *   **回答话术**：

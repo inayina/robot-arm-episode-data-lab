@@ -185,6 +185,79 @@ def test_phaseaware50_split_and_release_fixture(tmp_path: Path) -> None:
     assert len(norms["state15"]["mean"]) == 15
 
 
+def test_prospective_eval_only_release_has_no_training_refs(tmp_path: Path) -> None:
+    import importlib.util
+
+    prep_path = ROOT / "training/scripts/prepare_smolvla_s3_release.py"
+    spec = importlib.util.spec_from_file_location(
+        "prepare_smolvla_s3_release_eval_only", prep_path
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    source = _write_source_tree(
+        tmp_path, "e2_red_500hz_seed65_v3_prospective_P0_eval2_fixture", n_eps=2
+    )
+    for ep in range(2):
+        video = (
+            source
+            / "videos/chunk-000/observation.images.scene"
+            / f"episode_{ep:06d}.mp4"
+        )
+        if not video.is_file():
+            pytest.skip("OpenCV mp4 writer unavailable")
+
+    normalization_release = tmp_path / "training_release"
+    normalization_release.mkdir()
+    (normalization_release / "manifest.json").write_text(
+        json.dumps({"release_id": "training_release_fixture"}) + "\n",
+        encoding="utf-8",
+    )
+    frozen_norms = {
+        "policy_action_semantics": "absolute_eef_gripper_v0",
+        "computed_on_split": "train",
+        "state15": {"mean": [0.0] * 15, "std": [1.0] * 15},
+    }
+    (normalization_release / "norm_stats.json").write_text(
+        json.dumps(frozen_norms) + "\n", encoding="utf-8"
+    )
+
+    out = tmp_path / "prospective_release"
+    argv = [
+        "prepare_smolvla_s3_release.py",
+        "--output-dir",
+        str(out),
+        "--release-id",
+        "smolvla_s3_recovery_v3_prospective_eval10_fixture",
+        "--split-policy",
+        "prospective_eval_only",
+        "--normalization-source-release",
+        str(normalization_release),
+        "--compose-state15",
+        "--cameras",
+        "scene",
+        "--source",
+        str(source),
+    ]
+    old = sys.argv
+    try:
+        sys.argv = argv
+        rc = mod.main()
+    finally:
+        sys.argv = old
+    assert rc == 0
+
+    splits = json.loads((out / "splits.json").read_text(encoding="utf-8"))
+    assert splits["train"] == []
+    assert splits["validation"] == []
+    assert len(splits["benchmark"]) == 2
+    assert json.loads((out / "norm_stats.json").read_text()) == frozen_norms
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["split_policy"] == "prospective_eval_only"
+    assert manifest["normalization_source"]["release_id"] == "training_release_fixture"
+
+
 def test_v3_schema_yaml_matches_release_id() -> None:
     cfg = yaml.safe_load(
         (ROOT / "configs/smolvla_s3/v3_phaseaware50.yaml").read_text(encoding="utf-8")

@@ -1,0 +1,80 @@
+# SmolVLA S3 Recovery v3 — independent prospective evaluation collection.
+#
+# Frozen before acquisition on 2026-07-24. This is an eval-only set:
+# it must not be added to a training split or used to tune eval_gate_v2.
+
+contract_version: smolvla_s3_prospective_eval_collection_v1
+evaluation_id: recovery_v3_prospective_eval10_20260724
+purpose: canonical_open_loop_eval_only
+human_authorized_collection: true
+authorized_by: user_chat_2026-07-24
+authorized_to_train: false
+authorized_to_run_gpu_eval: false
+authorized_to_run_isaac: false
+frozen_before_acquisition_at_utc: "2026-07-24T04:56:15Z"
+
+cameras: [scene]
+enable_wrist_camera: false
+grasp_assist_enabled: false
+policy_action_semantics: absolute_eef_gripper_v0
+state_contract: observation.state[15]
+
+collection:
+  accepted_episodes_total: 10
+  accepted_episodes_per_position: 2
+  max_attempts_per_position: 4
+  capture_mode: portfolio
+  validation_mode: lift
+  camera_width: 320
+  camera_height: 240
+  camera_rate_hz: 10.0
+
+timing:
+  pre_close_hold_s: 0.4
+  close_duration_s: 0.8
+  grasp_pause_s: 0.5
+  hover_duration_s: 3.0
+  hover_height_m: 0.20
+  descend_duration_s: 6.0
+  lift_duration_s: 8.0
+  post_lift_hold_s: 4.0
+
+# Reuse the frozen P0-P4 geometry but use new seeds and new episode refs.
+# This measures an independent repeat of the same task distribution without
+# introducing a new spatial curriculum after the gate thresholds were frozen.
+positions:
+  P0:
+    seed: 65
+    xy: [0.36, -0.10]
+    accepted: 2
+  P1:
+    seed: 66
+    xy: [0.40, 0.10]
+    accepted: 2
+  P2:
+    seed: 67
+    xy: [0.44, -0.06]
+    accepted: 2
+  P3:
+    seed: 68
+    xy: [0.38, 0.06]
+    accepted: 2
+  P4:
+    seed: 69
+    xy: [0.48, 0.00]
+    accepted: 2
+
+park_distractors:
+  object_blue_cylinder: [0.52, -0.14]
+  object_green_sphere: [0.52, 0.14]
+
+phaseaware_thresholds:
+  expert_binary_close_transitions: 1
+  reopen_count_max: 0
+  gripper_cmd_min: 0.0
+  gripper_cmd_max: 1.0
+  close_ramp_frames_min: 5
+  close_ramp_frames_max: 15
+  max_ee_step_l2_p90_m: 0.012
+  pick_xy_tolerance_m: 0.02
+  pick_z_relative_max_m: 0.03

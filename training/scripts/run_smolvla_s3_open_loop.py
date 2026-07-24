@@ -57,6 +57,7 @@ from training.scripts.run_smolvla_s3_control import (  # noqa: E402
 from training.smolvla_s3.eval_gate_v3 import (  # noqa: E402
     EVALUATOR_CONTRACT_VERSION,
     GATE_CONTRACT_VERSION as EVAL_GATE_V2_CONTRACT_VERSION,
+    SEVERITY_GATE_CONTRACT_VERSIONS,
     compute_gripper_severity_metrics,
     decide_gate_v3,
     validate_prospective_context,
@@ -850,7 +851,7 @@ def decide_gate(
     s2_ee: float,
     prospective_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if gate.get("contract_version") == EVAL_GATE_V2_CONTRACT_VERSION:
+    if gate.get("contract_version") in SEVERITY_GATE_CONTRACT_VERSIONS:
         return decide_gate_v3(
             gate,
             lora_metrics,
@@ -1113,7 +1114,7 @@ def main() -> int:
             )
 
     prospective_context: dict[str, Any] | None = None
-    if gate.get("contract_version") == EVAL_GATE_V2_CONTRACT_VERSION:
+    if gate.get("contract_version") in SEVERITY_GATE_CONTRACT_VERSIONS:
         prospective_context = validate_prospective_context(
             gate,
             prospective_manifest,
@@ -1230,7 +1231,7 @@ def main() -> int:
 
     s2_ee = float(gate["baselines"]["s2_ee_rmse_m"])
     lora_metrics = (results.get("lora") or {}).get("metrics")
-    if gate.get("contract_version") == EVAL_GATE_V2_CONTRACT_VERSION:
+    if gate.get("contract_version") in SEVERITY_GATE_CONTRACT_VERSIONS:
         if lora_metrics is not None:
             lora_metrics["prospective_eval_eligible"] = bool(
                 prospective_context["eligible"]
@@ -1366,9 +1367,9 @@ def main() -> int:
             ),
             "Do not enter S4 Isaac unless gate_decision=pass and human asks.",
             (
-                "Eval-gate-v2 Pass requires a frozen-gate prospective manifest "
+                "Severity-gate (v2/v3) Pass requires a frozen-gate prospective manifest "
                 "with zero train/design overlap."
-                if gate.get("contract_version") == EVAL_GATE_V2_CONTRACT_VERSION
+                if gate.get("contract_version") in SEVERITY_GATE_CONTRACT_VERSIONS
                 else "Eval-gate-v1 is evaluated with evaluator-v3 backward-compatible logic."
             ),
             f"S2 baseline EE RMSE={s2_ee}",

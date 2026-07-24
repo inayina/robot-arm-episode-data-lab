@@ -1,0 +1,9 @@
+{
+  "contract_version": "smolvla_s3_eval_gate_v3_threshold_lock_v1",
+  "gate_path": "configs/smolvla_s3/eval_gate_v3.yaml",
+  "gate_sha256": "37325a1fee3cce2e14361071d39f2a0a5b767044e25472114fcb8684c495d46f",
+  "threshold_payload_sha256": "38c0198518e77360e0b1eaf3ddcef6a2946230c2c260a31080e15ff289568d52",
+  "frozen_at_utc": "2026-07-24T06:25:00Z",
+  "approved_scope": "execution_semantics_severity_revision_and_threshold_freeze",
+  "authorized_isaac": false
+}

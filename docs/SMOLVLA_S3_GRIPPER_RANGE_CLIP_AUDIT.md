@@ -1,8 +1,8 @@
 # SmolVLA S3 Recovery gripper 输出范围 / clip / 归一化审计
 
-**日期**：2026-07-23  
-**状态**：本地 CPU saved-prediction audit Pass；`eval_gate_v1` 结论仍为 **Hold**；`eval_gate_v2` 已批准并冻结，evaluator v3 已实现；尚未做 prospective evaluation  
-**范围**：Recovery v3 canonical first-action 与 K5 queued diagnostic；不训练、不推理、不运行 Isaac
+**日期**：2026-07-24
+**状态**：`eval_gate_v2` prospective = 历史 **Hold**；`eval_gate_v3` fresh prospective = **Pass**（isaac_ready_candidate）；未授权 Isaac
+**范围**：Recovery v3 canonical first-action、K5 queued diagnostic 与独立 prospective eval；不训练、不运行 Isaac
 
 ## 1. 直接结论
 
@@ -23,6 +23,15 @@
 `1.001` 与危险的大幅越界。当前证据支持提出一个同时保留精确 OOB、
 再按越界幅度和行为不变量分级的独立 v2；它不支持把现有 v1 Hold
 追溯改成 Pass。
+
+2026-07-24 新增的独立 prospective eval 使用 10 条 / 2,673 帧
+eval-only episode；`train_overlap=[]`、`threshold_design_overlap=[]`，
+manifest、gate/splits SHA 与全帧 `stride=1` 合同均通过。结果仍为
+**Hold**：EE RMSE `0.025968 m`、gripper balanced accuracy `0.993140`、
+关爪平均提前 `1.7` 帧、smoothness p90 `0.029835 m`。Pass 只失败于
+gripper 严重度：超界 `>0.05` 比例 `1.8706%`（门槛 `≤1%`）、
+clip max `0.215346`（门槛 `≤0.10`）、raw max `1.215346`
+（门槛 `≤1.10`）。clip MAE、分类/时序不变量和 mapped command 均通过。
 
 ## 2. 证据
 
@@ -114,27 +123,79 @@ gate。K5 始终 `temporal_metrics_gate_eligible=false`。
   校验及 fail-closed shell 入口；canonical v2 缺失/无效 manifest 时不会
   启动 policy inference。
 - evaluator v3 契约测试；历史 saved report 在 v2 下重新审计为 Hold。
+- 独立 eval-only 10 条采集、immutable release、run-specific 人工授权
+  manifest 与真实 RTX 4090 D prospective canonical 全帧评测；结论 Hold。
 
 ### 文档声明，代码未确认
 
-- 新的 prospective held-out 数据选择、run manifest 和 GPU evaluation
-  尚未执行；当前没有 v2 Pass。
+- Isaac / S4 尚未执行，也未授权。
 
 ### 基于证据的推断
 
 - 精确 OOB 主要由边界附近的小幅回归 overshoot 构成，而不是归一化统计
   配错；该判断由幅度分布和 mean/std 一致性支持。
-- 严重度门禁比单一精确 OOB 比率更适合执行安全评估，但必须经未来独立
-  prospective evaluation 才能验证。
+- prospective 结果表明任务几何与夹爪分类/时序已稳定，但 raw gripper
+  大幅正向 overshoot 仍未满足冻结的执行安全候选门槛。
 
 ### 通用背景知识
 
 - 无界回归头即使训练标签有界，也可能在反归一化后略微超出标签范围；
   执行前 clamp 是安全措施，但不能代替任务级闭环评测。
 
-## 5. 下一步
+## 5. 下一步（已由人工修订）
 
-当前本地实现已收口，不需要重训。下一步是选择未参与阈值设计且与 train
-零重叠的 held-out episode，复制并填写 prospective manifest；该 GPU
-评测仍需单独批准。只有新的 canonical prospective evaluation 通过后，
-才可另行申请 Isaac。
+2026-07-24 v2 prospective 为 **Hold**，历史记录不变。同日用户明确批准：
+硬约束可为上 Isaac 修订。据此冻结独立 `eval_gate_v3`
+（`configs/smolvla_s3/eval_gate_v3.yaml` + lock）：
+
+- 执行命令语义为 `clip(raw, 0, 1)`；
+- Pass 硬项保留关爪边 beyond-ε ≤1%、clip MAE、分类/时序零变化、
+  mapped==clip，以及全部非 gripper 门槛；
+- 开爪边 beyond-ε / clip max / raw max 降为 diagnostic，sanity 包络
+  `raw ∈ [-0.5, 1.5]`（越界仍 No-Go）；
+- v2 prospective 的 10 条 episode 已列入 v3 threshold-design，禁止复用；
+- 新独立 eval-only 集：`configs/smolvla_s3/prospective_eval10_v3.yaml`
+ （seeds 70–74）。
+
+v3 Pass 仅表示 `isaac_ready_candidate`；真正开 Isaac 仍需单独确认 S4
+运行清单。不重训、不加 barrier loss、不改判 v2 Hold。
+
+## 6. 证据分级（含 v3 修订）
+
+### 已实现
+
+- 上节 §4 全部项，外加：
+- `eval_gate_v3` 冻结文件与 threshold lock；
+- evaluator 侧向 open/close-edge 指标与 v3 判定分支；
+- 契约测试：v2 Hold 数值在 v3 下 Pass、关爪边超标仍 Hold、sanity 越界 No-Go。
+
+### 文档声明，代码未确认
+
+- Isaac / S4 尚未执行，也未授权。
+- gate v3 的 fresh prospective GPU 跑尚未执行（采集配置已冻结）。
+
+### 基于证据的推断
+
+- 开爪边 overshoot 在 clamp 后与 expert 全开命令语义等价；真正接触风险
+  侧（关爪边）在 v2 prospective 中仅 0.26%，低于 1% 门槛。
+
+
+## 7. eval_gate_v3 prospective Pass（2026-07-24）
+
+独立 seeds 70–74 / 10 episodes / 2,593 帧；manifest/gate/splits SHA、
+`train_overlap=[]`、`threshold_design_overlap=[]`、canonical `stride=1` 全过。
+
+| 指标 | 值 | v3 门槛 |
+|---|---:|---|
+| EE RMSE | 0.025337 m | ≤0.100 |
+| gripper balanced accuracy | 0.994284 | ≥0.70 |
+| close timing error | 1.6 frames | ≤5 |
+| smoothness p90 | 0.029811 m | ≤0.05 |
+| close-edge beyond-ε | 0.3857% | ≤1% |
+| clip MAE | 0.006920 | ≤0.01 |
+| classification / timing change | 0 / 0 | 0 |
+| open-edge beyond-ε（diagnostic） | 1.350% | report-only |
+| clip max / raw max（diagnostic） | 0.220 / 1.220 | report-only inside [-0.5,1.5] |
+
+`gate_decision=pass`，`isaac_ready_candidate=true`，`isaac_authorized=false`。
+证据：`runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/`。

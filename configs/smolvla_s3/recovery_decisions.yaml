@@ -4,11 +4,17 @@
 # Human (2026-07-23): authorized Phase-2 scene-only collect + immutable v3 release.
 # Human (2026-07-23): after AutoDL REAL Recovery preflight Pass on v3, authorized
 # one formal LoRA train via configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.yaml.
-# NOT authorized: Isaac (needs open-loop Pass).
+# Human (2026-07-24): authorized eval_gate_v2 → eval_gate_v3 execution-semantics
+# revision so Isaac readiness is gated on executed clip(raw,0,1) behavior, not
+# open-edge pre-clip raw magnitude. Historical v2 Hold is unchanged.
+# Human (2026-07-24): authorized bounded Isaac S4 (≤5 seeds) for portfolio-ready
+# evidence once an Isaac GPU host is available. Local host currently has no
+# NVIDIA driver; AutoDL DNS is down / is not an Isaac host. ran_isaac remains
+# false until a real bounded rollout lands.
 
 contract_version: smolvla_s3_recovery_decisions_v0
-status: phase3_5_openloop_v1_hold_eval_v2_proposed
-updated_at: "2026-07-23"
+status: phase4_s4_authorized_blocked_on_isaac_gpu_host
+updated_at: "2026-07-24"
 parent_release_id: smolvla_s3_abs_eef_rgb_v2_griptiming_lateclose
 
 authorized_to_train: true
@@ -16,7 +22,19 @@ authorized_train_config: configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.
 authorized_to_build_v3_release: true
 authorized_to_collect_v3_phaseaware50: true
 authorized_phase1_wrist_smoke: true
-authorized_isaac: false
+authorized_isaac: true
+authorized_isaac_scope: bounded_s4_max_5_seeds_portfolio_only
+authorized_isaac_checklist: docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md
+ran_isaac: false
+isaac_blockers:
+  - local_nvidia_driver_unavailable
+  - autodl_dns_unreachable
+  - autodl_not_isaac_host
+isaac_runtime_contract_implemented_cpu: true
+isaac_runtime_contract_evidence:
+  - training/smolvla_s3/runtime_s4.py
+  - tests/test_smolvla_s3_runtime_s4.py
+  - ../ros2-arm-teleoperation-suite/src/isaac_sim_adapter/isaac_sim_adapter/policy_control.py
 v3_release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
 v3_camera_variant: scene_only
 
@@ -210,9 +228,90 @@ gripper_range_clip_audit:
     retrospective_v1_reclassification_forbidden: true
     prospective_evaluation_required: true
     evaluator_v3_implemented: true
-    prospective_eval_run_authorized: false
+    prospective_eval_run_authorized: true
+    prospective_eval_run_executed: true
+    prospective_eval_run_id: openloop_recovery_v3_prospective_eval10_20260724T052300Z_retry1
+    prospective_eval_report_sha256: 7102c14042497ad502a6700bbc7bde79c8c7b9e81486acbc9d2ddc35733e4d8e
+    prospective_eval_decision: hold
+    prospective_eval_metrics:
+      num_episodes: 10
+      num_frames: 2673
+      ee_rmse_m: 0.025967761453333616
+      gripper_balanced_accuracy: 0.9931396967255146
+      close_timing_offset_frames_signed: -1.7
+      smoothness_ee_step_l2_p90_m: 0.02983534771757356
+      raw_gripper_oob_ratio: 0.4373363262252151
+      raw_gripper_oob_beyond_0_05_ratio: 0.01870557426112982
+      gripper_clip_adjustment_mae: 0.006957991735078046
+      gripper_clip_adjustment_max_abs: 0.2153458595275879
+      raw_gripper_range: [-0.06957733631134033, 1.215345859527588]
+      prospective_eval_eligible: true
+      full_episode_coverage: true
+    prospective_eval_pass_failures:
+      - gripper_oob_severity
+      - gripper_clip_max
+      - raw_gripper_max
     isaac_authorized: false
+  eval_gate_v3:
+    path: configs/smolvla_s3/eval_gate_v3.yaml
+    lock_path: configs/smolvla_s3/eval_gate_v3.lock.json
+    status: approved_frozen
+    approved_by: user_chat_2026-07-24_hard_constraints_revisable_for_isaac
+    approved_at_utc: "2026-07-24T06:25:00Z"
+    revision_kind: severity_semantics_execution_side_aware
+    historical_v2_decisions_unchanged: true
+    rationale: >
+      Executed gripper command is clip(raw, 0, 1). The v2 prospective Hold
+      failures were open-edge overshoot (43/50 beyond-eps frames with expert=1.0)
+      that clamp to the same fully-open command; classification and close-timing
+      invariants were already zero. Close-edge beyond-eps stays a Pass item at
+      ≤1%. Open-edge magnitude / clip max / raw max are diagnostics inside a
+      [-0.5, 1.5] sanity envelope (outside = No-Go). Fresh seeds 70-74 are
+      required because the v2 prospective 10 are now design-contaminated for v3.
+    gate_sha256: 37325a1fee3cce2e14361071d39f2a0a5b767044e25472114fcb8684c495d46f
+    thresholds_frozen: true
+    prospective_eval_collection_config: configs/smolvla_s3/prospective_eval10_v3.yaml
+    prospective_eval_run_authorized: true
+    prospective_eval_run_executed: true
+    prospective_eval_run_id: openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z
+    prospective_eval_report_sha256: e4e9985037ac5a59339aa7f1551117919809180166a406de24fd218d1f8bfb70
+    prospective_eval_decision: pass
+    prospective_eval_metrics:
+      num_episodes: 10
+      num_frames: 2593
+      ee_rmse_m: 0.0253369083666324
+      gripper_balanced_accuracy: 0.9942844469658416
+      close_timing_offset_frames_signed: -1.4
+      smoothness_ee_step_l2_p90_m: 0.029810560695489284
+      raw_gripper_oob_ratio: 0.43000385653682993
+      raw_gripper_oob_beyond_0_05_ratio: 0.017354415734670267
+      raw_gripper_oob_beyond_0_05_open_edge_ratio: 0.01349787890474354
+      raw_gripper_oob_beyond_0_05_close_edge_ratio: 0.0038565368299267257
+      gripper_clip_adjustment_mae: 0.00691963336295802
+      gripper_clip_adjustment_max_abs: 0.21992897987365723
+      raw_gripper_range: [-0.07464897632598877, 1.2199289798736572]
+      prospective_eval_eligible: true
+      full_episode_coverage: true
+    isaac_ready_candidate: true
+    isaac_authorized: true
+    isaac_authorized_at_utc: "2026-07-24T07:30:00Z"
+    isaac_authorization_scope: bounded_s4_max_5_seeds_portfolio_only
+    ran_isaac: false
+    isaac_authorization_note: >
+      User authorized the S4 checklist for portfolio-ready evidence. Local
+      NVIDIA driver is unavailable and AutoDL DNS is unreachable / not an
+      Isaac host, so ran_isaac remains false. CPU runtime contract
+      (chunk10/K5/clip) is implemented and unit-tested.
   evidence:
     - docs/SMOLVLA_S3_GRIPPER_RANGE_CLIP_AUDIT.md
     - runs/smolvla_s3/gripper_range_clip_audit_20260723/gripper_range_clip_audit.json
     - runs/smolvla_s3/gripper_range_clip_audit_20260723/v2_historical_reclassification_audit.json
+    - data/releases/smolvla_s3_recovery_v3_prospective_eval10_20260724/manifest.json
+    - runs/smolvla_s3/prospective_eval10_20260724/phaseaware_qa.json
+    - runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_20260724T052300Z_retry1/s3_open_loop_report.json
+    - configs/smolvla_s3/eval_gate_v3.yaml
+    - configs/smolvla_s3/eval_gate_v3.lock.json
+    - tests/test_smolvla_s3_eval_gate_v3.py
+    - runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json
+    - data/releases/smolvla_s3_recovery_v3_prospective_eval10_gate_v3_20260724b/manifest.json
+    - docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md

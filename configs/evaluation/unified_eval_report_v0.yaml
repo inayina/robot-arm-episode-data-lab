@@ -1,0 +1,62 @@
+# Unified evaluation report contract v0 (P1)
+# Midstream normalizer maps three backends onto one minimal envelope.
+# Does NOT authorize task success, Sim2Real, or seed expansion.
+#
+# Backends:
+#   - smolvla_open_loop: s3_open_loop_summary.json (+ optional s3_open_loop_report.json)
+#   - downstream_policy_runner: *benchmark_summary.json (PyBullet PolicyRunner)
+#   - isaac_s4_bounded: s4_gate.json (+ optional summary.json)
+#
+# failure_lane enum aligns with POLICY_ADAPTER_CONTRACT / policy_adapter_metadata:
+#   none | data_fail | interface_fail | behavior_tag | task_gt | system_fail
+
+contract_version: unified_eval_report_v0
+artifact_type: unified_eval_report
+bundle_artifact_type: smolvla_v3_eval_framework_bundle
+
+required_top_level:
+  - contract_version
+  - artifact_type
+  - evaluation_run_id
+  - backend_id
+  - claims_task_success
+  - claims_sim2real
+  - claims_online_autonomous_grasp
+  - failure_lane
+  - columns
+  - source
+  - non_claims
+
+claims_defaults:
+  claims_task_success: false
+  claims_sim2real: false
+  claims_online_autonomous_grasp: false
+
+failure_lane_enum:
+  - none
+  - data_fail
+  - interface_fail
+  - behavior_tag
+  - task_gt
+  - system_fail
+
+backend_ids:
+  - smolvla_open_loop
+  - downstream_policy_runner
+  - isaac_s4_bounded
+
+# Portfolio "one framework, three backends": nested columns, not new metrics.
+columns:
+  interface:
+    description: Checkpoint load, obs/action map, latency, health, policy interface Pass
+  behavior:
+    description: Offline grip timing / behavior tags; not runtime GT success
+  task:
+    description: Runtime GT reach/grasp/lift/outcome only when upstream GT exists
+  offline:
+    description: Open-loop EE/gripper metrics; never task success
+
+non_claims_note: >
+  Unified reports only remap existing evidence fields. Open-loop Pass,
+  PolicyRunner smoke completion, and Isaac interface Pass do not imply
+  task success or Sim2Real.

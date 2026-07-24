@@ -7,6 +7,7 @@
 **关联**：
 
 - 契约层：[`EVALUATION_CONTRACT.md`](EVALUATION_CONTRACT.md)（E0 run/episode/summary + Adapter metadata）
+- SmolVLA v3 主线专用执行清单：[`SMOLVLA_V3_EVAL_SOP.md`](SMOLVLA_V3_EVAL_SOP.md)（prospective → gate_v3 → 有界 S4 → 下游复用 → 统一信封 → 出图）
 - Policy Adapter：[`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md)
 - 单方块 Benchmark：[`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md)
 - VLA Gate V0：[`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)

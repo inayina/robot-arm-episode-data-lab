@@ -1,0 +1,196 @@
+# SmolVLA S3 Recovery execution-semantics open-loop gate (v3).
+#
+# Human-approved contract revision of eval_gate_v2, authorized in chat on
+# 2026-07-24 ("硬约束也不是不能改，只要最终能在ISAAC上实现就可以了").
+#
+# Revision rationale (see docs/SMOLVLA_S3_GRIPPER_RANGE_CLIP_AUDIT.md):
+# the executed gripper command is clip(raw, 0, 1). Open-edge overshoot
+# (raw > 1+eps where the expert command is 1.0 = fully open) clamps to a
+# command identical to the expert's, with zero classification change and
+# zero close-timing change — both of which remain hard No-Go invariants
+# here. v2 gated Pass on pre-clip raw magnitude on both edges, which is a
+# model-extrapolation diagnostic, not an execution-safety property. v3
+# keeps every execution-safety invariant from v2, keeps the contact-risk
+# close-edge bound, and demotes open-edge raw magnitude to report-only
+# diagnostics under a wide sanity envelope.
+#
+# This file does not reclassify any historical v2 report. The 2026-07-24
+# v2 prospective result remains Hold under v2. v3 applies prospectively
+# only, to fresh inference on episodes with zero overlap with train and
+# with the threshold-design refs below (which now include the 10 episodes
+# whose v2 result motivated this revision).
+
+contract_version: smolvla_s3_eval_gate_v3
+evaluator_contract_version: smolvla_s3_open_loop_evaluator_v3
+status: approved_frozen
+approved_at_utc: "2026-07-24T06:25:00Z"
+frozen_at_utc: "2026-07-24T06:25:00Z"
+approved_scope: execution_semantics_severity_revision_and_threshold_freeze
+approved_by: user_chat_2026-07-24_hard_constraints_revisable_for_isaac
+thresholds_frozen: true
+claims_task_success: false
+ran_isaac: false
+authorized_isaac: false
+
+parent_gate: configs/smolvla_s3/eval_gate_v2.yaml
+parent_gate_sha256: 31101fce204f6be6584635f52c6af4a88450412d39db0cf0bb60796d096daa0a
+revision_of: smolvla_s3_eval_gate_v2
+revision_kind: severity_semantics_execution_side_aware
+historical_v2_decisions_unchanged: true
+
+sampling_contract:
+  canonical_stride_frames: 1
+  canonical_max_frames_per_episode: 0
+  require_full_episode_for_pass: true
+  canonical_inference_mode: canonical_first_action
+  diagnostic_inference_mode: queued_diagnostic
+  canonical_executes_action_chunk_queue: false
+  queued_diagnostic_gate_eligible: false
+
+prospective_evaluation_contract:
+  manifest_contract_version: smolvla_s3_prospective_eval_manifest_v1
+  manifest_required_for_pass: true
+  require_gate_sha256_match: true
+  require_splits_sha256_match: true
+  require_manifest_created_after_gate_freeze: true
+  require_thresholds_frozen_before_evaluation: true
+  require_human_authorized_run: true
+  require_evaluation_refs_exact_match: true
+  require_zero_train_overlap: true
+  require_zero_threshold_design_overlap: true
+  forbid_saved_report_reclassification: true
+  threshold_design_reports:
+    - path: runs/smolvla_s3/openloop_recovery_v3_20260723T142240Z/s3_open_loop_report.json
+      sha256: caf22b9e2ccca7476cf39fea28afb0b2b354b24e1828e8d489a4fbc95fe7ccb0
+    - path: runs/smolvla_s3/openloop_recovery_v3_k5_20260723T151853Z_retry1/s3_open_loop_report.json
+      sha256: 6416bba69d5dc07fee6d598de3807afdcff9caafe77471dc091d3b9d485c2a74
+    # The v2 prospective result whose side-split motivated this revision.
+    # Its 10 episodes are therefore design-contaminated for v3 and are
+    # listed below; a v3 Pass requires a fresh eval-only episode set.
+    - path: runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_20260724T052300Z_retry1/s3_open_loop_report.json
+      sha256: 7102c14042497ad502a6700bbc7bde79c8c7b9e81486acbc9d2ddc35733e4d8e
+  threshold_design_episode_refs:
+    - e2_red_500hz_seed60_v3_P0_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed61_v3_P1_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed62_v3_P2_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed63_v3_P3_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000000
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000001
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000002
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000003
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000004
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000005
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000006
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000007
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000008
+    - e2_red_500hz_seed64_v3_P4_phaseaware10_20260723b/episode_000009
+    - e2_red_500hz_seed65_v3_prospective_P0_eval2_20260724/episode_000000
+    - e2_red_500hz_seed65_v3_prospective_P0_eval2_20260724/episode_000001
+    - e2_red_500hz_seed66_v3_prospective_P1_eval2_20260724/episode_000000
+    - e2_red_500hz_seed66_v3_prospective_P1_eval2_20260724/episode_000001
+    - e2_red_500hz_seed67_v3_prospective_P2_eval2_20260724/episode_000000
+    - e2_red_500hz_seed67_v3_prospective_P2_eval2_20260724/episode_000001
+    - e2_red_500hz_seed68_v3_prospective_P3_eval2_20260724/episode_000000
+    - e2_red_500hz_seed68_v3_prospective_P3_eval2_20260724/episode_000001
+    - e2_red_500hz_seed69_v3_prospective_P4_eval2_20260724/episode_000000
+    - e2_red_500hz_seed69_v3_prospective_P4_eval2_20260724/episode_000001
+
+gripper_contract:
+  physical_command_range: [0.0, 1.0]
+  closed_if_le: 0.5
+  close_debounce_source_frames: 3
+  gate_metric: gripper_balanced_accuracy
+  report_continuous_tolerance: 0.25
+  model_output_normalization: MEAN_STD
+  postprocessor_behavior: unnormalize_only_no_range_clamp
+  execution_adapter_behavior: clamp_to_physical_range
+
+baselines:
+  s2_report: evaluation/examples/smolvla_gate_s2_report.json
+  s2_ee_rmse_m: 0.2734163848429447
+  s2_gripper_accuracy: 0.0
+
+metrics_required:
+  - ee_position_rmse_m
+  - quaternion_angular_error_rad
+  - gripper_balanced_accuracy
+  - gripper_close_timing_error_frames
+  - action_smoothness_ee_step_l2_p90
+  - home_no_close_detected_rate
+  - temporal_metrics_gate_eligible
+  - raw_gripper_oob_ratio
+  - raw_gripper_oob_beyond_epsilon_ratio
+  - raw_gripper_oob_beyond_epsilon_open_edge_ratio
+  - raw_gripper_oob_beyond_epsilon_close_edge_ratio
+  - gripper_clip_adjustment_mae
+  - gripper_clip_adjustment_max_abs
+  - raw_gripper_min
+  - raw_gripper_max
+  - gripper_clip_classification_change_ratio
+  - gripper_clip_close_timing_change_frames_max_abs
+  - mapped_gripper_command_in_range
+  - mapped_gripper_matches_clip_max_abs
+  - prospective_eval_eligible
+
+gripper_range_severity_contract:
+  semantics: execution_side_aware_v3
+  epsilon: 0.05
+  thresholds:
+    # Pass items (execution/contact risk):
+    #  - close-edge bound inherits the frozen 1% from v2, restricted to the
+    #    side where clamping meets the object (raw < -epsilon).
+    #  - mean clip magnitude bound inherited unchanged from v2.
+    close_edge_oob_beyond_epsilon_ratio_max: 0.01
+    clip_adjustment_mae_max: 0.01
+    # No-Go sanity envelope: structural runaway detection, not tuned to data.
+    raw_gripper_sanity_min: -0.5
+    raw_gripper_sanity_max: 1.5
+    # Execution-clip invariants inherited unchanged from v2 (No-Go).
+    clip_classification_change_ratio_max: 0.0
+    clip_close_timing_change_frames_max: 0
+    mapped_gripper_matches_clip_max_abs_max: 0.0000001
+  diagnostics_report_only:
+    - raw_gripper_oob_ratio
+    - raw_gripper_oob_beyond_epsilon_ratio
+    - raw_gripper_oob_beyond_epsilon_open_edge_ratio
+    - gripper_clip_adjustment_max_abs
+    - raw_gripper_min
+    - raw_gripper_max
+
+thresholds:
+  pass:
+    ee_position_rmse_m_max: 0.100
+    relative_ee_improvement_vs_s2_min: 0.50
+    quaternion_angular_error_rad_max: 0.35
+    gripper_balanced_accuracy_min: 0.70
+    gripper_close_timing_error_frames_max: 5
+    action_smoothness_ee_step_l2_p90_max: 0.05
+    home_no_close_detected_max_rate: 0.20
+    require_consistent_stage_timing: true
+  hold:
+    ee_position_rmse_m_max: 0.205
+    relative_ee_improvement_vs_s2_min: 0.25
+    quaternion_angular_error_rad_max: 0.70
+    gripper_balanced_accuracy_min: 0.40
+    home_no_close_detected_max_rate: 0.50
+    max_data_fix_retries: 1
+  no_go:
+    ee_position_rmse_m_min: 0.246
+    gripper_balanced_accuracy_max: 0.15
+    home_no_close_detected_min_rate: 0.80
+    near_static_ee_step_l2_p90_max: 0.002
+    nan_or_inf_any: true
+    mapped_command_out_of_range_any: true
+    mapped_command_not_equal_clip_any: true
+    clip_classification_change_any: true
+    clip_close_timing_change_any: true
+    raw_gripper_outside_sanity_envelope_any: true
+
+decision_rules:
+  - "Executed command is clip(raw, 0, 1); severity Pass items gate the contact-risk close edge and mean clip magnitude only."
+  - "Open-edge raw overshoot is report-only diagnostics inside the [-0.5, 1.5] sanity envelope; outside the envelope is No-Go."
+  - "Mapped command range/mismatch or clip classification/timing changes remain No-Go."
+  - "Missing/non-finite severity metrics fail closed."
+  - "Pass requires canonical stride=1, full episodes, and an eligible prospective manifest with zero train/design overlap (design refs include the v2 prospective 10)."
+  - "Queued diagnostics and saved historical reports cannot Pass; v2 historical decisions are not reclassified."
+  - "A v3 open-loop Pass is only an Isaac-readiness candidate; Isaac still needs separate human approval."

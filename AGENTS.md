@@ -288,7 +288,7 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 - 2026-07-23 Phase 2 的 scene-only 50 条采集与 immutable `smolvla_s3_panda_abs_eef_scene_v3_phaseaware50` release 已单独获人工批准；该次批准当时不扩展到 wrist、额外 data-fix、正式训练、AutoDL 计费或 Isaac；后续正式训练由用户另行明确批准。
 - 2026-07-23 Recovery 本地入口修复已完成：train-only 物化可写 `state[15]`；训练配置显式覆盖 `state15+camera1/action8`，把 chunk10 与 `n_action_steps=5` 解耦；checkpoint audit 同时核验 policy/preprocessor state、camera、action、K 与 PEFT；evaluator v2 显式分开 `canonical_first_action` 与 `queued_diagnostic`（后者消费队列但禁止 canonical Pass），并记录 latency p50/p95。Recovery 唯一配置且提供 `camera1`；按 LeRobot 0.5.1 `prepare_images` 的 missing-feature 语义，`empty_cameras=0`、预期追加空图为 0，已由本地契约测试固定。结构上已排除空图补位，但 full-forward latency、真实 Recovery checkpoint 与异步部署 runtime **仍未验证/未实现**；这不扩大已批准的 Phase 2 范围，也不授权正式训练、AutoDL 计费或 Isaac。
 - 2026-07-23 经人工批准只跑无训练 probe 后，AutoDL RTX 4090D Recovery real preflight **Pass**：完整 SmolVLA 权重、32 steps、官方 PEFT 正则解析 74 个 trainable parameter names、LoRA 参数更新和 adapter 保存成功、无 OOM、峰值约 `939.99 MiB`、约 `25.17 ms/step`。该 probe 明确 `policy_forward_executed=false`、`inference_latency_measured=false`，不是推理延迟结论。Recovery draft 已把实际栈（含 `peft==0.19.1`）冻结为 preflight-qualified versions，并新增训练前依赖匹配硬门禁；旧 report 发生在该合同修订前，仅保留为 live-resolve 证据，修订后的配置需重新跑获批的无训练 preflight，且 report 必须含 `dependency_version_audit.passed=true`。该 probe 本身不授权正式训练或 Isaac；后续训练由用户另批。证据：`runs/smolvla_s3/recovery_preflight_nont_20260723T123500Z/preflight_report.json`。
-- 2026-07-23 经后续人工批准，Recovery v3 使用 train-only 36 episodes 完成 5,705-step LoRA，checkpoint audit Pass；14 条 / 3,413 帧 canonical first-action open-loop 在冻结的 `eval_gate_v1` 下仍为 **Hold**，唯一失败项是 `sat`：EE `0.037900 m`、gripper balanced accuracy `0.993587`、close timing error `2.142857 frames`、smoothness p90 `0.026814 m`、raw gripper OOB `33.6068%`。K5 queued diagnostic 仍为 Hold 且不可获 canonical Pass。本地 gripper range/clip/normalization 审计 Pass：checkpoint/release `MEAN_STD` 一致；postprocessor 只反归一化，执行 adapter clamp `[0,1]`；canonical 超边界超过 `0.05` 的比例为 `0.7032%`、clip MAE `0.004358`，clip 对开关分类与 3-frame 首次关爪时序均零变化。用户已批准独立 severity-aware `eval_gate_v2` 设计；`configs/smolvla_s3/eval_gate_v2.yaml` 已冻结（SHA256 `31101fce...daa0a`），evaluator v3 与契约测试已实现。v3 Pass 强制校验 gate/splits SHA、精确 eval refs、零 train/design overlap、canonical 全帧采样和 run-specific 人工授权 manifest；旧 Recovery 报告在 v2 下仍为 Hold（`prospective_eligibility`），不能追溯改判。尚未运行 prospective GPU evaluation，未授权 Isaac。证据：`docs/SMOLVLA_S3_GRIPPER_RANGE_CLIP_AUDIT.md`、`configs/smolvla_s3/eval_gate_v2.lock.json`、`runs/smolvla_s3/gripper_range_clip_audit_20260723/v2_historical_reclassification_audit.json`。
+- 2026-07-24 Recovery v3：`eval_gate_v2` prospective 仍为历史 **Hold**（开爪边严重度）。同日用户批准硬约束可修订：冻结执行语义 `eval_gate_v3`；新采 seeds 70–74 / 2,593 帧 eval-only；RTX 4090 D canonical prospective **Pass**（EE `0.0253 m`、grip BA `0.9943`、close-edge beyond-ε `0.386%`、clip MAE `0.00692`、分类/时序 0；开爪边过冲仅 diagnostic）。有界 Isaac S4（≤5 seeds）已在本机 RTX PRO 500 跑完：`ran_isaac=true`；policy interface 5/5；GT reach 3/5、grasp 1/5、lift **0/5** → **Hold**（不扩种子）。Online runner：上游 `scripts/run_isaac_smolvla_s4.sh`。证据：`configs/smolvla_s3/eval_gate_v3.yaml`、`runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json`、`evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json`、`docs/portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md`。
 - 2026-07-23 人工例外批准的 Round-2 已完整收口：upstream seed56/57 各 `10/10 accepted`，联合数据 QA Pass；独立 v2 release validate Pass（20 episodes / 7,765 frames）；RTX 4090 D 真实 GPU preflight Pass；正式 1000-step LoRA 与 checkpoint config audit 全项 Pass（adapter SHA256 `c9b93c4d994539c240b795242663f3758a578343ee245dfd20697180b129fe6d`）；全帧 open-loop 结果为 Hold。事后审计确认训练根含全部 20 episodes，未按 release 的 12/4/4 split 过滤，因此 validation/benchmark 不能称真正 held-out/OOD；在训练见过这些 episode 的条件下仍 Hold。训练产物有效，但 late-close data-fix 没有修复策略时序，未过 Pass，**不得进入 Isaac**。任何新实验必须先按 `docs/SMOLVLA_S3_RECOVERY_IMPLEMENTATION_PLAN.md` 修复 split、policy input 与 PEFT target，且需重新人工批准。
 
 权威路线表：中游 `docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`「VLA 候选路线状态」。
@@ -356,23 +356,13 @@ graph TD
 
 #### 9.2.2 中游：数据转换与模型训练
 * **路径**：`~/robot-sim-lab/robot-arm-episode-data-lab` （Conda 虚拟环境运行）
-* **当前接力点（2026-07-23）**：SmolVLA **S3 Hold**（见 `docs/SMOLVLA_GATE_S3_READY.md`、`docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`「VLA 候选路线状态」）。
-  SmolVLA 为**唯一活动预训练候选**；v1 griptiming + α64 LoRA 已训（checkpoint 审计通过）；canonical 全帧 open-loop **Hold**（EE / grip 已过 Pass 线；timing / smooth / sat 未过 Pass）；索引链已排除；`max_data_fix_retries: 1` **已用尽**；**默认停止**。
-  Recovery Phase 0 已冻结：`observation.state[15]` + 官方精确 PEFT 正则；Phase 1 wrist 已完成并 **Hold**（原 4 条目标不可见；翻转视轴 P0 仍失败，P1 跳过），v3 相机冻结为 **scene-only**。见 `configs/smolvla_s3/recovery_decisions.yaml`。
-  LingBot-VLA 2.0 执行路线 **CLOSED / ARCHIVED**（审计保留：`docs/VLA_GATE_V0_COMPATIBILITY_AUDIT.md`）。
-  ACT 为 frozen diagnostic baseline（`docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md`）。
-  接手 AI 必须从 `docs/SMOLVLA_GATE_S3_READY.md` 与
-  `docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`「VLA 候选路线状态」继续。
-  **硬禁止（防误推进）**：
-  - 不得自动恢复 LingBot Gate V1；
-  - 不得下载 LingBot 6B 权重；
-  - 不得把 55-D 通道切片视为已验证的 Panda 执行映射；
-  - 不得因 SmolVLA S2 接口 Pass、S3 Ready、S3 Hold 或历史 No-Go 而进入 Isaac / 跳过门禁；
-  - SmolVLA S3 任何继续修复需要显式人工批准；data-fix 配额已用尽，不得自动开启第二次修复；若人工例外批准，只允许围绕关爪时序、输出饱和与平滑度做定向数据/标签 A/B，不得泛化扩采或盲扫超参；未过 open-loop Pass 不得进 S4；
-  - ACT 保持冻结诊断基线，不继续盲目训练 / 不启动完整 E4；
-  - 不得从零重跑、混入旧 1000 Hz 数据、盲扫 stage weight；
-  - 不得用 ACT `ee_delta` release 作为 VLA S3 训练标签；
-  - 不得把首次漂移 checkpoint 或当前 Hold 计作 canonical S3 Pass / 任务成功。
+* **当前接力点（2026-07-24）**：SmolVLA Recovery v3 **open-loop Pass**（`eval_gate_v3`）；有界 Isaac S4 seeds 1–5 **已跑**（`ran_isaac=true`；lift 0/5 → Hold；见 `docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md`、`evidence/smolvla_s4_bounded5_20260724T203700Z/`）。
+ SmolVLA 为**唯一活动预训练候选**；v1/v2 全帧 open-loop 为历史 Hold；Recovery 修复 train-only/`state[15]`/scene/PEFT 后 prospective **Pass**。
+ **硬禁止（防误推进）**：
+ - 不得把 open-loop Pass、S4 interface Pass 或 `ran_isaac=true` 写成任务成功 / Sim2Real / 真机；
+ - 不得因 lift 0/5 自动扩种子 / 重训 / 进真机；
+ - 不得自动恢复 LingBot Gate V1 / 下载 6B 权重；
+ - ACT 保持冻结诊断基线。
 * **S3 本地入口**：
   ```bash
   ./scripts/run_smolvla_s3_preflight.sh          # 默认 mock-preflight

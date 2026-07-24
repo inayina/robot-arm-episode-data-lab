@@ -35,6 +35,29 @@ def _hysteresis_edges(
     return closes, reopens
 
 
+def _close_ramp_frames(
+    values: list[float], *, ramp_start_lt: float = 0.95, closed_le: float = 0.4
+) -> int | None:
+    """Frames from the first command leaving fully open to the first closed command."""
+    ramp_start = next(
+        (i for i, value in enumerate(values) if float(value) < ramp_start_lt),
+        None,
+    )
+    if ramp_start is None:
+        return None
+    close_idx = next(
+        (
+            i
+            for i, value in enumerate(values[ramp_start:], start=ramp_start)
+            if float(value) <= closed_le
+        ),
+        None,
+    )
+    if close_idx is None:
+        return None
+    return int(close_idx - ramp_start)
+
+
 def audit_episode(parquet: Path, thresholds: dict[str, Any]) -> dict[str, Any]:
     table = pq.read_table(parquet)
     action = np.asarray(
@@ -43,12 +66,7 @@ def audit_episode(parquet: Path, thresholds: dict[str, Any]) -> dict[str, Any]:
     )
     grips = action[:, 7].tolist()
     closes, reopens = _hysteresis_edges(grips)
-    # Ramp length: frames from first <0.95 open to first sustained closed.
-    open_idx = next((i for i, g in enumerate(grips) if g >= 0.95), None)
-    close_idx = next((i for i, g in enumerate(grips) if g <= 0.4), None)
-    ramp = None
-    if open_idx is not None and close_idx is not None and close_idx > open_idx:
-        ramp = int(close_idx - open_idx)
+    ramp = _close_ramp_frames(grips)
     steps = np.linalg.norm(np.diff(action[:, :3], axis=0), axis=1) if len(action) > 1 else np.array([0.0])
     p90 = float(np.percentile(steps, 90))
     failures: list[str] = []

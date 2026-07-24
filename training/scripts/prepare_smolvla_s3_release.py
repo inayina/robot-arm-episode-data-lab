@@ -325,6 +325,18 @@ def _assign_splits_phaseaware50(
     return {"train": train, "validation": val, "benchmark": bench}
 
 
+def _assign_splits_prospective_eval_only(
+    episodes: list[dict[str, Any]],
+) -> dict[str, list[str]]:
+    """Keep a prospective acquisition completely outside train/validation."""
+    episode_ids = sorted(e["episode_id"] for e in episodes)
+    if not episode_ids:
+        raise ValueError("prospective_eval_only requires at least one episode")
+    if len(episode_ids) != len(set(episode_ids)):
+        raise ValueError("prospective_eval_only duplicate episode ids")
+    return {"train": [], "validation": [], "benchmark": episode_ids}
+
+
 def _norm_stats(
     episodes: list[dict[str, Any]],
     train_ids: set[str],
@@ -433,9 +445,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--split-policy",
-        choices=("legacy", "phaseaware50"),
+        choices=("legacy", "phaseaware50", "prospective_eval_only"),
         default="legacy",
-        help="legacy=per-source 60/20/20 packs; phaseaware50=36/4/10 by P0–P4.",
+        help=(
+            "legacy=per-source 60/20/20 packs; phaseaware50=36/4/10 by P0–P4; "
+            "prospective_eval_only=empty train/validation and all episodes benchmark."
+        ),
     )
     parser.add_argument(
         "--compose-state15",
@@ -452,6 +467,15 @@ def main() -> int:
         "--cameras",
         default="scene",
         help="Comma-separated camera keys for manifest (default: scene).",
+    )
+    parser.add_argument(
+        "--normalization-source-release",
+        type=Path,
+        default=None,
+        help=(
+            "Frozen training release whose norm_stats.json is copied for "
+            "prospective_eval_only. Required for that split policy."
+        ),
     )
     args = parser.parse_args()
     sources = args.source or DEFAULT_SOURCES
@@ -483,10 +507,41 @@ def main() -> int:
         splits = _assign_splits_phaseaware50(
             episodes, position_by_source=position_by_source
         )
+    elif args.split_policy == "prospective_eval_only":
+        splits = _assign_splits_prospective_eval_only(episodes)
     else:
         splits = _assign_splits(episodes)
     train_ids = set(splits["train"])
-    norms = _norm_stats(episodes, train_ids, compose_state15=compose_state15)
+    normalization_source: dict[str, Any] | None = None
+    if args.split_policy == "prospective_eval_only":
+        source_release = args.normalization_source_release
+        if source_release is None:
+            raise SystemExit(
+                "--normalization-source-release is required for prospective_eval_only"
+            )
+        source_release = source_release.resolve()
+        source_norms = source_release / "norm_stats.json"
+        source_manifest = source_release / "manifest.json"
+        if not source_norms.is_file() or not source_manifest.is_file():
+            raise SystemExit(
+                "normalization source release must contain norm_stats.json and manifest.json"
+            )
+        norms = json.loads(source_norms.read_text(encoding="utf-8"))
+        if norms.get("computed_on_split") != "train":
+            raise SystemExit("normalization source must be computed on its train split")
+        if compose_state15 and "state15" not in norms:
+            raise SystemExit("normalization source is missing state15 statistics")
+        source_manifest_payload = json.loads(
+            source_manifest.read_text(encoding="utf-8")
+        )
+        normalization_source = {
+            "release_id": source_manifest_payload.get("release_id"),
+            "release_path": str(source_release),
+            "manifest_sha256": _sha256_file(source_manifest),
+            "norm_stats_sha256": _sha256_file(source_norms),
+        }
+    else:
+        norms = _norm_stats(episodes, train_ids, compose_state15=compose_state15)
 
     mid_head = _git_head(ROOT)
     up_head = _git_head(Path("/home/ina/dev/ros2-arm-teleoperation-suite"))
@@ -511,6 +566,12 @@ def main() -> int:
             "Release is metadata+hash freeze over upstream raw LeRobot v2.1 trees.",
             "Videos/parquet remain at source paths; AutoDL must sync sources by hash.",
             "Does not rewrite upstream or ACT ee_delta releases.",
+            (
+                "Prospective eval-only release reuses frozen training normalization; "
+                "evaluation episodes do not contribute statistics."
+                if args.split_policy == "prospective_eval_only"
+                else "Normalization statistics are computed on this release's train split."
+            ),
         ],
     }
     if not validation["checks"]["gripper_cmd_in_01"]:
@@ -642,6 +703,7 @@ def main() -> int:
             "valid_mask": "all-true for accepted episodes",
         },
         "split_policy": args.split_policy,
+        "normalization_source": normalization_source,
         "cameras": cameras,
         "state_contract": state15_contract_dict() if compose_state15 else None,
         "compose_state15": compose_state15,

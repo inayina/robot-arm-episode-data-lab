@@ -16,6 +16,10 @@ import numpy as np
 
 EVALUATOR_CONTRACT_VERSION = "smolvla_s3_open_loop_evaluator_v3"
 GATE_CONTRACT_VERSION = "smolvla_s3_eval_gate_v2"
+GATE_CONTRACT_VERSION_V3 = "smolvla_s3_eval_gate_v3"
+SEVERITY_GATE_CONTRACT_VERSIONS = frozenset(
+    {GATE_CONTRACT_VERSION, GATE_CONTRACT_VERSION_V3}
+)
 PROSPECTIVE_MANIFEST_CONTRACT_VERSION = "smolvla_s3_prospective_eval_manifest_v1"
 
 
@@ -96,6 +100,12 @@ def compute_gripper_severity_metrics(
         "raw_gripper_oob_beyond_epsilon_ratio": float(
             np.mean((raw < -epsilon) | (raw > 1.0 + epsilon))
         ),
+        "raw_gripper_oob_beyond_epsilon_open_edge_ratio": float(
+            np.mean(raw > 1.0 + epsilon)
+        ),
+        "raw_gripper_oob_beyond_epsilon_close_edge_ratio": float(
+            np.mean(raw < -epsilon)
+        ),
         "gripper_clip_adjustment_mae": float(np.mean(np.abs(adjustment))),
         "gripper_clip_adjustment_max_abs": float(np.max(np.abs(adjustment))),
         "raw_gripper_min": float(np.min(raw)),
@@ -146,7 +156,7 @@ def validate_prospective_context(
             "threshold_design_episode_refs", []
         )
     )
-    if gate.get("contract_version") != GATE_CONTRACT_VERSION:
+    if gate.get("contract_version") not in SEVERITY_GATE_CONTRACT_VERSIONS:
         errors.append("gate_contract_version")
     if gate.get("status") != "approved_frozen":
         errors.append("gate_not_approved_frozen")
@@ -219,7 +229,10 @@ def decide_gate_v3(
     s2_ee: float,
     prospective_context: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Apply the frozen v2 gate. Pass requires prospective eligibility."""
+    """Apply a frozen severity gate (v2 or v3 execution-semantics).
+
+    Pass requires prospective eligibility in both contract versions.
+    """
     if not metrics:
         return {
             "gate_decision": "no_go",
@@ -273,6 +286,9 @@ def decide_gate_v3(
     if smooth <= float(no_go["near_static_ee_step_l2_p90_max"]):
         reasons.append("near_static_ee")
     severity = gate["gripper_range_severity_contract"]["thresholds"]
+    execution_side_aware = (
+        gate.get("contract_version") == GATE_CONTRACT_VERSION_V3
+    )
     if metrics["mapped_gripper_command_in_range"] is not True:
         reasons.append("mapped_gripper_out_of_range")
     if float(metrics["mapped_gripper_matches_clip_max_abs"]) > float(
@@ -283,6 +299,13 @@ def decide_gate_v3(
         reasons.append("clip_classification_change")
     if int(metrics["gripper_clip_close_timing_change_frames_max_abs"]) > 0:
         reasons.append("clip_close_timing_change")
+    if execution_side_aware and (
+        float(metrics["raw_gripper_min"])
+        < float(severity["raw_gripper_sanity_min"])
+        or float(metrics["raw_gripper_max"])
+        > float(severity["raw_gripper_sanity_max"])
+    ):
+        reasons.append("raw_gripper_outside_sanity_envelope")
     if reasons:
         return {
             "gate_decision": "no_go",
@@ -309,22 +332,36 @@ def decide_gate_v3(
         failures.append("hnc")
     if metrics["temporal_metrics_gate_eligible"] is not True:
         failures.append("temporal_coverage")
-    if float(metrics["raw_gripper_oob_beyond_epsilon_ratio"]) > float(
-        severity["oob_beyond_epsilon_ratio_max"]
-    ):
-        failures.append("gripper_oob_severity")
-    if float(metrics["gripper_clip_adjustment_mae"]) > float(
-        severity["clip_adjustment_mae_max"]
-    ):
-        failures.append("gripper_clip_mae")
-    if float(metrics["gripper_clip_adjustment_max_abs"]) > float(
-        severity["clip_adjustment_max_abs_max"]
-    ):
-        failures.append("gripper_clip_max")
-    if float(metrics["raw_gripper_min"]) < float(severity["raw_gripper_min"]):
-        failures.append("raw_gripper_min")
-    if float(metrics["raw_gripper_max"]) > float(severity["raw_gripper_max"]):
-        failures.append("raw_gripper_max")
+    if execution_side_aware:
+        # v3 execution semantics: the executed command is clip(raw, 0, 1),
+        # so Pass gates the contact-risk close edge and mean clip magnitude.
+        # Open-edge raw overshoot is diagnostics-only inside the sanity
+        # envelope enforced above as No-Go.
+        if float(
+            metrics["raw_gripper_oob_beyond_epsilon_close_edge_ratio"]
+        ) > float(severity["close_edge_oob_beyond_epsilon_ratio_max"]):
+            failures.append("gripper_close_edge_oob")
+        if float(metrics["gripper_clip_adjustment_mae"]) > float(
+            severity["clip_adjustment_mae_max"]
+        ):
+            failures.append("gripper_clip_mae")
+    else:
+        if float(metrics["raw_gripper_oob_beyond_epsilon_ratio"]) > float(
+            severity["oob_beyond_epsilon_ratio_max"]
+        ):
+            failures.append("gripper_oob_severity")
+        if float(metrics["gripper_clip_adjustment_mae"]) > float(
+            severity["clip_adjustment_mae_max"]
+        ):
+            failures.append("gripper_clip_mae")
+        if float(metrics["gripper_clip_adjustment_max_abs"]) > float(
+            severity["clip_adjustment_max_abs_max"]
+        ):
+            failures.append("gripper_clip_max")
+        if float(metrics["raw_gripper_min"]) < float(severity["raw_gripper_min"]):
+            failures.append("raw_gripper_min")
+        if float(metrics["raw_gripper_max"]) > float(severity["raw_gripper_max"]):
+            failures.append("raw_gripper_max")
     prospective_eligible = bool(
         prospective_context and prospective_context.get("eligible")
     )
@@ -333,7 +370,11 @@ def decide_gate_v3(
     if not failures:
         return {
             "gate_decision": "pass",
-            "reasons": ["all_frozen_v2_thresholds_and_prospective_contract"],
+            "reasons": [
+                "all_frozen_v3_execution_semantics_thresholds_and_prospective_contract"
+                if execution_side_aware
+                else "all_frozen_v2_thresholds_and_prospective_contract"
+            ],
             "relative_ee_improvement_vs_s2": rel,
             "pass_failures": [],
             "isaac_ready_candidate": True,
