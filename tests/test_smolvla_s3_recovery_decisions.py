@@ -81,7 +81,8 @@ def test_recovery_decisions_freeze_state15_and_peft_regex() -> None:
     )
     assert cfg["authorized_to_build_v3_release"] is True
     assert cfg["authorized_to_collect_v3_phaseaware50"] is True
-    assert cfg["authorized_isaac"] is False
+    assert cfg["authorized_isaac"] is True
+    assert cfg["authorized_isaac_scope"] == "bounded_s4_max_5_seeds_portfolio_only"
     assert cfg["v3_release_id"] == "smolvla_s3_panda_abs_eef_scene_v3_phaseaware50"
     assert cfg["authorized_phase1_wrist_smoke"] is True
     assert cfg["peft"]["full_training_modules"] == []
@@ -95,6 +96,35 @@ def test_recovery_decisions_freeze_state15_and_peft_regex() -> None:
     assert inference["expected_empty_cameras_appended"] == 0
     assert inference["queued_diagnostic_gate_eligible"] is False
     assert inference["async_double_buffer_runtime_implemented"] is False
+    assert inference["async_double_buffer_offline_bench_measured"] is True
+    assert inference["async_double_buffer_online_wired"] is False
+    assert Path(ROOT / inference["async_double_buffer_offline_bench_run"]).is_dir()
+
+
+def test_bounded_s4_record_matches_authoritative_gate_and_stays_non_claiming() -> None:
+    """The executed bounded-S4 record must track the authoritative gate JSON."""
+    cfg = yaml.safe_load(DECISIONS.read_text(encoding="utf-8"))
+    assert cfg["ran_isaac"] is True
+    executed = cfg["bounded_s4_executed"]
+    gate_path = ROOT / executed["authoritative_run"] / "s4_gate.json"
+    gate = json.loads(gate_path.read_text(encoding="utf-8"))
+
+    assert gate["ran_isaac"] is True
+    assert gate["gate_pass"] is executed["gate_pass"] is False
+    assert gate["lift"] == executed["lift"] == 0
+    assert gate["seeds_planned"] == executed["seeds"] == 5
+    assert gate["claims_task_success"] is False
+    assert gate["claims_sim2real"] is False
+
+    # Hold must never be laundered into approval for more seeds or another train.
+    assert executed["authorizes_seed_expansion"] is False
+    assert executed["authorizes_retrain"] is False
+
+    # Superseded dark-scene runs stay on record as history, not as canonical.
+    labels = {h["label"] for h in executed["historical_runs"]}
+    assert "first_round_dark_scene_superseded" in labels
+    for hist in executed["historical_runs"]:
+        assert (ROOT / hist["path"]).is_dir()
 
 
 def test_recovery_inference_contract_is_chunk10_k5_scene_only() -> None:

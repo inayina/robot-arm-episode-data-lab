@@ -7,6 +7,12 @@
 
 面试和作品集展示优先看 **P0 文档**；Legacy PyBullet/KUKA 材料仅用于理解历史实现，不代表 Panda 当前主线。
 
+**收口入口（2026-07-25）**：项目最终结论与定位见
+[portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md)，
+分层失败归因见 [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md)，
+后续路线（P1/P2 仅登记不执行）见 [FUTURE_WORK_ROADMAP.md](FUTURE_WORK_ROADMAP.md)。
+诚实边界：open-loop Pass、interface Pass、`ran_isaac=true` 都**不是**任务成功、不是 Sim2Real、不是真机。
+
 ## 日常开发（优先看这里）
 
 | 文档 | 用途 |
@@ -20,6 +26,9 @@
 | [EVALUATION_CONTRACT.md](EVALUATION_CONTRACT.md) | **P0** E0 run/episode/summary + Policy Adapter metadata 契约、六层指标、ownership |
 | [POLICY_ADAPTER_CONTRACT.md](POLICY_ADAPTER_CONTRACT.md) | **P0** 模型无关 Policy Adapter 方法集与接入映射（契约冻结；运行时 ABC 待迭代） |
 | [POLICY_ADAPTER_QUICKSTART.md](POLICY_ADAPTER_QUICKSTART.md) | **P0** Policy Adapter / 注册表 / Benchmark 三切片一页速查 |
+| [POLICY_RUNTIME_INTEGRATION_SPEC.md](POLICY_RUNTIME_INTEGRATION_SPEC.md) | **M0–M6 implementation complete** M6 mock-policy ROS wiring Pass；SmolVLA authoritative 仍未切流 |
+| [POLICY_RUNTIME_HOC_IMPLEMENTATION_ROADMAP.md](POLICY_RUNTIME_HOC_IMPLEMENTATION_ROADMAP.md) | **M0–M6 implementation complete** QoS、R2/R3、HOC 四泳道与 trace bundle 已做有界接线实测 |
+| [portfolio/POLICY_RUNTIME_M6_WIRING_RESULTS.md](portfolio/POLICY_RUNTIME_M6_WIRING_RESULTS.md) | M6 运行拓扑、验收数字、竞态修复和不可升级结论 |
 | [SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md) | **P0** 单方块受控泛化 Benchmark 规范（不跑完整 E4） |
 | [VLA_GATE_V0_COMPATIBILITY_AUDIT.md](VLA_GATE_V0_COMPATIBILITY_AUDIT.md) | **Archived** LingBot-VLA 2.0 Gate V0 兼容性审计（路线 Closed；文档保留） |
 | [VLA_GATE_V05_PANDA_ACTION_CONTRACT.md](VLA_GATE_V05_PANDA_ACTION_CONTRACT.md) | **P0** 模型无关 absolute EEF / channel / execution adapter 契约（LingBot 审计触发） |
@@ -27,7 +36,15 @@
 | [SMOLVLA_GATE_S0_COMPATIBILITY_AUDIT.md](SMOLVLA_GATE_S0_COMPATIBILITY_AUDIT.md) | **P0** SmolVLA Gate S0 只读审计与门禁设计 |
 | [SMOLVLA_GATE_S1_OFFICIAL_REPRO.md](SMOLVLA_GATE_S1_OFFICIAL_REPRO.md) | SmolVLA Gate S1 官方推理复现 |
 | [SMOLVLA_GATE_S2_OPEN_LOOP.md](SMOLVLA_GATE_S2_OPEN_LOOP.md) | SmolVLA Gate S2 Panda open-loop |
-| [SMOLVLA_GATE_S3_READY.md](SMOLVLA_GATE_S3_READY.md) | **P0** SmolVLA S3 Ready（本地冻结） |
+| [SMOLVLA_GATE_S3_READY.md](SMOLVLA_GATE_S3_READY.md) | **Historical / Superseded** SmolVLA S3 v1 本地冻结与 Hold（已被 Recovery v3 取代；文档保留） |
+| [SMOLVLA_S3_RECOVERY_IMPLEMENTATION_PLAN.md](SMOLVLA_S3_RECOVERY_IMPLEMENTATION_PLAN.md) | **P0** Recovery 实施计划（train-only split / `state[15]` / PEFT 修复） |
+| [SMOLVLA_V3_EVAL_SOP.md](SMOLVLA_V3_EVAL_SOP.md) | **P0** Recovery v3 全链评测 SOP（prospective → gate_v3 → 有界 S4 → 下游 → 信封 → 出图） |
+| [SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md](SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md) | **P1-0** clean 全帧 / K5 / 扰动锚点+close 窗口；禁 H=5·H=10 |
+| [portfolio/OPENLOOP_PERTURBATION_RESULTS.md](portfolio/OPENLOOP_PERTURBATION_RESULTS.md) | **已执行** 2026-07-25 1080× nuisance 诊断结果（非 Gate） |
+| [portfolio/QUEUE_RUNTIME_BENCH_RESULTS.md](portfolio/QUEUE_RUNTIME_BENCH_RESULTS.md) | **已执行** P1-1 sync vs async queue 时序（非 Isaac / 非 Gate） |
+| [SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md](SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md) | **P0** 有界 Isaac S4 运行清单与批准勾选（已执行；lift 0/5 → Hold） |
+| [SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md](SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md) | **P0** S4 lift 0/5 假设矩阵、遥测修订与修光后复测 |
+| [FUTURE_WORK_ROADMAP.md](FUTURE_WORK_ROADMAP.md) | **P0** P0/P1/P2 登记表与执行闸门（P1/P2 不执行） |
 | [SMOLVLA_S3_AUTODL_RUNBOOK.md](SMOLVLA_S3_AUTODL_RUNBOOK.md) | **P0** AutoDL S3 执行顺序 |
 | [SMOLVLA_GATE_S1_OFFICIAL_REPRO.md](SMOLVLA_GATE_S1_OFFICIAL_REPRO.md) | **P0** Gate S1 官方推理复现 |
 | [SMOLVLA_GATE_S2_OPEN_LOOP.md](SMOLVLA_GATE_S2_OPEN_LOOP.md) | **P0** Gate S2 Hold：接口 Pass / base zero-shot absolute-EEF No-Go |
@@ -82,8 +99,12 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 
 | 文档 | 用途 |
 |------|------|
+| [portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md) | **P0 收口** 项目定位、六层分栏、Pass/Hold/No-Go 全表、诚实边界 |
+| [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md) | **P0 收口** Data / Interface / Behavior / Task-GT / System 分层归因与止损记录 |
+| [portfolio/UNIFIED_EVAL_REPORT.md](portfolio/UNIFIED_EVAL_REPORT.md) | `unified_eval_report_v0` 三后端统一信封 |
+| [portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md](portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md) | Recovery v3 一页纸（量化事实 + STAR + 禁止话术） |
 | [portfolio/interview_walkthrough.md](portfolio/interview_walkthrough.md) | 3–5 分钟面试讲稿 |
-| [portfolio/resume_description.md](portfolio/resume_description.md) | 在线简历描述与面试核心 Q&A |
+| [portfolio/resume_description.md](portfolio/resume_description.md) | **P0 收口** 三套简历版本 + 30 秒/2 分钟话术 + 失败归因案例 + Q&A |
 | [portfolio/project_status.md](portfolio/project_status.md) | 自动生成的进度快照 |
 | [portfolio/DATA_AND_ANALYSIS_PATHS.md](portfolio/DATA_AND_ANALYSIS_PATHS.md) | 中游 KUKA legacy 与 Panda 主线两条数据/分析路径说明 |
 | [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计、训练策略分层、下游评估架构与冗余说明 |

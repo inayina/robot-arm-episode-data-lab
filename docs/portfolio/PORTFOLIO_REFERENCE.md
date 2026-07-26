@@ -1,9 +1,16 @@
 # 三仓机器人项目作品集事实母版
 
-> 2026-07-20 更新：本文保留早期 MLP/handoff 素材；当前求职主叙事已经切换为
+> **2026-07-25 更新（当前权威指针）**：本文是**历史素材母版**（早期 MLP/handoff + ACT→Isaac 阶段）。
+> 当前求职主叙事与最终结论已收口到
+> [FINAL_PROJECT_SUMMARY.md](FINAL_PROJECT_SUMMARY.md)、
+> [BADCASE_ATTRIBUTION_SUMMARY.md](BADCASE_ATTRIBUTION_SUMMARY.md) 和
+> [resume_description.md](resume_description.md)。
+> 若下文旧段落与它们或与运行产物冲突，**以原始 JSON 产物、canonical facts 和收口总结为准**。
+> 本文未记录 SmolVLA Recovery v3（open-loop Pass）与有界 Isaac S4（lift 0/5 → Hold）。
+
+> 2026-07-20 更新：本文保留早期 MLP/handoff 素材；当时求职主叙事为
 > ACT→Isaac 评测闭环。E3 nominal=0/20、E3.5 oracle lift=5/5、close→lift 模型 5-seed
-> lift=0/5 的权威口径见 [EVALUATION_REPORT.md](../EVALUATION_REPORT.md)。若下文旧段落与该报告
-> 冲突，以运行产物、canonical facts 和该报告为准。
+> lift=0/5 的权威口径见 [EVALUATION_REPORT.md](../EVALUATION_REPORT.md)。
 
 审计日期：2026-07-13
 项目定位：Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环。

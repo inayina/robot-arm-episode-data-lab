@@ -32,7 +32,10 @@ OPEN_LOOP_SUMMARY = (
     / "s3_open_loop_summary.json"
 )
 POLICY_RUNNER = ROOT / "evidence/downstream/smolvla_v3_ep0_benchmark_summary.json"
-S4_GATE = ROOT / "evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json"
+# Authoritative bounded S4 = post-light-fix relight rerun of the same seeds 1-5.
+S4_GATE = ROOT / "evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json"
+# Superseded dark-scene first round; kept so historical evidence stays contract-valid.
+S4_GATE_HISTORICAL = ROOT / "evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json"
 
 
 def _validator() -> Draft202012Validator:
@@ -78,9 +81,10 @@ def test_policy_runner_defaults_claims_false() -> None:
     assert report["failure_lane"] == "none"
 
 
-def test_isaac_s4_maps_task_funnel_and_keeps_non_claims() -> None:
-    gate = json.loads(S4_GATE.read_text(encoding="utf-8"))
-    report = normalize_isaac_s4(gate, primary_path=str(S4_GATE))
+@pytest.mark.parametrize("gate_path", [S4_GATE, S4_GATE_HISTORICAL])
+def test_isaac_s4_maps_task_funnel_and_keeps_non_claims(gate_path: Path) -> None:
+    gate = json.loads(gate_path.read_text(encoding="utf-8"))
+    report = normalize_isaac_s4(gate, primary_path=str(gate_path))
     assert validate_unified_report(report) == []
     _validator().validate(report)
     assert report["backend_id"] == BACKEND_ISAAC_S4
@@ -90,6 +94,22 @@ def test_isaac_s4_maps_task_funnel_and_keeps_non_claims() -> None:
     assert report["columns"]["task"]["metrics"]["lift"] == 0
     assert report["columns"]["task"]["metrics"]["gate_pass"] is False
     assert report["failure_lane"] == "task_gt"
+
+
+def test_published_envelope_uses_authoritative_relight_gate() -> None:
+    """The published bundle must envelope the post-light-fix run, not the dark one."""
+    bundle_path = (
+        ROOT
+        / "evidence/smolvla_v3_eval_framework_relight_20260725"
+        / "smolvla_v3_eval_framework_bundle.json"
+    )
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    isaac = next(r for r in bundle["backends"] if r["backend_id"] == BACKEND_ISAAC_S4)
+    gate = json.loads(S4_GATE.read_text(encoding="utf-8"))
+    task = isaac["columns"]["task"]["metrics"]
+    for key in ("reach", "grasp", "lift", "outcome_success"):
+        assert task[key] == gate[key]
+    assert bundle["claims_task_success"] is False
 
 
 def test_schema_rejects_task_success_claim() -> None:

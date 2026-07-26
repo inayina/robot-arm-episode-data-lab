@@ -1,0 +1,21 @@
+{
+  "lock_version": "panda_policy_runtime_v1_m0_lock_v1",
+  "runtime_contract_version": "panda_policy_runtime_v1",
+  "frozen_at_utc": "2026-07-26T08:00:00Z",
+  "approved_scope": "m0_contract_only_no_runtime_behavior_change",
+  "artifact_sha256": {
+    "configs/policy_runtime/runtime_diagnostic_graph.yaml": "90aa2af4e5bdfc89758bdcde5bc0f7925da39104cda7fadc6ff52e6b93c98988",
+    "evaluation/examples/hoc_runtime_frame_fixture.json": "cd7357595bf6839c6edf0ec5691146c523fa899f496ada70381e480c22efac64",
+    "evaluation/examples/policy_command_fixture.json": "e2584668014ea6f9c6cc23ad96eaf7a657561a553a3433d26aa9edac84c9dbac",
+    "evaluation/examples/policy_execution_report_fixture.json": "bc7a4de0e836392deab88d0e937ef308ae14d15bf19b47a1787f4a478a58c8e2",
+    "evaluation/examples/policy_runtime_contract_fixture.json": "e78176b6d487b03e8602c1b58a437d88b9d7509af23dec499262bb679ada7447",
+    "evaluation/examples/policy_runtime_health_fixture.json": "697d277729a0c5cd2eaca71626563b9ae4cdd32f09afac91044b83843540f7ee",
+    "evaluation/examples/task_evaluation_status_fixture.json": "2ca1d7f55fdd098d6d4d6fc419b3fef8e3d8daab394a1e498d05485a2fe9f3e8",
+    "evaluation/schemas/policy_runtime_contract.schema.json": "6323e3e8be23dd34c0ae4818f1bade822e103b90520edffe23109b2af774a1f3"
+  },
+  "content_sha256": "995be854a056860c382ae72c0437299b4be8d3dd95b03595374dc2beda824ea1",
+  "authorized_runtime_behavior_change": false,
+  "authorized_simulation": false,
+  "authorized_training": false,
+  "authorized_task_claim": false
+}

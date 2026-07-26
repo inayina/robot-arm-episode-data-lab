@@ -8,13 +8,18 @@
 # revision so Isaac readiness is gated on executed clip(raw,0,1) behavior, not
 # open-edge pre-clip raw magnitude. Historical v2 Hold is unchanged.
 # Human (2026-07-24): authorized bounded Isaac S4 (≤5 seeds) for portfolio-ready
-# evidence once an Isaac GPU host is available. Local host currently has no
-# NVIDIA driver; AutoDL DNS is down / is not an Isaac host. ran_isaac remains
-# false until a real bounded rollout lands.
+# evidence once an Isaac GPU host is available. At authorization time the local
+# host had no usable NVIDIA driver and AutoDL DNS was unreachable, so ran_isaac
+# was recorded false (historical state, kept for provenance).
+# Human (2026-07-24, later same day): bounded S4 seeds 1-5 actually executed on
+# the local RTX PRO 500 -> ran_isaac=true, lift 0/5, gate_pass=false (Hold).
+# A telemetry rerun exposed a near-black policy camera (H1'); after the offline
+# scene-light fix the relight 5-seed rerun is the authoritative Isaac S4 run.
+# Neither run authorizes seed expansion, retraining, or a task-success claim.
 
 contract_version: smolvla_s3_recovery_decisions_v0
-status: phase4_s4_authorized_blocked_on_isaac_gpu_host
-updated_at: "2026-07-24"
+status: phase4_bounded_s4_executed_hold
+updated_at: "2026-07-25"
 parent_release_id: smolvla_s3_abs_eef_rgb_v2_griptiming_lateclose
 
 authorized_to_train: true
@@ -25,11 +30,34 @@ authorized_phase1_wrist_smoke: true
 authorized_isaac: true
 authorized_isaac_scope: bounded_s4_max_5_seeds_portfolio_only
 authorized_isaac_checklist: docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md
-ran_isaac: false
-isaac_blockers:
-  - local_nvidia_driver_unavailable
-  - autodl_dns_unreachable
-  - autodl_not_isaac_host
+ran_isaac: true
+bounded_s4_executed:
+  authoritative_run: evidence/smolvla_s4_bounded5_relight_20260724T151711Z
+  authoritative_note: >
+    Post scene-light-fix rerun of the same seeds 1-5. Policy-input JPEG mean
+    ~154. interface 5/5, reach 1/5, grasp 0/5, lift 0/5, gate_pass=false.
+  historical_runs:
+    - path: evidence/smolvla_s4_bounded5_20260724T203700Z
+      label: first_round_dark_scene_superseded
+      note: >
+        interface 5/5, reach 3/5, grasp 1/5, lift 0/5. The reach/grasp counts are
+        geometry overlap plus GRIPPER_CLOSE_MAX=0.70 accounting under a near-black
+        policy camera; not partial task success.
+    - path: evidence/smolvla_s4_bounded5_telemetry_20260724T144549Z
+      label: dark_scene_telemetry_rerun_for_H1_H3
+    - path: evidence/smolvla_s4_mujoco_bounded5_20260724T155513Z
+      label: mujoco_train_domain_H2_control_early_stopped
+  gate_pass: false
+  lift: 0
+  seeds: 5
+  claims_task_success: false
+  claims_sim2real: false
+  authorizes_seed_expansion: false
+  authorizes_retrain: false
+isaac_blockers_resolved:
+  - local_nvidia_driver_unavailable   # resolved: bounded run completed on local RTX PRO 500
+  - autodl_dns_unreachable            # not needed for the bounded local run
+  - autodl_not_isaac_host             # not needed for the bounded local run
 isaac_runtime_contract_implemented_cpu: true
 isaac_runtime_contract_evidence:
   - training/smolvla_s3/runtime_s4.py
@@ -89,12 +117,19 @@ local_inference_contract:
   canonical_mode: canonical_first_action
   diagnostic_mode: queued_diagnostic
   queued_diagnostic_gate_eligible: false
+  # Online Isaac node still sync-select_action; offline bench measured 2026-07-26.
   async_double_buffer_runtime_implemented: false
+  async_double_buffer_offline_bench_measured: true
+  async_double_buffer_offline_bench_run: runs/smolvla_s3/queue_runtime_bench_20260726T040945Z
+  async_double_buffer_online_wired: false
   evidence:
     - scripts/run_smolvla_s3_train.sh
     - training/scripts/run_smolvla_s3_control.py
     - training/scripts/run_smolvla_s3_open_loop.py
+    - training/scripts/bench_smolvla_s4_queue_runtime.py
+    - training/smolvla_s3/async_queue_runtime.py
     - tests/test_smolvla_s3_entrypoints.py
+    - tests/test_smolvla_s4_async_queue_runtime.py
 
 autodl_recovery_preflight:
   status: passed_v3_config_for_train
@@ -296,12 +331,14 @@ gripper_range_clip_audit:
     isaac_authorized: true
     isaac_authorized_at_utc: "2026-07-24T07:30:00Z"
     isaac_authorization_scope: bounded_s4_max_5_seeds_portfolio_only
-    ran_isaac: false
+    ran_isaac: true
     isaac_authorization_note: >
-      User authorized the S4 checklist for portfolio-ready evidence. Local
-      NVIDIA driver is unavailable and AutoDL DNS is unreachable / not an
-      Isaac host, so ran_isaac remains false. CPU runtime contract
-      (chunk10/K5/clip) is implemented and unit-tested.
+      User authorized the S4 checklist for portfolio-ready evidence. The bounded
+      seeds 1-5 rollout was then executed locally on an RTX PRO 500. The
+      authoritative run is the post-light-fix relight rerun
+      (evidence/smolvla_s4_bounded5_relight_20260724T151711Z): interface 5/5,
+      lift 0/5, gate_pass=false -> Hold. open-loop Pass and interface Pass are
+      not task success and not Sim2Real.
   evidence:
     - docs/SMOLVLA_S3_GRIPPER_RANGE_CLIP_AUDIT.md
     - runs/smolvla_s3/gripper_range_clip_audit_20260723/gripper_range_clip_audit.json

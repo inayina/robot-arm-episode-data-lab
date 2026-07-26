@@ -39,6 +39,12 @@ pkill -9 -f "ros2_control" || true
 
 2026-07-24 参考产物：B **Pass**（EE 0.0253 m）、C **Hold**（lift 0/5）、D/E/F 已完成。
 
+C 的权威产物是**修光后**的 `evidence/smolvla_s4_bounded5_relight_20260724T151711Z/`（interface 5/5、
+reach 1/5、grasp 0/5、lift 0/5）；首轮 `evidence/smolvla_s4_bounded5_20260724T203700Z/`（reach 3/5、
+grasp 1/5）在 policy 相机近黑条件下产生，已标注 **Superseded / historical**。E 的权威信封为
+`evidence/smolvla_v3_eval_framework_relight_20260725/`。收口总结见
+`docs/portfolio/FINAL_PROJECT_SUMMARY.md`；后续路线见 `docs/FUTURE_WORK_ROADMAP.md`。
+
 ---
 
 ## 2. Step A — prospective eval-only 采集（需人工批准）
@@ -60,7 +66,12 @@ PROSPECTIVE_RUN_TAG=prospective_eval10_v3 PROSPECTIVE_STAMP=<YYYYMMDD> \
 ## 3. Step B — canonical open-loop（eval_gate_v3）
 
 - **前置**：checkpoint config audit Pass（policy/preprocessor state[15]、scene camera、action8、K 与 PEFT 核验）。
-- **协议**：canonical = 全帧 `stride=1` + `canonical_first_action`；`queued_diagnostic` 只作诊断，禁止用它判 Pass。
+- **协议（冻结，不得为省算力缩水）**：
+  - 每次观测只评 **1 步**（`canonical_first_action`，H=1）；
+  - 每条 episode **所有帧**；评测集 **10 条 prospective**；`stride=1`；**每一帧独立 reset**；
+  - `queued_diagnostic`（chunk10 / K5 / episode-boundary reset）只作诊断，**禁止**用它判 Pass，也**不能**单独说明闭环任务能力；
+  - **禁止**新增 H=5 / H=10 open-loop 未来动作误差作 Gate 或正式指标（模型未来状态假设 ≠ 专家未来轨迹）；
+  - 若另做「open-loop + 扰动」：clean 全帧基线不变；扰动只抽 **6 阶段锚点**与 **close±10 帧窗口**，见 [SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md](SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md)（**登记不执行**，需另批）。
 
 ```bash
 python3 training/scripts/run_smolvla_s3_open_loop.py \

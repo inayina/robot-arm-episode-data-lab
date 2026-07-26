@@ -89,13 +89,17 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q \
 
 改写 evidence/checkpoint；把 interface PASS 写成 task success；跳过 Gate 接 VLA/Isaac；
 启用 OOD 大规模矩阵；本机 6GB 上启动 SmolVLA LoRA；自动恢复 LingBot Gate V1 / 下载 LingBot 6B；
-因 SmolVLA S2 接口 Pass 或 S3 Ready 自动进入正式训练 / S4。
+因 SmolVLA S2 接口 Pass、S3 Ready 或 open-loop Pass 自动进入正式训练 / S4；
+把有界 S4 的 `ran_isaac=true` / interface 5/5 / reach-grasp 计数写成任务成功、在线自主抓取或 Sim2Real；
+因 S4 lift 0/5 自动扩种子、重训或再跑 Isaac。
 
-## 7. SmolVLA（当前活动候选，S3 Ready）
+## 7. SmolVLA（当前活动候选：S3 open-loop Pass / 有界 S4 Hold）
 
-- S0–S2：[`SMOLVLA_GATE_S2_OPEN_LOOP.md`](SMOLVLA_GATE_S2_OPEN_LOOP.md)（接口 Pass；base zero-shot absolute-EEF open-loop No-Go）。  
-- S3 Ready：[`SMOLVLA_GATE_S3_READY.md`](SMOLVLA_GATE_S3_READY.md)（本地冻结；**未**正式 LoRA、**未** Isaac）。  
-- 正式 S3 须外部 ≥16GB + **人工批准**；未过 open-loop Pass 不得进 S4。  
+- S0–S2：[`SMOLVLA_GATE_S2_OPEN_LOOP.md`](SMOLVLA_GATE_S2_OPEN_LOOP.md)（接口 Pass；base zero-shot absolute-EEF open-loop No-Go）。
+- S3 v1（历史）：[`SMOLVLA_GATE_S3_READY.md`](SMOLVLA_GATE_S3_READY.md) — **Historical / Superseded**，其「不得进 Isaac」为当时状态。
+- **Recovery v3（当前）**：5,705-step LoRA + 独立 prospective 全帧 open-loop 在冻结 `eval_gate_v3` 下 **Pass**（EE `0.0253 m`、grip BA `0.9943`）；见 [`portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md`](portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md)。
+- **有界 Isaac S4（已跑）**：人工批准 seeds 1–5，`ran_isaac=true`；interface 5/5、lift **0/5** → **Hold**；不扩种子、不重训、不声称任务成功。
+- 后续任何训练 / 扩种子 / 再跑 Isaac 须**另行人工批准**；路线见 [`FUTURE_WORK_ROADMAP.md`](FUTURE_WORK_ROADMAP.md)。
 - LingBot 执行路线：**Closed / Archived**（[`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)）；V0.5 absolute EEF 契约为**模型无关**保留。
 
 详情：[`POLICY_ADAPTER_CONTRACT.md`](POLICY_ADAPTER_CONTRACT.md) · [`THREE_REPO_CANONICAL_FACTS.md`](portfolio/THREE_REPO_CANONICAL_FACTS.md)

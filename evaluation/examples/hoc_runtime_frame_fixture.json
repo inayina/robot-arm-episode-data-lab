@@ -1,0 +1,39 @@
+{
+  "contract_version": "panda_policy_runtime_v1",
+  "artifact_type": "hoc_runtime_frame",
+  "frame_kind": "risk_status",
+  "trace_run_id": "policy_runtime_m0_fixture",
+  "episode_id": "episode_fixture_000",
+  "command_sequence": 42,
+  "source_stamp": {"sec": 100, "nanosec": 108000000},
+  "received_stamp": {"sec": 100, "nanosec": 109000000},
+  "validity": "VALID",
+  "reason_code": "none",
+  "payload": {
+    "contract_version": "panda_policy_runtime_v1",
+    "artifact_type": "risk_status_snapshot",
+    "event_id": "risk:fixture:42",
+    "parent_event_id": "execution:fixture:42",
+    "trace_run_id": "policy_runtime_m0_fixture",
+    "episode_id": "episode_fixture_000",
+    "source_stamp": {"sec": 100, "nanosec": 108000000},
+    "received_stamp": {"sec": 100, "nanosec": 109000000},
+    "validity": "VALID",
+    "reason_code": "none",
+    "level": 0,
+    "decision": "RUN",
+    "composite_score": 0.08,
+    "primary_driver": "none",
+    "cause_path": ["final_decision", "runtime_safe"],
+    "source_validity": {
+      "brain_ready": "VALID",
+      "execution_ready": "VALID",
+      "distribution_metrics": "WARMING_UP"
+    },
+    "degraded_mode": false,
+    "estop_active": false,
+    "may_override_task_gt": false,
+    "claims_task_success": false
+  },
+  "claims_task_success": false
+}

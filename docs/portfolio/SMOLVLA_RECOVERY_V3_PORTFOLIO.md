@@ -17,7 +17,9 @@
 | 执行不变式 | clip 分类变化 **0**、关爪时序变化 **0**、mapped==clip | 同上 report |
 | 物理链上界（非本策略） | Isaac scripted oracle lift **5/5** | `evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/` |
 | S4 runtime 合同 | chunk10 / K5 / 10 Hz / gripper clip；**单源** `configs/smolvla_s3/s4_runtime_contract.json`（上游包内同 SHA）；CPU 单测 Pass | `training/smolvla_s3/runtime_s4.py` |
-| Bounded Isaac S4 | seeds 1–5；interface 5/5；reach 3/5；grasp 1/5；lift **0/5**；`ran_isaac=true` | `evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json` |
+| Bounded Isaac S4（修光后权威） | seeds 1–5；interface 5/5；reach 1/5；grasp **0/5**；lift **0/5**；Hold；JPEG≈154 | `evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json` |
+| S4 首轮（近黑场景，**Superseded**） | reach 3/5 · grasp 1/5 · lift 0/5；JPEG≈0.3；reach/grasp 为失明走廊几何重叠 + `close_max=0.70` 口径放大，**不作权威** | `evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json` |
+| 训练域 MuJoCo H2 对照（提前停止） | 同 ckpt、JPEG≈50；seed1 `gripper never closed below 0.700`（`grip_min≈0.976`）→ 倾向闭环 BC，**不是**完整 5-seed gate | `evidence/smolvla_s4_mujoco_bounded5_20260724T155513Z/s4_gate.json` |
 | Downstream PolicyRunner reuse | 1-ep `panda_jsonl_replay` + `pybullet_ik` + `--launch-stack`；`is_closed_loop=false` | `evidence/downstream/smolvla_v3_ep0_benchmark_summary.json` |
 
 ## 图表（全部可由 `scripts/generate_smolvla_v3_portfolio_figures.py` 复现）
@@ -29,9 +31,9 @@
 | ![EE vs S2](smolvla_recovery_v3_openloop_ee_vs_s2.png) | prospective EE RMSE vs S2 基线（相对改善 ≈ 90.7%） | gate_v3 report + `eval_gate_v3.yaml` baselines |
 | ![base vs LoRA](smolvla_v3_openloop_base_vs_lora_paired.png) | base vs LoRA 成对离线指标（EE / 夹爪 / 平滑 / 饱和 / latency p50-p95-max） | 同一 gate_v3 report（paired） |
 | ![per position](smolvla_v3_openloop_per_position.png) | held-out seeds 70–74 按 P0–P4 位置分解（P4 为最难位） | gate_v3 report `per_episode_raw_results` |
-| ![S4 funnel](smolvla_s4_bounded5_funnel.png) | S4 有界 funnel：interface 5/5 → lift 0/5 → Hold | `s4_gate.json` |
-| ![S4 per seed](smolvla_s4_bounded5_per_seed.png) | S4 逐种子：subgoal 矩阵 + max EE excursion + latency p50 | `episode_results.jsonl` + `trials/seed_*/report.json` |
-| ![downstream timeseries](smolvla_v3_downstream_policyrunner_timeseries.png) | 下游 PolicyRunner 1-ep smoke 命令时延时序 + 分布（p50 7.7 ms / p95 39 ms / max 358 ms） | 下游 `benchmark_timeseries.csv` |
+| ![S4 funnel](smolvla_s4_bounded5_funnel.png) | S4 有界 funnel：interface 5/5 → reach 1/5 → grasp/lift 0/5 → Hold | **relight** `s4_gate.json`（权威） |
+| ![S4 per seed](smolvla_s4_bounded5_per_seed.png) | S4 逐种子：subgoal 矩阵 + max EE excursion + latency p50 | **relight** `episode_results.jsonl` + `trials/seed_*/report.json` |
+| ![downstream timeseries](smolvla_v3_downstream_policyrunner_timeseries.png) | 下游 PolicyRunner 1-ep smoke：1,105 telemetry rows，其中 1,084 条含 latency 值；p50 7.7 ms / p95 39 ms / max 358 ms | 下游 `benchmark_timeseries.csv` |
 | ![framework summary](smolvla_v3_eval_framework_summary.png) | 三后端 unified_eval_report_v0 一图汇总（Pass / Smoke / Hold） | `evidence/smolvla_v3_eval_framework_20260724/` |
 
 ## 面试 STAR（60 秒）
@@ -49,7 +51,11 @@
 
 ## 关联
 
+- **最终项目总结（统一入口）**：`docs/portfolio/FINAL_PROJECT_SUMMARY.md`
+- 分层 Badcase 归因：`docs/portfolio/BADCASE_ATTRIBUTION_SUMMARY.md`
+- 后续路线（P1/P2 仅登记）：`docs/FUTURE_WORK_ROADMAP.md`
 - v3 全链评测 SOP：`docs/SMOLVLA_V3_EVAL_SOP.md`
+- S4 lift 0/5 离线归因（含遥测：相机近黑 / H3 排除）：`docs/SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md`
 - 权威事实表：`docs/portfolio/THREE_REPO_CANONICAL_FACTS.md`  
 - S4 清单：`docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md`  
 - 简历长文：`docs/portfolio/resume_description.md`

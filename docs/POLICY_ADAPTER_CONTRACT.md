@@ -16,6 +16,7 @@
 - LingBot Gate V0（**Closed / Archived**）：[`VLA_GATE_V0_COMPATIBILITY_AUDIT.md`](VLA_GATE_V0_COMPATIBILITY_AUDIT.md)
 - SmolVLA（**当前活动候选，S3 Ready**）：[`SMOLVLA_GATE_S3_READY.md`](SMOLVLA_GATE_S3_READY.md) / [`SMOLVLA_GATE_S2_OPEN_LOOP.md`](SMOLVLA_GATE_S2_OPEN_LOOP.md)
 - Benchmark 规范：[`SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md`](SINGLE_BLOCK_GENERALIZATION_BENCHMARK.md)
+- 统一在线接线目标：[`POLICY_RUNTIME_INTEGRATION_SPEC.md`](POLICY_RUNTIME_INTEGRATION_SPEC.md)（Proposed；v0 本合同在实施前继续作为离线兼容合同）
 
 ---
 
@@ -82,7 +83,7 @@ Fixture：`evaluation/examples/policy_adapter_metadata_fixture.json`。
 | MoveIt / 规则基线 | 上游 teleop/servo 路径 | 有界笛卡尔目标 → export | **文档声明，E3 对照套件未固化** |
 | 下游 JSONL replay | 下游 `BasePolicy` / `JsonlActionReplayPolicy` | open-loop 对照 | **已实现** PyBullet；非 Isaac 主评测宿主 |
 | 未来 LingBot-VLA | 新 `LingBotVlaAdapter`（仅未来复审） | 执行路线 **Closed / Archived**；禁止自动恢复 V1 / 下 6B | **未实现**；审计见 V0（archived） |
-| SmolVLA | 未来 `SmolVlaAdapter` | S3 Ready；正式 LoRA/Isaac 须人工批准；禁止把 6-D 当 absolute EEF / ee_delta | S1–S2 离线证据已有；S3 本地冻结；Adapter 运行时未挂 Isaac |
+| SmolVLA | 未来 `SmolVlaAdapter` | Recovery v3 已完成 LoRA 与 open-loop **Pass**；有界 Isaac S4 已跑并 **Hold**（lift 0/5）；再跑 Isaac / 扩种子 / 重训须另行人工批准；禁止把 6-D 当 absolute EEF / ee_delta | S1–S2 离线证据 + Recovery v3 gate_v3 Pass + 有界 S4 Hold；**本 Adapter ABC 运行时仍未挂 Isaac**（S4 走 `smolvla_policy_inference_node`） |
 
 当前 ACT 硬事实（不得在 Adapter 设计中忽略）：
 

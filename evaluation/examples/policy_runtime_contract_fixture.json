@@ -1,0 +1,145 @@
+{
+  "contract_version": "panda_policy_runtime_v1",
+  "artifact_type": "policy_runtime_contract",
+  "implementation_status": "m0_contract_frozen_runtime_not_implemented",
+  "canonical_owner_repository": "robot-arm-episode-data-lab",
+  "frozen_at_utc": "2026-07-26T08:00:00Z",
+  "source_spec": "docs/POLICY_RUNTIME_INTEGRATION_SPEC.md",
+  "supported_action_schemas": [
+    "panda_absolute_eef_gripper_v0",
+    "panda_ee_delta_gripper_v0"
+  ],
+  "validity_states": [
+    "VALID",
+    "WARMING_UP",
+    "STALE",
+    "UNAVAILABLE",
+    "ERROR"
+  ],
+  "reason_codes": [
+    "none",
+    "contract_mismatch",
+    "policy_not_loaded",
+    "observation_warming_up",
+    "observation_stale",
+    "observation_invalid",
+    "inference_deadline_missed",
+    "inference_timeout",
+    "queue_empty",
+    "queue_underrun",
+    "queue_reset",
+    "action_schema_unknown",
+    "action_dimension_invalid",
+    "action_non_finite",
+    "command_ttl_expired",
+    "command_sequence_regression",
+    "command_held",
+    "command_rejected",
+    "workspace_clipped",
+    "gripper_clipped",
+    "soft_limit",
+    "hard_limit",
+    "risk_r2_hold",
+    "risk_r3_estop",
+    "baseline_warming_up",
+    "baseline_not_ready",
+    "insufficient_samples",
+    "calibration_mismatch",
+    "source_stale",
+    "source_unavailable",
+    "task_running",
+    "task_reach_failed",
+    "task_grasp_failed",
+    "task_lift_failed",
+    "task_place_failed",
+    "task_pass",
+    "manual_estop",
+    "controller_inactive",
+    "dds_deadline_missed",
+    "dds_liveliness_lost",
+    "lifecycle_inactive",
+    "lifecycle_error"
+  ],
+  "lifecycle": {
+    "states": [
+      "UNCONFIGURED",
+      "INACTIVE",
+      "ACTIVE",
+      "ERROR_PROCESSING",
+      "FINALIZED"
+    ],
+    "initial_state": "UNCONFIGURED",
+    "command_enabled_state": "ACTIVE",
+    "transitions": [
+      {"name": "configure", "from": "UNCONFIGURED", "to": "INACTIVE"},
+      {"name": "activate", "from": "INACTIVE", "to": "ACTIVE"},
+      {"name": "deactivate", "from": "ACTIVE", "to": "INACTIVE"},
+      {"name": "cleanup", "from": "INACTIVE", "to": "UNCONFIGURED"},
+      {"name": "error", "from": "ANY_NON_FINALIZED", "to": "ERROR_PROCESSING"},
+      {"name": "recover", "from": "ERROR_PROCESSING", "to": "UNCONFIGURED"},
+      {"name": "shutdown", "from": "ANY_NON_FINALIZED", "to": "FINALIZED"}
+    ]
+  },
+  "qos_profiles": {
+    "policy_command": {
+      "reliability": "reliable",
+      "durability": "volatile",
+      "history": "keep_last",
+      "depth": 1,
+      "deadline_period_multiplier": 1.5,
+      "lifespan_lte_application_ttl": true,
+      "liveliness": "manual_by_topic",
+      "liveliness_lease_period_multiplier": 2.0
+    },
+    "runtime_telemetry": {
+      "reliability": "reliable",
+      "durability": "volatile",
+      "history": "keep_last",
+      "depth": 20,
+      "deadline_period_multiplier": 2.0,
+      "lifespan_lte_application_ttl": false,
+      "liveliness": "automatic",
+      "liveliness_lease_period_multiplier": 3.0
+    },
+    "latched_state": {
+      "reliability": "reliable",
+      "durability": "transient_local",
+      "history": "keep_last",
+      "depth": 1,
+      "deadline_period_multiplier": null,
+      "lifespan_lte_application_ttl": false,
+      "liveliness": "automatic",
+      "liveliness_lease_period_multiplier": null
+    },
+    "sensor_data": {
+      "reliability": "best_effort",
+      "durability": "volatile",
+      "history": "keep_last",
+      "depth": 10,
+      "deadline_period_multiplier": null,
+      "lifespan_lte_application_ttl": false,
+      "liveliness": "automatic",
+      "liveliness_lease_period_multiplier": null
+    }
+  },
+  "hoc_frame_kinds": [
+    "policy_health",
+    "execution_report",
+    "risk_status",
+    "task_gt"
+  ],
+  "diagnostic_graph_path": "configs/policy_runtime/runtime_diagnostic_graph.yaml",
+  "safety_boundaries": {
+    "single_execution_authority": true,
+    "risk_may_hold_or_estop": true,
+    "risk_may_override_task_gt": false,
+    "unknown_or_stale_defaults_to_hold": true,
+    "r3_auto_clear": false
+  },
+  "authorized_runtime_behavior_change": false,
+  "authorized_simulation": false,
+  "authorized_training": false,
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "claims_real_robot": false
+}

@@ -1,6 +1,17 @@
 # SmolVLA Gate S3（本地冻结 / open-loop Hold）
 
-**状态**：`S3 Hold`（open-loop `gate_decision=hold`；**不是** Ready / Pass / No-Go）
+> **⚠ HISTORICAL / SUPERSEDED（2026-07-25 标注）**
+> 本文记录的是 **S3 v1（griptiming + α64 LoRA）** 阶段的冻结事实，其 `S3 Hold`、
+> 「Isaac / S4 **禁止**」、「唯一活动路线 = S3 Hold」等表述均为**当时状态**，**已被
+> Recovery v3 取代**：Recovery v3 在冻结 `eval_gate_v3` 下 canonical prospective
+> open-loop **Pass**，人工批准后有界 Isaac S4 seeds 1–5 **已实际运行**（`ran_isaac=true`，
+> lift 0/5 → **Hold**）。当前权威口径见
+> [`portfolio/FINAL_PROJECT_SUMMARY.md`](portfolio/FINAL_PROJECT_SUMMARY.md) 与
+> [`portfolio/THREE_REPO_CANONICAL_FACTS.md`](portfolio/THREE_REPO_CANONICAL_FACTS.md)。
+> 本文作为历史证据保留，**数字不修改**；不得据本文声称「不得进 Isaac」仍是当前状态，
+> 也不得把 v3 的 Pass 回填到本文的 v1 结论。
+
+**状态**：`S3 Hold`（open-loop `gate_decision=hold`；**不是** Ready / Pass / No-Go）— **v1 阶段历史状态**
 **日期**：2026-07-23
 **约束**：v1 griptiming + α64 LoRA 已训且 checkpoint 审计通过；open-loop **Hold**；**不得进 Isaac**；默认停止，任何继续修复需显式人工批准。未改写 S2 evidence。
 

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Panda brain-cerebellum policy runtime architecture</title>
+  <desc id="desc">Three-repository brain, cerebellum, safety and HOC runtime with evidence boundaries.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <marker id="feedback" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/>
+    </marker>
+    <style>
+      .title{font:700 28px Arial,sans-serif;fill:#0f172a}.sub{font:14px Arial,sans-serif;fill:#475569}
+      .repo{font:700 17px Arial,sans-serif;fill:#fff}.box-title{font:700 16px Arial,sans-serif;fill:#0f172a}
+      .body{font:13px Arial,sans-serif;fill:#334155}.small{font:12px Arial,sans-serif;fill:#475569}
+      .white{fill:#fff}.flow{stroke:#475569;stroke-width:2;fill:none;marker-end:url(#arrow)}
+      .dash{stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+      .red{stroke:#dc2626;stroke-width:2.5;fill:none;marker-end:url(#feedback)}
+    </style>
+  </defs>
+  <rect width="1200" height="760" fill="#f8fafc"/>
+  <text x="600" y="42" text-anchor="middle" class="title">Panda Brain–Cerebellum Policy Runtime</text>
+  <text x="600" y="67" text-anchor="middle" class="sub">contract → structured policy output → bounded execution → risk feedback → four-lane HOC → auditable replay</text>
+
+  <rect x="35" y="92" width="1130" height="150" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+  <rect x="35" y="92" width="175" height="150" rx="14" fill="#2563eb"/>
+  <text x="122" y="126" text-anchor="middle" class="repo">MIDSTREAM</text>
+  <text x="122" y="149" text-anchor="middle" class="white" style="font:13px Arial,sans-serif">contract &amp; evidence spine</text>
+  <rect x="238" y="112" width="270" height="105" rx="10" fill="#fff" stroke="#60a5fa"/>
+  <text x="373" y="139" text-anchor="middle" class="box-title">Canonical Contract</text>
+  <text x="258" y="164" class="body">PolicyCommand · health · execution · Task GT</text>
+  <text x="258" y="186" class="body">validity states · QoS · SHA locks · trace keys</text>
+  <rect x="535" y="112" width="270" height="105" rx="10" fill="#fff" stroke="#60a5fa"/>
+  <text x="670" y="139" text-anchor="middle" class="box-title">Evidence Contract</text>
+  <text x="555" y="164" class="body">five-track trace bundle · strict reload</text>
+  <text x="555" y="186" class="body">is_closed_loop=false · claims_task_success=false</text>
+  <rect x="832" y="112" width="300" height="105" rx="10" fill="#fff" stroke="#60a5fa"/>
+  <text x="982" y="139" text-anchor="middle" class="box-title">Acceptance Boundary</text>
+  <text x="852" y="164" class="body">interface PASS ≠ task PASS</text>
+  <text x="852" y="186" class="body">Risk never overwrites continuous Task GT</text>
+
+  <rect x="35" y="264" width="730" height="278" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <rect x="35" y="264" width="175" height="278" rx="14" fill="#059669"/>
+  <text x="122" y="298" text-anchor="middle" class="repo">UPSTREAM</text>
+  <text x="122" y="321" text-anchor="middle" class="white" style="font:13px Arial,sans-serif">brain + execution plane</text>
+  <rect x="236" y="291" width="205" height="89" rx="10" fill="#fff" stroke="#34d399"/>
+  <text x="338" y="318" text-anchor="middle" class="box-title">Observation</text>
+  <text x="256" y="343" class="body">state[15] + scene RGB</text>
+  <text x="256" y="363" class="small">identity · age · lifecycle</text>
+  <rect x="475" y="291" width="250" height="89" rx="10" fill="#fff" stroke="#34d399"/>
+  <text x="600" y="318" text-anchor="middle" class="box-title">Brain Runtime</text>
+  <text x="495" y="343" class="body">native absolute EEF8 chunk10</text>
+  <text x="495" y="363" class="small">Scheduler consumes K=5 @ 10 Hz</text>
+  <path d="M441 335 H475" class="flow"/>
+  <rect x="236" y="415" width="238" height="98" rx="10" fill="#fff" stroke="#34d399"/>
+  <text x="355" y="442" text-anchor="middle" class="box-title">Execution Adapter</text>
+  <text x="256" y="467" class="body">TTL · sequence · clamp · Hold/E-stop</text>
+  <text x="256" y="489" class="small">legacy | shadow | authoritative</text>
+  <rect x="510" y="415" width="215" height="98" rx="10" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="617" y="442" text-anchor="middle" class="box-title">Controller / Simulator</text>
+  <text x="530" y="467" class="body">current cutover: not enabled</text>
+  <text x="530" y="489" class="small">SmolVLA default remains legacy</text>
+  <path d="M600 380 V398 H355 V415" class="flow"/>
+  <path d="M474 464 H510" class="dash"/>
+
+  <rect x="790" y="264" width="375" height="278" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+  <rect x="790" y="264" width="150" height="278" rx="14" fill="#ea580c"/>
+  <text x="865" y="298" text-anchor="middle" class="repo">DOWNSTREAM</text>
+  <text x="865" y="321" text-anchor="middle" class="white" style="font:13px Arial,sans-serif">safety &amp; HOC</text>
+  <rect x="966" y="291" width="170" height="82" rx="10" fill="#fff" stroke="#fb923c"/>
+  <text x="1051" y="318" text-anchor="middle" class="box-title">Monitor / Risk</text>
+  <text x="986" y="343" class="small">validity · provenance · R0–R3</text>
+  <rect x="966" y="392" width="170" height="82" rx="10" fill="#fff" stroke="#fb923c"/>
+  <text x="1051" y="419" text-anchor="middle" class="box-title">Safety Bridge</text>
+  <text x="986" y="444" class="small">R2→Hold · R3→E-stop</text>
+  <rect x="966" y="491" width="170" height="35" rx="8" fill="#fff" stroke="#fb923c"/>
+  <text x="1051" y="514" text-anchor="middle" class="box-title">Four-lane HOC</text>
+  <path d="M1051 373 V392" class="flow"/>
+  <path d="M966 433 H795 C770 433 770 464 740 464 H474" class="red"/>
+
+  <rect x="145" y="562" width="910" height="38" rx="9" fill="#0f172a"/>
+  <text x="600" y="587" text-anchor="middle" class="white" style="font:700 14px Arial,sans-serif">Verified wiring used a mock policy · not SmolVLA task success · not Sim2Real · not real robot</text>
+</svg>

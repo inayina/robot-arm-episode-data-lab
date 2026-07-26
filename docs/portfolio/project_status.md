@@ -4,8 +4,18 @@
 
 文档索引：[docs/README.md](../README.md) · 总体架构：[THREE_REPO_ARCHITECTURE.md](../THREE_REPO_ARCHITECTURE.md) · 最小演示：[DEMO_GUIDE.md](../DEMO_GUIDE.md) · 简历与话术：[resume_description.md](resume_description.md)
 
-> **当前定位**：机械臂具身数据闭环中游已具备 legacy PyBullet 采集、Panda schema、dataset inspection / release、baseline training、offline evaluation 与 bridge handoff 文档链路；
+> **当前定位（2026-07-25 收口）**：面向机器人模仿学习与 VLA 策略的**数据质量、动作契约、
+> open-loop、closed-loop、仿真执行和 Badcase 归因评测框架**。中游已具备 legacy PyBullet 采集、
+> Panda schema、dataset inspection / release、baseline 与 LoRA training、冻结 open-loop 门禁、
+> 跨后端统一评测信封与 bridge handoff 链路；
 > 当前仍属于 software simulation / Sim-to-Sim readiness，不宣称真实机械臂 Sim2Real 已完成。
+>
+> **当前结论**：SmolVLA Recovery v3 离线 open-loop **Pass**（`eval_gate_v3`），有界 Isaac S4
+> `ran_isaac=true` 但 lift **0/5** → **Hold**；ACT 冻结为 diagnostic baseline；scripted oracle
+> lift 5/5 为系统上界参考。**Not task success / Not Sim2Real / Not real robot。**
+> 收口入口：[FINAL_PROJECT_SUMMARY.md](FINAL_PROJECT_SUMMARY.md) ·
+> [BADCASE_ATTRIBUTION_SUMMARY.md](BADCASE_ATTRIBUTION_SUMMARY.md) ·
+> [../FUTURE_WORK_ROADMAP.md](../FUTURE_WORK_ROADMAP.md)（P1/P2 仅登记不执行）。
 
 ## P0 主线状态
 

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/policy_trace_bundle.schema.json",
+  "title": "Panda policy trace replay bundle v1 manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_format",
+    "contract_version",
+    "trace_run_id",
+    "episode_id",
+    "created_at_utc",
+    "is_closed_loop",
+    "claims_task_success",
+    "files",
+    "sequence_bounds",
+    "correlation"
+  ],
+  "properties": {
+    "bundle_format": {"const": "panda_policy_trace_bundle_v1"},
+    "contract_version": {"const": "panda_policy_runtime_v1"},
+    "trace_run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+    },
+    "episode_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "is_closed_loop": {"const": false},
+    "claims_task_success": {"const": false},
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_commands",
+        "policy_health_timeline",
+        "execution_reports",
+        "risk_timeline",
+        "task_gt_timeline"
+      ],
+      "properties": {
+        "policy_commands": {"$ref": "#/$defs/fileRecord"},
+        "policy_health_timeline": {"$ref": "#/$defs/fileRecord"},
+        "execution_reports": {"$ref": "#/$defs/fileRecord"},
+        "risk_timeline": {"$ref": "#/$defs/fileRecord"},
+        "task_gt_timeline": {"$ref": "#/$defs/fileRecord"}
+      }
+    },
+    "sequence_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first", "last"],
+      "properties": {
+        "first": {"type": "integer", "minimum": 0},
+        "last": {"type": "integer", "minimum": 0}
+      }
+    },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_count",
+        "execution_report_count",
+        "orphan_execution_report_count",
+        "missing_execution_report_count",
+        "sequence_regression_count",
+        "trace_consistent"
+      ],
+      "properties": {
+        "command_count": {"type": "integer", "minimum": 1},
+        "execution_report_count": {"type": "integer", "minimum": 0},
+        "orphan_execution_report_count": {"const": 0},
+        "missing_execution_report_count": {"const": 0},
+        "sequence_regression_count": {"const": 0},
+        "trace_consistent": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "fileRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "record_count"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*\\.jsonl$"
+        },
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "record_count": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

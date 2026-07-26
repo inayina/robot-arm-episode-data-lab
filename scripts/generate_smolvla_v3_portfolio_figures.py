@@ -8,9 +8,17 @@ success and NOT Sim2Real.
 
 Inputs (canonical, overridable via CLI):
   - midstream runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json
-  - midstream evidence/smolvla_s4_bounded5_20260724T203700Z/{s4_gate.json,episode_results.jsonl,trials/seed_*/report.json}
+  - midstream evidence/smolvla_s4_bounded5_relight_20260724T151711Z/{s4_gate.json,episode_results.jsonl,trials/seed_*/report.json}
   - downstream evidence/downstream/smolvla_v3_ep0_policyrunner_20260724T213800Z/benchmark_timeseries.csv (+ benchmark_summary.json)
-  - midstream evidence/smolvla_v3_eval_framework_20260724/*.json (unified eval envelope)
+  - midstream evidence/smolvla_v3_eval_framework_relight_20260725/*.json (unified eval envelope)
+
+The bounded-S4 default is the post-light-fix relight rerun, which supersedes the
+first-round dark-scene run (evidence/smolvla_s4_bounded5_20260724T203700Z). Both
+are Hold with lift 0/5; the dark-scene reach/grasp counts were a blind-camera plus
+GRIPPER_CLOSE_MAX=0.70 accounting artifact, so they must not be plotted as the
+authoritative funnel. Pass --s4-evidence to render the historical run instead.
+
+All funnel/subgoal counts are read from the gate JSON, never hardcoded.
 
 Usage:
   python3 scripts/generate_smolvla_v3_portfolio_figures.py [--out-dir docs/portfolio]
@@ -36,11 +44,11 @@ OPEN_LOOP_REPORT = (
     MIDSTREAM
     / "runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json"
 )
-S4_EVIDENCE = MIDSTREAM / "evidence/smolvla_s4_bounded5_20260724T203700Z"
+S4_EVIDENCE = MIDSTREAM / "evidence/smolvla_s4_bounded5_relight_20260724T151711Z"
 POLICYRUNNER_DIR = (
     DOWNSTREAM / "evidence/downstream/smolvla_v3_ep0_policyrunner_20260724T213800Z"
 )
-FRAMEWORK_DIR = MIDSTREAM / "evidence/smolvla_v3_eval_framework_20260724"
+FRAMEWORK_DIR = MIDSTREAM / "evidence/smolvla_v3_eval_framework_relight_20260725"
 
 DISCLAIMER = "Not task success / not Sim2Real (AGENTS 8.6)"
 
@@ -86,7 +94,8 @@ def fig_downstream_timeseries(out_dir: Path) -> Path:
     ax1.set_ylabel("command latency (ms, log)")
     ax1.set_title(
         f"PolicyRunner 1-ep smoke command latency\n"
-        f"{len(lat)} samples · mean {summary['mean_latency_ms']:.1f} ms · "
+        f"{len(lat)} latency-bearing commands / {len(rows)} telemetry rows · "
+        f"mean {summary['mean_latency_ms']:.1f} ms · "
         f"max {summary['max_latency_ms']:.0f} ms"
     )
     ax1.axhline(p50, color="#c08a2d", ls="--", lw=1, label=f"p50 = {p50:.1f} ms")
@@ -124,7 +133,7 @@ def fig_openloop_paired(out_dir: Path) -> Path:
         ("action smoothness jerk", "action_smoothness_jerk", "{:.4f}"),
         ("action saturation ratio", "action_saturation_ratio", "{:.4f}"),
     ]
-    fig, axes = plt.subplots(1, 5, figsize=(14, 4.2))
+    fig, axes = plt.subplots(1, 5, figsize=(16, 4.4))
     colors = ["#9aa5ad", "#2a9d8f"]
     for ax, (title, key, fmt) in zip(axes[:4], panels):
         vals = [base_m[key], lora_m[key]]
@@ -141,11 +150,18 @@ def fig_openloop_paired(out_dir: Path) -> Path:
     lora_lat = [d["lora"][f"latency_ms_{k}"] for k in ("p50", "p95", "max")]
     x = range(len(labels))
     w = 0.38
-    ax.bar([i - w / 2 for i in x], base_lat, w, color=colors[0], label="base")
-    ax.bar([i + w / 2 for i in x], lora_lat, w, color=colors[1], label="LoRA")
+    base_bars = ax.bar([i - w / 2 for i in x], base_lat, w, color=colors[0], label="base")
+    lora_bars = ax.bar([i + w / 2 for i in x], lora_lat, w, color=colors[1], label="LoRA")
+    for bars in (base_bars, lora_bars):
+        for bar in bars:
+            value = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2, value, f"{value:.0f}",
+                    ha="center", va="bottom", fontsize=8)
     ax.set_xticks(list(x), labels)
     ax.set_ylabel("open-loop inference latency (ms)")
-    ax.set_title(f"latency ({d.get('gpu_name', 'GPU')})", fontsize=10)
+    gpu_name = d.get("gpu_name", "GPU").replace("GeForce ", "")
+    ax.set_title(f"inference latency\n({gpu_name})", fontsize=10)
+    ax.margins(y=0.16)
     ax.legend(fontsize=8)
 
     fig.suptitle(
@@ -226,7 +242,13 @@ def fig_s4_per_seed(out_dir: Path) -> Path:
         for xi, v in enumerate(row):
             ax1.text(xi, yi, "✓" if v else "–", ha="center", va="center",
                      color="darkgreen" if v else "gray", fontsize=11)
-    ax1.set_title("continuous-GT subgoals per seed\n(reach 3/5 · grasp 1/5 · lift 0/5)", fontsize=10)
+    gate = json.load(open(S4_EVIDENCE / "s4_gate.json"))
+    n = gate["seeds_planned"]
+    ax1.set_title(
+        "continuous-GT subgoals per seed\n"
+        f"(reach {gate['reach']}/{n} · grasp {gate['grasp']}/{n} · lift {gate['lift']}/{n})",
+        fontsize=10,
+    )
 
     ee = [trials[s]["max_observed_ee_excursion_m"] for s in seeds]
     ax2.bar([f"s{s}" for s in seeds], ee, color="#4878a8")
@@ -243,7 +265,11 @@ def fig_s4_per_seed(out_dir: Path) -> Path:
         fontsize=12,
     )
     fig.tight_layout(rect=(0, 0.08, 1, 0.94))
-    _footer(fig, "evidence/smolvla_s4_bounded5_20260724T203700Z/{episode_results.jsonl, trials/seed_*/report.json}")
+    _footer(
+        fig,
+        f"{S4_EVIDENCE.relative_to(MIDSTREAM)}/"
+        "{episode_results.jsonl, trials/seed_*/report.json}",
+    )
     out = out_dir / "smolvla_s4_bounded5_per_seed.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
@@ -319,7 +345,11 @@ def fig_framework_summary(out_dir: Path) -> Path:
         fontsize=12,
     )
     fig.tight_layout(rect=(0, 0.07, 1, 0.93))
-    _footer(fig, "evidence/smolvla_v3_eval_framework_20260724/*.json (bundle: smolvla_v3_eval_framework_bundle.json)")
+    _footer(
+        fig,
+        f"{FRAMEWORK_DIR.relative_to(MIDSTREAM)}/*.json "
+        "(bundle: smolvla_v3_eval_framework_bundle.json)",
+    )
     out = out_dir / "smolvla_v3_eval_framework_summary.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
@@ -373,7 +403,7 @@ def fig_s4_funnel(out_dir: Path) -> Path:
         ax.text(b.get_x() + b.get_width() / 2, c + 0.08, f"{c}/{n}",
                 ha="center", va="bottom", fontsize=12)
     ax.axhline(g["pass_threshold"], color="gray", ls="--", lw=1,
-               label=f"pass_threshold={g['pass_threshold']} lift")
+               label=f"task pass threshold: lift ≥ {g['pass_threshold']}")
     ax.set_ylim(0, n + 0.6)
     ax.set_ylabel(f"count / {n} seeds")
     ax.set_title(
@@ -384,7 +414,7 @@ def fig_s4_funnel(out_dir: Path) -> Path:
     )
     ax.legend()
     fig.tight_layout(rect=(0, 0.07, 1, 1))
-    _footer(fig, "evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json")
+    _footer(fig, f"{S4_EVIDENCE.relative_to(MIDSTREAM)}/s4_gate.json")
     out = out_dir / "smolvla_s4_bounded5_funnel.png"
     fig.savefig(out, dpi=110)
     plt.close(fig)
@@ -392,9 +422,25 @@ def fig_s4_funnel(out_dir: Path) -> Path:
 
 
 def main() -> None:
+    global S4_EVIDENCE, FRAMEWORK_DIR
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, default=MIDSTREAM / "docs/portfolio")
+    parser.add_argument(
+        "--s4-evidence",
+        type=Path,
+        default=S4_EVIDENCE,
+        help="bounded S4 evidence dir (default: authoritative post-light-fix relight run)",
+    )
+    parser.add_argument(
+        "--framework-dir",
+        type=Path,
+        default=FRAMEWORK_DIR,
+        help="unified_eval_report_v0 envelope dir",
+    )
     args = parser.parse_args()
+    S4_EVIDENCE = args.s4_evidence
+    FRAMEWORK_DIR = args.framework_dir
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     for fn in (

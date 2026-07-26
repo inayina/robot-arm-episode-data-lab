@@ -1,0 +1,73 @@
+# SmolVLA open-loop + nuisance perturbation (P1-0A / P1-0B)
+#
+# Diagnostic only. Does NOT replace clean canonical Gate.
+# gate_eligible: false · claims_task_success: false
+# State perturbations that would change the correct action are OUT OF SCOPE
+# until scripted-oracle re-label exists (not in this table).
+
+contract_version: smolvla_openloop_perturbation_v0
+status: authorized_diagnostic_run
+gate_eligible: false
+claims_task_success: false
+claims_sim2real: false
+inference_mode: canonical_first_action
+horizon: 1
+policy_reset: every_observation
+gt_policy: expert_action_at_t  # nuisance only; original GT retained
+
+release_id: smolvla_s3_recovery_v3_prospective_eval10_gate_v3_20260724b
+train_config: configs/smolvla_s3/lora_train_recovery_v3_phaseaware50.yaml
+design_doc: docs/SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md
+
+close_debounce_frames: 3
+gripper_threshold: 0.5  # Panda: 0=closed, 1=open
+
+layers:
+  stage_anchors:
+    id: P1-0A
+    stages:
+      - hover_approach
+      - descend_mid
+      - pre_close
+      - close_transition
+      - early_lift
+      - late_lift
+    conditions: [clean, light, medium, heavy]
+    expected_inferences: 240  # 6 * 10 * 4
+  close_window:
+    id: P1-0B
+    frames_before: 10
+    frames_after: 10
+    # All nuisance levels so close-timing degradation is comparable to Layer-1.
+    conditions: [clean, light, medium, heavy]
+    expected_frames_per_episode: 21
+    expected_inferences: 840  # 21 * 10 * 4
+
+# Image-only nuisance: does not change the correct expert action at t.
+nuisance_conditions:
+  clean:
+    kind: nuisance
+    brightness_scale: 1.0
+    gaussian_blur_ksize: 0
+    gaussian_noise_std: 0.0
+  light:
+    kind: nuisance
+    brightness_scale: 0.85
+    gaussian_blur_ksize: 3
+    gaussian_noise_std: 8.0
+  medium:
+    kind: nuisance
+    brightness_scale: 0.70
+    gaussian_blur_ksize: 5
+    gaussian_noise_std: 16.0
+  heavy:
+    kind: nuisance
+    brightness_scale: 0.55
+    gaussian_blur_ksize: 7
+    gaussian_noise_std: 28.0
+
+# Explicitly excluded from main degradation table (needs oracle re-label).
+excluded_from_main_table:
+  - state_ee_noise
+  - state_object_pose_noise
+  - timestamp_shift_requiring_new_gt

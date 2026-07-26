@@ -1,0 +1,853 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/policy_runtime_contract.schema.json",
+  "title": "Panda policy runtime v1 contract artifacts",
+  "description": "M0-frozen descriptor and runtime evidence envelopes. This schema does not authorize runtime cutover, simulation, training, or task-success claims.",
+  "oneOf": [
+    {"$ref": "#/$defs/contractDescriptor"},
+    {"$ref": "#/$defs/policyCommand"},
+    {"$ref": "#/$defs/policyExecutionReport"},
+    {"$ref": "#/$defs/policyRuntimeHealth"},
+    {"$ref": "#/$defs/taskEvaluationStatus"},
+    {"$ref": "#/$defs/hocRuntimeFrame"},
+    {"$ref": "#/$defs/runtimeDiagnosticGraph"}
+  ],
+  "$defs": {
+    "contractVersion": {
+      "const": "panda_policy_runtime_v1"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "traceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+    },
+    "rosTime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sec", "nanosec"],
+      "properties": {
+        "sec": {"type": "integer", "minimum": 0},
+        "nanosec": {"type": "integer", "minimum": 0, "maximum": 999999999}
+      }
+    },
+    "validity": {
+      "enum": ["VALID", "WARMING_UP", "STALE", "UNAVAILABLE", "ERROR"]
+    },
+    "reasonCode": {
+      "enum": [
+        "none",
+        "contract_mismatch",
+        "policy_not_loaded",
+        "observation_warming_up",
+        "observation_stale",
+        "observation_invalid",
+        "inference_deadline_missed",
+        "inference_timeout",
+        "queue_empty",
+        "queue_underrun",
+        "queue_reset",
+        "action_schema_unknown",
+        "action_dimension_invalid",
+        "action_non_finite",
+        "command_ttl_expired",
+        "command_sequence_regression",
+        "command_held",
+        "command_rejected",
+        "workspace_clipped",
+        "gripper_clipped",
+        "soft_limit",
+        "hard_limit",
+        "risk_r2_hold",
+        "risk_r3_estop",
+        "baseline_warming_up",
+        "baseline_not_ready",
+        "insufficient_samples",
+        "calibration_mismatch",
+        "source_stale",
+        "source_unavailable",
+        "task_running",
+        "task_reach_failed",
+        "task_grasp_failed",
+        "task_lift_failed",
+        "task_place_failed",
+        "task_pass",
+        "manual_estop",
+        "controller_inactive",
+        "dds_deadline_missed",
+        "dds_liveliness_lost",
+        "lifecycle_inactive",
+        "lifecycle_error"
+      ]
+    },
+    "eventContextProperties": {
+      "contract_version": {"$ref": "#/$defs/contractVersion"},
+      "event_id": {"$ref": "#/$defs/identifier"},
+      "parent_event_id": {
+        "oneOf": [
+          {"type": "null"},
+          {"$ref": "#/$defs/identifier"}
+        ]
+      },
+      "trace_run_id": {"$ref": "#/$defs/traceId"},
+      "episode_id": {"$ref": "#/$defs/identifier"},
+      "source_stamp": {"$ref": "#/$defs/rosTime"},
+      "received_stamp": {"$ref": "#/$defs/rosTime"},
+      "validity": {"$ref": "#/$defs/validity"},
+      "reason_code": {"$ref": "#/$defs/reasonCode"},
+      "claims_task_success": {"const": false}
+    },
+    "actionSchema": {
+      "enum": [
+        "panda_absolute_eef_gripper_v0",
+        "panda_ee_delta_gripper_v0"
+      ]
+    },
+    "absoluteAction": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {"type": "number"}
+    },
+    "deltaAction": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {"type": "number"}
+    },
+    "actionBySchema": {
+      "oneOf": [
+        {"$ref": "#/$defs/absoluteAction"},
+        {"$ref": "#/$defs/deltaAction"}
+      ]
+    },
+    "clipAxis": {
+      "enum": [
+        "x",
+        "y",
+        "z",
+        "qx",
+        "qy",
+        "qz",
+        "qw",
+        "roll",
+        "pitch",
+        "yaw",
+        "gripper",
+        "workspace",
+        "joint_excursion"
+      ]
+    },
+    "contractDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "implementation_status",
+        "canonical_owner_repository",
+        "frozen_at_utc",
+        "source_spec",
+        "supported_action_schemas",
+        "validity_states",
+        "reason_codes",
+        "lifecycle",
+        "qos_profiles",
+        "hoc_frame_kinds",
+        "diagnostic_graph_path",
+        "safety_boundaries",
+        "authorized_runtime_behavior_change",
+        "authorized_simulation",
+        "authorized_training",
+        "claims_task_success",
+        "claims_sim2real",
+        "claims_real_robot"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "policy_runtime_contract"},
+        "implementation_status": {"const": "m0_contract_frozen_runtime_not_implemented"},
+        "canonical_owner_repository": {"const": "robot-arm-episode-data-lab"},
+        "frozen_at_utc": {"type": "string", "format": "date-time"},
+        "source_spec": {"const": "docs/POLICY_RUNTIME_INTEGRATION_SPEC.md"},
+        "supported_action_schemas": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/actionSchema"}
+        },
+        "validity_states": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/validity"}
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reasonCode"}
+        },
+        "lifecycle": {"$ref": "#/$defs/lifecycleContract"},
+        "qos_profiles": {"$ref": "#/$defs/qosProfiles"},
+        "hoc_frame_kinds": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["policy_health", "execution_report", "risk_status", "task_gt"]
+          }
+        },
+        "diagnostic_graph_path": {
+          "const": "configs/policy_runtime/runtime_diagnostic_graph.yaml"
+        },
+        "safety_boundaries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "single_execution_authority",
+            "risk_may_hold_or_estop",
+            "risk_may_override_task_gt",
+            "unknown_or_stale_defaults_to_hold",
+            "r3_auto_clear"
+          ],
+          "properties": {
+            "single_execution_authority": {"const": true},
+            "risk_may_hold_or_estop": {"const": true},
+            "risk_may_override_task_gt": {"const": false},
+            "unknown_or_stale_defaults_to_hold": {"const": true},
+            "r3_auto_clear": {"const": false}
+          }
+        },
+        "authorized_runtime_behavior_change": {"const": false},
+        "authorized_simulation": {"const": false},
+        "authorized_training": {"const": false},
+        "claims_task_success": {"const": false},
+        "claims_sim2real": {"const": false},
+        "claims_real_robot": {"const": false}
+      }
+    },
+    "lifecycleContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["states", "initial_state", "command_enabled_state", "transitions"],
+      "properties": {
+        "states": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["UNCONFIGURED", "INACTIVE", "ACTIVE", "ERROR_PROCESSING", "FINALIZED"]
+          }
+        },
+        "initial_state": {"const": "UNCONFIGURED"},
+        "command_enabled_state": {"const": "ACTIVE"},
+        "transitions": {
+          "type": "array",
+          "minItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "from", "to"],
+            "properties": {
+              "name": {
+                "enum": ["configure", "activate", "deactivate", "cleanup", "error", "recover", "shutdown"]
+              },
+              "from": {
+                "enum": ["UNCONFIGURED", "INACTIVE", "ACTIVE", "ERROR_PROCESSING", "FINALIZED", "ANY_NON_FINALIZED"]
+              },
+              "to": {
+                "enum": ["UNCONFIGURED", "INACTIVE", "ACTIVE", "ERROR_PROCESSING", "FINALIZED"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "qosProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reliability",
+        "durability",
+        "history",
+        "depth",
+        "deadline_period_multiplier",
+        "lifespan_lte_application_ttl",
+        "liveliness",
+        "liveliness_lease_period_multiplier"
+      ],
+      "properties": {
+        "reliability": {"enum": ["reliable", "best_effort"]},
+        "durability": {"enum": ["volatile", "transient_local"]},
+        "history": {"const": "keep_last"},
+        "depth": {"type": "integer", "minimum": 1, "maximum": 100},
+        "deadline_period_multiplier": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "number", "exclusiveMinimum": 1.0}
+          ]
+        },
+        "lifespan_lte_application_ttl": {"type": "boolean"},
+        "liveliness": {"enum": ["automatic", "manual_by_topic"]},
+        "liveliness_lease_period_multiplier": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "number", "minimum": 2.0}
+          ]
+        }
+      }
+    },
+    "qosProfiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_command", "runtime_telemetry", "latched_state", "sensor_data"],
+      "properties": {
+        "policy_command": {"$ref": "#/$defs/qosProfile"},
+        "runtime_telemetry": {"$ref": "#/$defs/qosProfile"},
+        "latched_state": {"$ref": "#/$defs/qosProfile"},
+        "sensor_data": {"$ref": "#/$defs/qosProfile"}
+      }
+    },
+    "policyCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "event_id",
+        "parent_event_id",
+        "trace_run_id",
+        "episode_id",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "observation_sequence",
+        "command_sequence",
+        "action_schema_version",
+        "action",
+        "chunk_index",
+        "chunk_size",
+        "from_prefetched_chunk",
+        "inference_latency_ms",
+        "valid_until",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "policy_command"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "parent_event_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"const": "VALID"},
+        "reason_code": {"const": "none"},
+        "observation_sequence": {"type": "integer", "minimum": 0},
+        "command_sequence": {"type": "integer", "minimum": 0},
+        "action_schema_version": {"$ref": "#/$defs/actionSchema"},
+        "action": {"$ref": "#/$defs/actionBySchema"},
+        "chunk_index": {"type": "integer", "minimum": 0},
+        "chunk_size": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "from_prefetched_chunk": {"type": "boolean"},
+        "inference_latency_ms": {"type": "number", "minimum": 0},
+        "valid_until": {"$ref": "#/$defs/rosTime"},
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"action_schema_version": {"const": "panda_absolute_eef_gripper_v0"}}},
+          "then": {"properties": {"action": {"$ref": "#/$defs/absoluteAction"}}},
+          "else": {"properties": {"action": {"$ref": "#/$defs/deltaAction"}}}
+        }
+      ]
+    },
+    "policyExecutionReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "event_id",
+        "parent_event_id",
+        "trace_run_id",
+        "episode_id",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "command_sequence",
+        "accepted",
+        "decision",
+        "source_action_schema_version",
+        "execution_action_schema_version",
+        "source_action",
+        "bounded_action",
+        "clipped",
+        "clip_axes",
+        "hold_active",
+        "estop_active",
+        "adapter_name",
+        "adapter_version",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "policy_execution_report"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "parent_event_id": {"$ref": "#/$defs/identifier"},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"$ref": "#/$defs/validity"},
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "command_sequence": {"type": "integer", "minimum": 0},
+        "accepted": {"type": "boolean"},
+        "decision": {"enum": ["EXECUTED", "HELD", "REJECTED", "ESTOPPED"]},
+        "source_action_schema_version": {"$ref": "#/$defs/actionSchema"},
+        "execution_action_schema_version": {"const": "panda_bounded_pose_gripper_v0"},
+        "source_action": {"$ref": "#/$defs/actionBySchema"},
+        "bounded_action": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/absoluteAction"}
+          ]
+        },
+        "clipped": {"type": "boolean"},
+        "clip_axes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/clipAxis"}
+        },
+        "hold_active": {"type": "boolean"},
+        "estop_active": {"type": "boolean"},
+        "adapter_name": {"$ref": "#/$defs/identifier"},
+        "adapter_version": {"$ref": "#/$defs/identifier"},
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"source_action_schema_version": {"const": "panda_absolute_eef_gripper_v0"}}},
+          "then": {"properties": {"source_action": {"$ref": "#/$defs/absoluteAction"}}},
+          "else": {"properties": {"source_action": {"$ref": "#/$defs/deltaAction"}}}
+        },
+        {
+          "if": {"properties": {"decision": {"const": "EXECUTED"}}},
+          "then": {
+            "properties": {
+              "accepted": {"const": true},
+              "bounded_action": {"$ref": "#/$defs/absoluteAction"},
+              "validity": {"const": "VALID"}
+            }
+          },
+          "else": {"properties": {"accepted": {"const": false}}}
+        },
+        {
+          "if": {"properties": {"clipped": {"const": false}}},
+          "then": {"properties": {"clip_axes": {"maxItems": 0}}},
+          "else": {"properties": {"clip_axes": {"minItems": 1}}}
+        }
+      ]
+    },
+    "policyRuntimeHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "event_id",
+        "parent_event_id",
+        "trace_run_id",
+        "episode_id",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "lifecycle_state",
+        "policy_name",
+        "policy_version",
+        "checkpoint_hash",
+        "observation_schema_version",
+        "policy_loaded",
+        "observation_age_ms",
+        "inference_busy",
+        "inference_latency_ms_last",
+        "inference_latency_ms_p50",
+        "inference_latency_ms_p95",
+        "queue_depth",
+        "queue_underrun_count",
+        "deadline_miss_count",
+        "last_command_sequence",
+        "last_successful_command_age_ms",
+        "hold_active",
+        "estop_active",
+        "contract_sha256",
+        "failure_lane",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "policy_runtime_health"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "parent_event_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"$ref": "#/$defs/validity"},
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "lifecycle_state": {
+          "enum": ["UNCONFIGURED", "INACTIVE", "ACTIVE", "ERROR_PROCESSING", "FINALIZED"]
+        },
+        "policy_name": {"$ref": "#/$defs/identifier"},
+        "policy_version": {"$ref": "#/$defs/identifier"},
+        "checkpoint_hash": {
+          "pattern": "^([a-f0-9]{64}|none|oracle_scripted_v2b|not_applicable)$",
+          "type": "string"
+        },
+        "observation_schema_version": {"$ref": "#/$defs/identifier"},
+        "policy_loaded": {"type": "boolean"},
+        "observation_age_ms": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+        "inference_busy": {"type": "boolean"},
+        "inference_latency_ms_last": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+        "inference_latency_ms_p50": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+        "inference_latency_ms_p95": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+        "queue_depth": {"type": "integer", "minimum": 0},
+        "queue_underrun_count": {"type": "integer", "minimum": 0},
+        "deadline_miss_count": {"type": "integer", "minimum": 0},
+        "last_command_sequence": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+        "last_successful_command_age_ms": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+        "hold_active": {"type": "boolean"},
+        "estop_active": {"type": "boolean"},
+        "contract_sha256": {"$ref": "#/$defs/sha256"},
+        "failure_lane": {"enum": ["none", "interface_fail", "system_fail"]},
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"lifecycle_state": {"const": "ACTIVE"}}},
+          "then": {"properties": {"policy_loaded": {"const": true}}}
+        },
+        {
+          "if": {"properties": {"validity": {"const": "VALID"}}},
+          "then": {"properties": {"reason_code": {"const": "none"}}}
+        }
+      ]
+    },
+    "taskEvaluationStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "event_id",
+        "parent_event_id",
+        "trace_run_id",
+        "episode_id",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "phase",
+        "task_status",
+        "reach",
+        "grasp",
+        "lift",
+        "place",
+        "object_delta_m",
+        "gt_source",
+        "risk_may_override",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "task_evaluation_status"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "parent_event_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"$ref": "#/$defs/validity"},
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "phase": {"enum": ["IDLE", "HOVER", "DESCEND", "CLOSE", "LIFT", "TRANSPORT", "PLACE", "RELEASE", "DONE"]},
+        "task_status": {"enum": ["RUNNING", "PASS", "FAIL", "UNAVAILABLE"]},
+        "reach": {"type": ["boolean", "null"]},
+        "grasp": {"type": ["boolean", "null"]},
+        "lift": {"type": ["boolean", "null"]},
+        "place": {"type": ["boolean", "null"]},
+        "object_delta_m": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y", "z"],
+              "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"}
+              }
+            }
+          ]
+        },
+        "gt_source": {"const": "upstream_continuous_task_evaluator"},
+        "risk_may_override": {"const": false},
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"task_status": {"const": "UNAVAILABLE"}}},
+          "then": {
+            "properties": {
+              "validity": {"enum": ["UNAVAILABLE", "STALE", "ERROR"]}
+            }
+          },
+          "else": {"properties": {"validity": {"const": "VALID"}}}
+        },
+        {
+          "if": {"properties": {"task_status": {"const": "PASS"}}},
+          "then": {
+            "properties": {
+              "phase": {"const": "DONE"},
+              "reach": {"const": true},
+              "grasp": {"const": true},
+              "lift": {"const": true},
+              "place": {"const": true},
+              "reason_code": {"const": "task_pass"}
+            }
+          }
+        }
+      ]
+    },
+    "hocRuntimeFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "frame_kind",
+        "trace_run_id",
+        "episode_id",
+        "command_sequence",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "payload",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "hoc_runtime_frame"},
+        "frame_kind": {"enum": ["policy_health", "execution_report", "risk_status", "task_gt"]},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "command_sequence": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"$ref": "#/$defs/validity"},
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "payload": {
+          "oneOf": [
+            {"$ref": "#/$defs/policyRuntimeHealth"},
+            {"$ref": "#/$defs/policyExecutionReport"},
+            {"$ref": "#/$defs/riskStatusSnapshot"},
+            {"$ref": "#/$defs/taskEvaluationStatus"}
+          ]
+        },
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"frame_kind": {"const": "policy_health"}}},
+          "then": {"properties": {"payload": {"$ref": "#/$defs/policyRuntimeHealth"}}}
+        },
+        {
+          "if": {"properties": {"frame_kind": {"const": "execution_report"}}},
+          "then": {"properties": {"payload": {"$ref": "#/$defs/policyExecutionReport"}}}
+        },
+        {
+          "if": {"properties": {"frame_kind": {"const": "risk_status"}}},
+          "then": {"properties": {"payload": {"$ref": "#/$defs/riskStatusSnapshot"}}}
+        },
+        {
+          "if": {"properties": {"frame_kind": {"const": "task_gt"}}},
+          "then": {"properties": {"payload": {"$ref": "#/$defs/taskEvaluationStatus"}}}
+        }
+      ]
+    },
+    "riskStatusSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "event_id",
+        "parent_event_id",
+        "trace_run_id",
+        "episode_id",
+        "source_stamp",
+        "received_stamp",
+        "validity",
+        "reason_code",
+        "level",
+        "decision",
+        "composite_score",
+        "primary_driver",
+        "cause_path",
+        "source_validity",
+        "degraded_mode",
+        "estop_active",
+        "may_override_task_gt",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "risk_status_snapshot"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "parent_event_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "trace_run_id": {"$ref": "#/$defs/traceId"},
+        "episode_id": {"$ref": "#/$defs/identifier"},
+        "source_stamp": {"$ref": "#/$defs/rosTime"},
+        "received_stamp": {"$ref": "#/$defs/rosTime"},
+        "validity": {"$ref": "#/$defs/validity"},
+        "reason_code": {"$ref": "#/$defs/reasonCode"},
+        "level": {"type": "integer", "minimum": 0, "maximum": 3},
+        "decision": {"enum": ["RUN", "HOLD", "E_STOP"]},
+        "composite_score": {"type": "number", "minimum": 0, "maximum": 1},
+        "primary_driver": {"$ref": "#/$defs/identifier"},
+        "cause_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "source_validity": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"$ref": "#/$defs/validity"}
+        },
+        "degraded_mode": {"type": "boolean"},
+        "estop_active": {"type": "boolean"},
+        "may_override_task_gt": {"const": false},
+        "claims_task_success": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"level": {"const": 3}}},
+          "then": {"properties": {"decision": {"const": "E_STOP"}, "estop_active": {"const": true}}}
+        },
+        {
+          "if": {"properties": {"decision": {"const": "HOLD"}}},
+          "then": {"properties": {"degraded_mode": {"const": true}}}
+        }
+      ]
+    },
+    "diagnosticNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "lane", "inputs", "latch_seconds", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "type": {"enum": ["input", "and", "or", "link", "decision"]},
+        "lane": {"enum": ["brain", "execution", "safety", "task_gt"]},
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "latch_seconds": {"type": "number", "minimum": 0},
+        "description": {"type": "string", "minLength": 1, "maxLength": 512}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "input"}}},
+          "then": {"properties": {"inputs": {"maxItems": 0}}},
+          "else": {"properties": {"inputs": {"minItems": 1}}}
+        }
+      ]
+    },
+    "decisionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "when_node", "when_status", "decision", "reason_code"],
+      "properties": {
+        "priority": {"type": "integer", "minimum": 0},
+        "when_node": {"$ref": "#/$defs/identifier"},
+        "when_status": {"enum": ["OK", "WARN", "ERROR", "STALE", "TRUE", "FALSE"]},
+        "decision": {"enum": ["RUN", "HOLD", "E_STOP"]},
+        "reason_code": {"$ref": "#/$defs/reasonCode"}
+      }
+    },
+    "runtimeDiagnosticGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "artifact_type",
+        "graph_version",
+        "root_node",
+        "nodes",
+        "decision_rules",
+        "fixture_scenarios",
+        "risk_may_override_task_gt",
+        "claims_task_success"
+      ],
+      "properties": {
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "artifact_type": {"const": "runtime_diagnostic_graph"},
+        "graph_version": {"const": "runtime_diagnostic_graph_v1"},
+        "root_node": {"$ref": "#/$defs/identifier"},
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/diagnosticNode"}
+        },
+        "decision_rules": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"$ref": "#/$defs/decisionRule"}
+        },
+        "fixture_scenarios": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "input_status", "expected_decision", "expected_reason_code", "expected_cause_path"],
+            "properties": {
+              "id": {"$ref": "#/$defs/identifier"},
+              "input_status": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {"enum": ["OK", "WARN", "ERROR", "STALE", "TRUE", "FALSE"]}
+              },
+              "expected_decision": {"enum": ["RUN", "HOLD", "E_STOP"]},
+              "expected_reason_code": {"$ref": "#/$defs/reasonCode"},
+              "expected_cause_path": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"$ref": "#/$defs/identifier"}
+              }
+            }
+          }
+        },
+        "risk_may_override_task_gt": {"const": false},
+        "claims_task_success": {"const": false}
+      }
+    }
+  }
+}

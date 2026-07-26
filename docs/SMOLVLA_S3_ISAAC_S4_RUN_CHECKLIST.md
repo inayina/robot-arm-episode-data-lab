@@ -40,17 +40,26 @@ success_metric      = bounded lift task success（连续 GT；沿用 E3.5 v2b）
 - [x] 成功判据：lift 高度 / place 容差沿用 E3.5 v2b
 - [x] 失败即停：任一种子 E-stop 过多或 success=0/5 时默认 Hold，不自动扩种子
 - [x] 明确 **不** 声称 Sim2Real / 真机部署
+- [x] 2026-07-24 另批：**同 seeds 1–5 带遥测复跑**（`RECORD_SCENE_VIDEO=true` + policy-input 相机帧 + `observations.jsonl`/`state15`），专用于 H1/H3 归因；**不扩种子、不重训**
 
 ## 4. 首批有界结果（诚实）
 
 | 项 | 结果 |
 |---|---|
-| Evidence | `evidence/smolvla_s4_bounded5_20260724T203700Z/` |
-| Gate | `s4_gate.json`：`ran_isaac=true`，`gate_pass=false` |
-| Policy interface | 5/5 PASS（各 150 actions；latency p50 ≈ 9–11 ms after warmup） |
-| Continuous GT | reach **3/5**，grasp **1/5**，lift **0/5**，outcome_success **0/5** |
-| Host | local RTX PRO 500 Blackwell laptop GPU ~6GB；`RECORD_SCENE_VIDEO=false`；local Franka USD |
-| Interpretation | **Hold** — online path wired and executed；not task success |
+| Evidence（黑光，历史） | `evidence/smolvla_s4_bounded5_20260724T203700Z/` |
+| Evidence（修光后权威） | `evidence/smolvla_s4_bounded5_relight_20260724T151711Z/` |
+| Gate（修光后） | `s4_gate.json`：`ran_isaac=true`，`gate_pass=false` |
+| Policy interface | 5/5 PASS；JPEG 均值 ≈154（dome450/distant900） |
+| Continuous GT（修光后） | reach **1/5**，grasp **0/5**，lift **0/5**；failure=`gripper never closed below 0.70` |
+| 黑光基线对照 | reach 3/5 · grasp 1/5 · lift 0/5（失明+阈值假象，**不作权威**） |
+| Interpretation | **Hold** — 视觉已修复；策略在有光下仍不闭爪/不抓取；not task success |
+
+### 4.0 H2 注记（MuJoCo 训练域对照，提前停止）
+
+- Evidence：`evidence/smolvla_s4_mujoco_bounded5_20260724T155513Z/`（`early_stopped=true`，`seeds_completed=1`）。
+- 同 ckpt、训练域 JPEG≈50：seed1 仍 `gripper never closed below 0.700`（grip_min≈0.976）；seed2 部分遥测同型（无完整 GT）。
+- 解读：修光后 Isaac Hold **不能**主要归因于 Isaac 外观域差；倾向闭环 BC（H2）。**不是**完整 5-seed gate，**禁止**据此扩种子 / 重训 / 声称任务成功。
+- 入口：`scripts/run_smolvla_s4_mujoco_bounded.sh` → 上游 `run_mujoco_smolvla_s4.sh`（本机 EGL+GPU 争用导致 chunk 延迟 7–13 s，墙钟过长）。
 
 ```bash
 export ISAAC_FRANKA_USD=$HOME/isaac_assets/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd
@@ -67,6 +76,23 @@ export SEEDS="1 2 3 4 5"
 ```bash
 export ISAAC_FRANKA_USD=$HOME/isaac_assets/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd
 export ISAAC_REQUIRE_LOCAL_FRANKA=1
+```
+
+## 4.1 lift 0/5 离线归因（含遥测复跑）
+
+见 `docs/SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md`。
+
+- 行为：闭环退化为习惯走廊（EE z 最低 ≈0.20 m、半闭爪、方块位移数值零）；reach/grasp 数字为几何重叠，非部分成功。
+- **遥测复跑**（同 seeds 1–5，`evidence/smolvla_s4_bounded5_telemetry_20260724T144549Z/`）：policy-input 相机近黑（均值 ≈0.3；对照 MuJoCo ≈50、oracle ≈114）→ **H1′ 主因：Isaac 离线场景缺光**；`state[15]` 与训练一致 → **H3 排除**。
+- **下一步候选（另批）**：修光冒烟已 Pass（`evidence/smolvla_s4_lightfix_smoke1_20260724T150519Z/`，JPEG 均值 ≈233）；是否重跑有界 5 seeds 待人工确认。
+
+```bash
+export ISAAC_FRANKA_USD=$HOME/isaac_assets/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd
+export ISAAC_REQUIRE_LOCAL_FRANKA=1
+export RECORD_SCENE_VIDEO=true   # also enables DUMP_TELEMETRY by default
+export SEEDS="1 2 3 4 5"
+./scripts/run_smolvla_s4_bounded_isaac.sh
+# or: bash scripts/_run_s4_telemetry_once.sh
 ```
 
 ## 5. 明确不做（除非另批）

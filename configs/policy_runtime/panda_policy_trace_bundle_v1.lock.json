@@ -1,0 +1,19 @@
+{
+  "lock_version": "panda_policy_trace_bundle_v1_m5_lock_v1",
+  "bundle_format": "panda_policy_trace_bundle_v1",
+  "runtime_contract_version": "panda_policy_runtime_v1",
+  "frozen_at_utc": "2026-07-26T09:30:00Z",
+  "artifact_sha256": {
+    "evaluation/schemas/policy_trace_bundle.schema.json": "f39ba39dbcee1a74c5a6cc17719103a68499f05c227c573ff9e58bd59665598b",
+    "evaluation/examples/policy_trace_bundle_fixture/manifest.json": "b84d7b139133625a42472439f08400b92296bdc2039efb542694e5d6012977cc",
+    "evaluation/examples/policy_trace_bundle_fixture/policy_commands.jsonl": "4646c000f1350234e6bf92f109dab6c81861b4d3e9a97ddd6f1dbd2e9c51965f",
+    "evaluation/examples/policy_trace_bundle_fixture/policy_health_timeline.jsonl": "f6540bf2ab3fba1dda7fcb9fa071800ffdeaedbac604d6a3defa6c8bc69aea5f",
+    "evaluation/examples/policy_trace_bundle_fixture/execution_reports.jsonl": "8a9407e820a697594f3bbac9f8ab62d4cc0d78d0525975ab36ce0f6b9e53bac3",
+    "evaluation/examples/policy_trace_bundle_fixture/risk_timeline.jsonl": "1c8938b7748a3060e6e865e356d087cc5679b01212f5d92c3cc71c5509d75fcd",
+    "evaluation/examples/policy_trace_bundle_fixture/task_gt_timeline.jsonl": "6a442cbe7612e91153323ebbfff6bc76826af8cf78e0d054daca875c3b7d0782"
+  },
+  "is_closed_loop": false,
+  "authorized_simulation": false,
+  "authorized_training": false,
+  "authorized_task_claim": false
+}

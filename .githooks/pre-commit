@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 
-# Allow project source, docs, schemas, and JSONL fixtures (episode_results / frames).
+# Allow project source, docs, schemas, evidence images, and JSONL fixtures
+# (episode_results / frames).
 excluded_files="$(
   git diff --cached --name-only --diff-filter=ACM |
-    grep -vE '(^LICENSE$|^\.githooks/pre-commit$|^\.gitignore$|\.gitkeep$|\.py$|\.jsonl?$|\.ya?ml$|\.txt$|\.md$|\.gif$|\.png$|\.svg$|\.mp4$|\.ipynb$|\.urdf$|\.sh$|^bin/)' ||
+    grep -vE '(^LICENSE$|^\.githooks/pre-commit$|^\.gitignore$|\.gitkeep$|\.py$|\.jsonl?$|\.ya?ml$|\.txt$|\.md$|\.gif$|\.jpe?g$|\.png$|\.svg$|\.mp4$|\.ipynb$|\.urdf$|\.sh$|^bin/)' ||
     true
 )"
 

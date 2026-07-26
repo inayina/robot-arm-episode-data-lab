@@ -1,0 +1,22 @@
+{
+  "contract_version": "panda_policy_runtime_v1",
+  "artifact_type": "task_evaluation_status",
+  "event_id": "task_gt:fixture:43",
+  "parent_event_id": "execution:fixture:42",
+  "trace_run_id": "policy_runtime_m0_fixture",
+  "episode_id": "episode_fixture_000",
+  "source_stamp": {"sec": 100, "nanosec": 106000000},
+  "received_stamp": {"sec": 100, "nanosec": 107000000},
+  "validity": "VALID",
+  "reason_code": "task_running",
+  "phase": "DESCEND",
+  "task_status": "RUNNING",
+  "reach": true,
+  "grasp": null,
+  "lift": null,
+  "place": null,
+  "object_delta_m": {"x": 0.0, "y": 0.0, "z": 0.0},
+  "gt_source": "upstream_continuous_task_evaluator",
+  "risk_may_override": false,
+  "claims_task_success": false
+}

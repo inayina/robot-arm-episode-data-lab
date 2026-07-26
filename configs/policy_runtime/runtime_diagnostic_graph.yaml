@@ -1,0 +1,212 @@
+contract_version: panda_policy_runtime_v1
+artifact_type: runtime_diagnostic_graph
+graph_version: runtime_diagnostic_graph_v1
+root_node: final_decision
+
+nodes:
+  - id: observation_valid
+    type: input
+    lane: brain
+    inputs: []
+    latch_seconds: 0.0
+    description: Observation schema, synchronization and source age are valid.
+  - id: policy_loaded
+    type: input
+    lane: brain
+    inputs: []
+    latch_seconds: 0.0
+    description: Contract and checkpoint loaded successfully.
+  - id: inference_deadline_ok
+    type: input
+    lane: brain
+    inputs: []
+    latch_seconds: 0.0
+    description: Inference and DDS deadline are within the frozen budget.
+  - id: queue_ready
+    type: input
+    lane: brain
+    inputs: []
+    latch_seconds: 0.0
+    description: Active chunk queue has a valid command available.
+  - id: brain_ready
+    type: and
+    lane: brain
+    inputs: [observation_valid, policy_loaded, inference_deadline_ok, queue_ready]
+    latch_seconds: 0.0
+    description: All policy runtime preconditions are healthy.
+  - id: controller_active
+    type: input
+    lane: execution
+    inputs: []
+    latch_seconds: 0.0
+    description: Controller and hardware lifecycle are active.
+  - id: command_valid
+    type: input
+    lane: execution
+    inputs: []
+    latch_seconds: 0.0
+    description: Command contract, schema, dimension and finite checks passed.
+  - id: ttl_ok
+    type: input
+    lane: execution
+    inputs: []
+    latch_seconds: 0.0
+    description: Command TTL and sequence checks passed.
+  - id: limits_ok
+    type: input
+    lane: execution
+    inputs: []
+    latch_seconds: 0.0
+    description: Workspace, gripper, joint and hard safety limits are healthy.
+  - id: execution_ready
+    type: and
+    lane: execution
+    inputs: [controller_active, command_valid, ttl_ok, limits_ok]
+    latch_seconds: 0.0
+    description: Execution adapter may accept the next command.
+  - id: monitor_sources_valid
+    type: input
+    lane: safety
+    inputs: []
+    latch_seconds: 0.0
+    description: Required monitoring sources are valid; optional sources may be unavailable.
+  - id: risk_r2_active
+    type: input
+    lane: safety
+    inputs: []
+    latch_seconds: 0.5
+    description: Risk aggregator requests degraded HOLD.
+  - id: estop_latched
+    type: input
+    lane: safety
+    inputs: []
+    latch_seconds: 0.0
+    description: Manual or risk R3 E-stop is latched and requires explicit reset.
+  - id: task_gt_status
+    type: input
+    lane: task_gt
+    inputs: []
+    latch_seconds: 0.0
+    description: Task GT is displayed but never contributes to runtime safety aggregation.
+  - id: runtime_safe
+    type: and
+    lane: safety
+    inputs: [brain_ready, execution_ready, monitor_sources_valid]
+    latch_seconds: 0.0
+    description: Brain, execution and required monitoring preconditions allow RUN.
+  - id: final_decision
+    type: decision
+    lane: safety
+    inputs: [runtime_safe, risk_r2_active, estop_latched]
+    latch_seconds: 0.0
+    description: Single authoritative RUN, HOLD or E_STOP decision.
+
+decision_rules:
+  - priority: 100
+    when_node: estop_latched
+    when_status: "TRUE"
+    decision: E_STOP
+    reason_code: risk_r3_estop
+  - priority: 90
+    when_node: limits_ok
+    when_status: ERROR
+    decision: E_STOP
+    reason_code: hard_limit
+  - priority: 60
+    when_node: risk_r2_active
+    when_status: "TRUE"
+    decision: HOLD
+    reason_code: risk_r2_hold
+  - priority: 50
+    when_node: queue_ready
+    when_status: ERROR
+    decision: HOLD
+    reason_code: queue_underrun
+  - priority: 40
+    when_node: observation_valid
+    when_status: STALE
+    decision: HOLD
+    reason_code: observation_stale
+  - priority: 30
+    when_node: runtime_safe
+    when_status: ERROR
+    decision: HOLD
+    reason_code: source_unavailable
+  - priority: 0
+    when_node: runtime_safe
+    when_status: OK
+    decision: RUN
+    reason_code: none
+
+fixture_scenarios:
+  - id: all_valid_run
+    input_status:
+      observation_valid: OK
+      policy_loaded: OK
+      inference_deadline_ok: OK
+      queue_ready: OK
+      controller_active: OK
+      command_valid: OK
+      ttl_ok: OK
+      limits_ok: OK
+      monitor_sources_valid: OK
+      risk_r2_active: "FALSE"
+      estop_latched: "FALSE"
+      task_gt_status: ERROR
+    expected_decision: RUN
+    expected_reason_code: none
+    expected_cause_path: [final_decision, runtime_safe]
+  - id: queue_underrun_hold
+    input_status:
+      observation_valid: OK
+      policy_loaded: OK
+      inference_deadline_ok: OK
+      queue_ready: ERROR
+      controller_active: OK
+      command_valid: OK
+      ttl_ok: OK
+      limits_ok: OK
+      monitor_sources_valid: OK
+      risk_r2_active: "FALSE"
+      estop_latched: "FALSE"
+      task_gt_status: OK
+    expected_decision: HOLD
+    expected_reason_code: queue_underrun
+    expected_cause_path: [final_decision, runtime_safe, brain_ready, queue_ready]
+  - id: hard_limit_estop
+    input_status:
+      observation_valid: OK
+      policy_loaded: OK
+      inference_deadline_ok: OK
+      queue_ready: OK
+      controller_active: OK
+      command_valid: OK
+      ttl_ok: OK
+      limits_ok: ERROR
+      monitor_sources_valid: OK
+      risk_r2_active: "FALSE"
+      estop_latched: "FALSE"
+      task_gt_status: OK
+    expected_decision: E_STOP
+    expected_reason_code: hard_limit
+    expected_cause_path: [final_decision, runtime_safe, execution_ready, limits_ok]
+  - id: risk_r2_hold
+    input_status:
+      observation_valid: OK
+      policy_loaded: OK
+      inference_deadline_ok: OK
+      queue_ready: OK
+      controller_active: OK
+      command_valid: OK
+      ttl_ok: OK
+      limits_ok: OK
+      monitor_sources_valid: OK
+      risk_r2_active: "TRUE"
+      estop_latched: "FALSE"
+      task_gt_status: OK
+    expected_decision: HOLD
+    expected_reason_code: risk_r2_hold
+    expected_cause_path: [final_decision, risk_r2_active]
+
+risk_may_override_task_gt: false
+claims_task_success: false

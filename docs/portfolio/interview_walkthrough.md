@@ -2,6 +2,12 @@
 
 > 预计讲解时长：3-5 分钟。面向机器人软件、具身智能数据工程、仿真系统集成岗位。
 
+> **2026-07-25 指针**：本文是**数据闭环视角**的早期讲稿（MLP / linear smoke 阶段），未覆盖
+> ACT→Isaac 评测、SmolVLA Recovery v3（open-loop Pass）与有界 Isaac S4（lift 0/5 → Hold）。
+> 当前推荐使用的三套版本话术（系统验证 / 具身数据评测 / 仿真评测）见
+> [resume_description.md](resume_description.md)，最终结论见
+> [FINAL_PROJECT_SUMMARY.md](FINAL_PROJECT_SUMMARY.md)。冲突时以原始产物与收口总结为准。
+
 ## 1. 30 秒版本
 
 我把三个机械臂仓库整理成一条上游-中游-下游的数据闭环：上游 `ros2-arm-teleoperation-suite` 用 MuJoCo / ROS 2 产生 teleop、action、state 和 observation；中游也就是这个仓库，负责把 raw episode 标准化成 Panda episode schema，并完成 validation、dataset release、baseline training、offline evaluation 和 replay handoff；下游 `ros2-moveit-pybullet-bridge` 用 MoveIt / PyBullet 做轨迹执行、抓取稳定性和 Sim2Real-readiness 风险评估。
