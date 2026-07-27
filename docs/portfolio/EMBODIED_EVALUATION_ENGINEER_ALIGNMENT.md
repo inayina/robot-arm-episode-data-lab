@@ -150,7 +150,7 @@ model checkpoint + feature contract
 | upstream adapter | `training/adapters/upstream_m6.py` | 将 raw `action[8]` 显式派生为 `ee_delta_gripper[7]` | provenance 继承需补全 |
 | dataset loader | `training/scripts/inspect_dataset.py::load_rows` | 统一读取 raw/adapted 评测数据 | 尚无 evaluation result 专用 loader |
 | schema inspection | `inspect_dataset.py::inspect_dataset` | 直接作为评测输入 G0/G1 | 只证明数据合规，不证明任务成功 |
-| immutable release | `prepare_dataset_release.py::prepare_release` | 固定被测数据、schema、split 和 release id | 评测 run 还需要 model/scenario manifest |
+| non-overwrite release | `prepare_dataset_release.py::prepare_release` | 防覆盖地固定 release id 与数据快照；不声称逐文件 SHA/fingerprint | 需要不可变发布时改用 SmolVLA release builder；评测 run 仍需 model/scenario manifest |
 | low-dimensional EDA | `eda_low_dim_dataset.py::trajectory_metrics`、`quality_gate` | 复用轨迹步长、反转、质量分布指标 | 不是在线 rollout evaluator |
 | policy offline evaluation | `evaluate_policy.py::evaluate_policy` | 复用 RMSE、smoothness 和 success metadata 汇总 | 离线指标不能当任务成功率 |
 | ACT baseline | `train_act_lerobot.py::build_act_policy`、`evaluate` | 作为稳定被测 checkpoint | scene-only、language 非输入、尚无 canonical 完整 ACT run 证据 |

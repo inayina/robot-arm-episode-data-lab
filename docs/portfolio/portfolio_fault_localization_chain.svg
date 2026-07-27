@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">Panda 机器人策略软硬件故障定位链</title>
+  <desc id="desc">从相机与机器人状态，经 ROS 2、数据合同、策略、动作适配和仿真物理，到连续任务真值的六层排查链。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <style>
+      .title{font:700 32px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .subtitle{font:16px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+      .num{font:700 15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#fff}
+      .layer{font:700 19px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .component{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#334155}
+      .label{font:700 13px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+      .evidence{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .small{font:13px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+      .arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .trace{stroke:#2563eb;stroke-width:2;stroke-dasharray:6 5;fill:none}
+    </style>
+  </defs>
+
+  <rect width="1440" height="760" fill="#f8fafc"/>
+  <text x="720" y="49" text-anchor="middle" class="title">一次机器人异常，怎样沿软硬件链条定位？</text>
+  <text x="720" y="78" text-anchor="middle" class="subtitle">每层都有独立观测点、可复现实验和明确的责任边界</text>
+
+  <!-- Layer cards -->
+  <g>
+    <rect x="40" y="130" width="205" height="265" rx="16" fill="#ecfeff" stroke="#67e8f9" stroke-width="2"/>
+    <circle cx="72" cy="162" r="18" fill="#0891b2"/><text x="72" y="167" text-anchor="middle" class="num">1</text>
+    <text x="102" y="168" class="layer">感知与状态</text>
+    <text x="58" y="208" class="component">Camera · joint · EEF</text>
+    <text x="58" y="233" class="component">时间戳与同步状态</text>
+    <line x1="58" y1="256" x2="227" y2="256" stroke="#a5f3fc"/>
+    <text x="58" y="283" class="label">看什么</text>
+    <text x="58" y="309" class="evidence">像素统计 · 帧完整性</text>
+    <text x="58" y="334" class="evidence">state 维度 · sync slop</text>
+    <rect x="58" y="354" width="169" height="25" rx="7" fill="#cffafe"/>
+    <text x="142" y="372" text-anchor="middle" class="small">相机近黑在此被发现</text>
+  </g>
+
+  <g>
+    <rect x="270" y="130" width="205" height="265" rx="16" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+    <circle cx="302" cy="162" r="18" fill="#2563eb"/><text x="302" y="167" text-anchor="middle" class="num">2</text>
+    <text x="332" y="168" class="layer">ROS 2 与采集</text>
+    <text x="288" y="208" class="component">Topic · recorder · meta</text>
+    <text x="288" y="233" class="component">episode physical gate</text>
+    <line x1="288" y1="256" x2="457" y2="256" stroke="#bfdbfe"/>
+    <text x="288" y="283" class="label">看什么</text>
+    <text x="288" y="309" class="evidence">topic / rate / sequence</text>
+    <text x="288" y="334" class="evidence">success · fault · E-stop</text>
+    <rect x="288" y="354" width="169" height="25" rx="7" fill="#dbeafe"/>
+    <text x="372" y="372" text-anchor="middle" class="small">先确认数据真的到达</text>
+  </g>
+
+  <g>
+    <rect x="500" y="130" width="205" height="265" rx="16" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+    <circle cx="532" cy="162" r="18" fill="#7c3aed"/><text x="532" y="167" text-anchor="middle" class="num">3</text>
+    <text x="562" y="168" class="layer">数据与模型</text>
+    <text x="518" y="208" class="component">schema · release · split</text>
+    <text x="518" y="233" class="component">policy · preprocessor</text>
+    <line x1="518" y1="256" x2="687" y2="256" stroke="#ddd6fe"/>
+    <text x="518" y="283" class="label">看什么</text>
+    <text x="518" y="309" class="evidence">state / camera / action</text>
+    <text x="518" y="334" class="evidence">SHA · split · checkpoint</text>
+    <rect x="518" y="354" width="169" height="25" rx="7" fill="#ede9fe"/>
+    <text x="602" y="372" text-anchor="middle" class="small">排除字段与配置漂移</text>
+  </g>
+
+  <g>
+    <rect x="735" y="130" width="205" height="265" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <circle cx="767" cy="162" r="18" fill="#ea580c"/><text x="767" y="167" text-anchor="middle" class="num">4</text>
+    <text x="797" y="168" class="layer">动作与接口</text>
+    <text x="753" y="208" class="component">EEF8 · scheduler · adapter</text>
+    <text x="753" y="233" class="component">clip · workspace · TTL</text>
+    <line x1="753" y1="256" x2="922" y2="256" stroke="#fed7aa"/>
+    <text x="753" y="283" class="label">看什么</text>
+    <text x="753" y="309" class="evidence">raw / clipped command</text>
+    <text x="753" y="334" class="evidence">identity · sequence · latency</text>
+    <rect x="753" y="354" width="169" height="25" rx="7" fill="#ffedd5"/>
+    <text x="837" y="372" text-anchor="middle" class="small">确认命令没有变语义</text>
+  </g>
+
+  <g>
+    <rect x="965" y="130" width="205" height="265" rx="16" fill="#fefce8" stroke="#fde047" stroke-width="2"/>
+    <circle cx="997" cy="162" r="18" fill="#ca8a04"/><text x="997" y="167" text-anchor="middle" class="num">5</text>
+    <text x="1027" y="168" class="layer">控制与物理</text>
+    <text x="983" y="208" class="component">ROS control · simulator</text>
+    <text x="983" y="233" class="component">robot · object · contact</text>
+    <line x1="983" y1="256" x2="1152" y2="256" stroke="#fef08a"/>
+    <text x="983" y="283" class="label">怎么排除</text>
+    <text x="983" y="309" class="evidence">scripted oracle · replay</text>
+    <text x="983" y="334" class="evidence">同 seeds · 故障注入</text>
+    <rect x="983" y="354" width="169" height="25" rx="7" fill="#fef9c3"/>
+    <text x="1067" y="372" text-anchor="middle" class="small">验证物理链任务上界</text>
+  </g>
+
+  <g>
+    <rect x="1195" y="130" width="205" height="265" rx="16" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="2"/>
+    <circle cx="1227" cy="162" r="18" fill="#059669"/><text x="1227" y="167" text-anchor="middle" class="num">6</text>
+    <text x="1257" y="168" class="layer">任务与安全</text>
+    <text x="1213" y="208" class="component">continuous Task GT</text>
+    <text x="1213" y="233" class="component">risk · HOC · watchdog</text>
+    <line x1="1213" y1="256" x2="1382" y2="256" stroke="#a7f3d0"/>
+    <text x="1213" y="283" class="label">看什么</text>
+    <text x="1213" y="309" class="evidence">reach · grasp · lift</text>
+    <text x="1213" y="334" class="evidence">Hold · E-stop · trace</text>
+    <rect x="1213" y="354" width="169" height="25" rx="7" fill="#d1fae5"/>
+    <text x="1297" y="372" text-anchor="middle" class="small">由真值而非画面裁决</text>
+  </g>
+
+  <path d="M245 263 H262" class="arrow"/><path d="M475 263 H492" class="arrow"/>
+  <path d="M705 263 H727" class="arrow"/><path d="M940 263 H957" class="arrow"/>
+  <path d="M1170 263 H1187" class="arrow"/>
+
+  <!-- Diagnostic workflow -->
+  <rect x="40" y="443" width="1360" height="246" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="70" y="483" class="layer">我的排查方式</text>
+  <text x="70" y="511" class="subtitle">不直接重训最后一个模块，而是先确认信号、合同和执行链，再用对照实验收敛根因</text>
+
+  <rect x="70" y="548" width="280" height="92" rx="12" fill="#f1f5f9"/>
+  <text x="90" y="577" class="label">01 · 复现与保全</text>
+  <text x="90" y="604" class="evidence">冻结配置、seed、原始 trace</text>
+  <text x="90" y="627" class="small">异常产物保留，不覆盖历史</text>
+
+  <rect x="405" y="548" width="280" height="92" rx="12" fill="#eff6ff"/>
+  <text x="425" y="577" class="label">02 · 从输入向执行逐层检查</text>
+  <text x="425" y="604" class="evidence">像素 → schema → action → GT</text>
+  <text x="425" y="627" class="small">每层只使用自己的事实源</text>
+
+  <rect x="755" y="548" width="280" height="92" rx="12" fill="#fff7ed"/>
+  <text x="775" y="577" class="label">03 · 最小对照实验</text>
+  <text x="775" y="604" class="evidence">同 seeds · oracle · replay</text>
+  <text x="775" y="627" class="small">一次只改变一个可疑因素</text>
+
+  <rect x="1090" y="548" width="280" height="92" rx="12" fill="#ecfdf5"/>
+  <text x="1110" y="577" class="label">04 · 收敛而不过度声明</text>
+  <text x="1110" y="604" class="evidence">排除项 · 领先假设 · No-Go</text>
+  <text x="1110" y="627" class="small">证据不足时明确保持 Hold</text>
+
+  <path d="M350 594 H397" class="arrow"/><path d="M685 594 H747" class="arrow"/><path d="M1035 594 H1082" class="arrow"/>
+  <path d="M70 666 H1370" class="trace"/>
+  <text x="720" y="720" text-anchor="middle" style="font:700 15px Inter,'Noto Sans SC',Arial,sans-serif;fill:#1d4ed8">核心能力：把“机器人没完成任务”转化为可复现、可排除、可交接的软硬件诊断结论</text>
+</svg>

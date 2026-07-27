@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="790" viewBox="0 0 1440 790" role="img" aria-labelledby="title desc">
+  <title id="title">SmolVLA Recovery v3 数据与证据流</title>
+  <desc id="desc">训练数据、独立评测数据、checkpoint audit、open-loop gate、Isaac S4 和失败归因之间的关系。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <style>
+      .title{font:700 30px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .subtitle{font:15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+      .lane{font:700 17px Inter,"Noto Sans SC",Arial,sans-serif;fill:#fff}
+      .head{font:700 16px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .body{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#334155}
+      .small{font:12px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+      .flow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .dash{stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1440" height="790" fill="#f8fafc"/>
+  <text x="720" y="47" text-anchor="middle" class="title">数据不是一路“流过模型”，而是两条隔离的数据线汇合</text>
+  <text x="720" y="75" text-anchor="middle" class="subtitle">训练数据只训练；fresh eval-only 数据只判 Gate；任务结论必须来自 bounded runtime GT</text>
+
+  <rect x="45" y="116" width="1350" height="222" rx="16" fill="#eff6ff" stroke="#93c5fd"/>
+  <rect x="45" y="116" width="118" height="222" rx="16" fill="#2563eb"/>
+  <text x="104" y="155" text-anchor="middle" class="lane">训练线</text>
+  <text x="104" y="180" text-anchor="middle" style="font:12px Inter,'Noto Sans SC',Arial;fill:#dbeafe">只产生</text>
+  <text x="104" y="199" text-anchor="middle" style="font:12px Inter,'Noto Sans SC',Arial;fill:#dbeafe">checkpoint</text>
+
+  <rect x="195" y="155" width="250" height="140" rx="12" fill="#fff" stroke="#60a5fa"/>
+  <text x="320" y="184" text-anchor="middle" class="head">Phase-aware episode</text>
+  <text x="215" y="214" class="body">上游 physical gate 已完成</text>
+  <text x="215" y="239" class="body">state / image / action 原始语义</text>
+  <text x="215" y="267" class="small">中游不从 object_pose 重判成功</text>
+
+  <rect x="515" y="155" width="250" height="140" rx="12" fill="#fff" stroke="#60a5fa"/>
+  <text x="640" y="184" text-anchor="middle" class="head">Immutable release</text>
+  <text x="535" y="214" class="body">36 train / 4 val / 10 benchmark</text>
+  <text x="535" y="239" class="body">逐文件 SHA + content fingerprint</text>
+  <text x="535" y="267" class="small">训练入口只物化 train 36</text>
+
+  <rect x="835" y="155" width="250" height="140" rx="12" fill="#fff" stroke="#60a5fa"/>
+  <text x="960" y="184" text-anchor="middle" class="head">Recovery v3 LoRA</text>
+  <text x="855" y="214" class="body">5,705 steps · state[15] · camera1</text>
+  <text x="855" y="239" class="body">absolute EEF + gripper action[8]</text>
+  <text x="855" y="267" class="small">官方精确 PEFT regularization</text>
+
+  <rect x="1155" y="155" width="210" height="140" rx="12" fill="#ecfdf5" stroke="#34d399"/>
+  <text x="1260" y="184" text-anchor="middle" class="head">Checkpoint audit</text>
+  <text x="1175" y="214" class="body">policy + preprocessor</text>
+  <text x="1175" y="239" class="body">state / camera / action / K</text>
+  <text x="1175" y="267" class="small">adapter SHA256 locked</text>
+
+  <path d="M445 225 H505" class="flow"/><path d="M765 225 H825" class="flow"/><path d="M1085 225 H1145" class="flow"/>
+
+  <rect x="45" y="372" width="1350" height="222" rx="16" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <rect x="45" y="372" width="118" height="222" rx="16" fill="#059669"/>
+  <text x="104" y="411" text-anchor="middle" class="lane">评测线</text>
+  <text x="104" y="436" text-anchor="middle" style="font:12px Inter,'Noto Sans SC',Arial;fill:#d1fae5">独立数据</text>
+  <text x="104" y="455" text-anchor="middle" style="font:12px Inter,'Noto Sans SC',Arial;fill:#d1fae5">逐级加严</text>
+
+  <rect x="195" y="411" width="250" height="140" rx="12" fill="#fff" stroke="#34d399"/>
+  <text x="320" y="440" text-anchor="middle" class="head">Fresh eval-only</text>
+  <text x="215" y="470" class="body">seeds 70–74 · 10 episodes</text>
+  <text x="215" y="495" class="body">2,593 frames · overlap = 0</text>
+  <text x="215" y="523" class="small">阈值设计后重新采集，避免污染</text>
+
+  <rect x="515" y="411" width="250" height="140" rx="12" fill="#fff" stroke="#34d399"/>
+  <text x="640" y="440" text-anchor="middle" class="head">Canonical open-loop</text>
+  <text x="535" y="470" class="body">first action · stride=1 · 全帧</text>
+  <text x="535" y="495" class="body">EE RMSE 0.0253 m · grip BA 0.994</text>
+  <text x="535" y="523" class="small">Gate v3 = Pass；task 未评测</text>
+
+  <rect x="835" y="411" width="250" height="140" rx="12" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="960" y="440" text-anchor="middle" class="head">Bounded Isaac S4</text>
+  <text x="855" y="470" class="body">seeds 1–5 · interface 5/5</text>
+  <text x="855" y="495" class="body">reach 1/5 · grasp 0/5 · lift 0/5</text>
+  <text x="855" y="523" class="small">Continuous Task GT → Hold</text>
+
+  <rect x="1155" y="411" width="210" height="140" rx="12" fill="#fef2f2" stroke="#f87171"/>
+  <text x="1260" y="440" text-anchor="middle" class="head">Stop / attribution</text>
+  <text x="1175" y="470" class="body">不扩 seed · 不重训</text>
+  <text x="1175" y="495" class="body">保留 failure evidence</text>
+  <text x="1175" y="523" class="small">No-Go 是工程产出</text>
+
+  <path d="M445 481 H505" class="flow"/><path d="M765 481 H825" class="flow"/><path d="M1085 481 H1145" class="flow"/>
+  <path d="M1260 295 V354 H700 V401" class="dash"/>
+  <text x="990" y="354" text-anchor="middle" class="small">audited checkpoint 与 fresh eval 在 Gate 汇合</text>
+
+  <rect x="195" y="632" width="370" height="105" rx="12" fill="#fff" stroke="#94a3b8"/>
+  <text x="380" y="662" text-anchor="middle" class="head">物理链对照</text>
+  <text x="217" y="691" class="body">Scripted oracle lift 5/5</text>
+  <text x="217" y="716" class="small">证明环境上界，不证明 learned policy 成功</text>
+
+  <rect x="605" y="632" width="370" height="105" rx="12" fill="#fff" stroke="#94a3b8"/>
+  <text x="790" y="662" text-anchor="middle" class="head">相机 Badcase 证伪</text>
+  <text x="627" y="691" class="body">近黑 JPEG≈0.3 → 修光 JPEG≈154</text>
+  <text x="627" y="716" class="small">同 seeds 的 reach 3/5 被复测证伪为 1/5</text>
+
+  <rect x="1015" y="632" width="350" height="105" rx="12" fill="#0f172a"/>
+  <text x="1190" y="662" text-anchor="middle" style="font:700 16px Inter,'Noto Sans SC',Arial;fill:#fff">最终可信结论</text>
+  <text x="1190" y="691" text-anchor="middle" style="font:15px Inter,'Noto Sans SC',Arial;fill:#fed7aa">Open-loop Pass / Closed-loop Hold</text>
+  <text x="1190" y="716" text-anchor="middle" style="font:12px Inter,'Noto Sans SC',Arial;fill:#cbd5e1">Not task success · Not Sim2Real</text>
+
+  <path d="M565 685 H595" class="flow"/><path d="M975 685 H1005" class="flow"/>
+</svg>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">实时优先级、多速率与非确定性治理甘特图</title>
+  <desc id="desc">对比真机 FIFO 阶梯与仿真普通调度，并展示内核、内存、调度和架构四层降低非确定性时延的措施。</desc>
+  <defs><style>
+    .title{font:700 31px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}.subtitle{font:15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+    .head{font:700 17px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}.body{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#334155}.small{font:12.5px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}.axis{font:12px Inter,Arial,sans-serif;fill:#64748b}
+    .grid{stroke:#cbd5e1;stroke-width:1}.tick{stroke:#94a3b8;stroke-width:1.2}.dash{stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 5}
+  </style></defs>
+  <rect width="1440" height="900" fill="#f8fafc"/>
+  <text x="720" y="47" text-anchor="middle" class="title">同一个控制系统，真机与仿真为什么采用相反的优先级策略？</text>
+  <text x="720" y="76" text-anchor="middle" class="subtitle">甘特为调度逻辑示意，不代表实测 WCET；实体 Panda 的硬实时仍待现场验收</text>
+
+  <rect x="45" y="112" width="1350" height="258" rx="17" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="70" y="146" class="head">真机 CAN 路径：FIFO 阶梯，让控制环抢占非关键工作</text>
+  <text x="70" y="171" class="small">配置意图：controller_manager prio 50 &gt; MoveIt Servo prio 40 &gt; CFS / nice 19</text>
+  <line x1="345" y1="194" x2="1350" y2="194" class="tick"/>
+  <g class="grid"><line x1="345" y1="190" x2="345" y2="348"/><line x1="596" y1="190" x2="596" y2="348"/><line x1="847" y1="190" x2="847" y2="348"/><line x1="1098" y1="190" x2="1098" y2="348"/><line x1="1350" y1="190" x2="1350" y2="348"/></g>
+  <text x="345" y="187" text-anchor="middle" class="axis">0 ms</text><text x="596" y="187" text-anchor="middle" class="axis">1 ms</text><text x="847" y="187" text-anchor="middle" class="axis">2 ms</text><text x="1098" y="187" text-anchor="middle" class="axis">3 ms</text><text x="1350" y="187" text-anchor="middle" class="axis">4 ms</text>
+  <text x="70" y="229" class="body">FIFO 50 · controller_manager</text>
+  <rect x="345" y="208" width="72" height="27" rx="6" fill="#2563eb"/><rect x="596" y="208" width="72" height="27" rx="6" fill="#2563eb"/><rect x="847" y="208" width="72" height="27" rx="6" fill="#2563eb"/><rect x="1098" y="208" width="72" height="27" rx="6" fill="#2563eb"/>
+  <text x="70" y="278" class="body">FIFO 40 · MoveIt Servo</text>
+  <rect x="417" y="257" width="179" height="27" rx="6" fill="#7c3aed"/><rect x="668" y="257" width="179" height="27" rx="6" fill="#7c3aed"/><text x="938" y="277" class="small">控制 tick 到达时让路，之后继续</text>
+  <text x="70" y="327" class="body">CFS · recorder / spawner</text>
+  <rect x="345" y="306" width="1005" height="27" rx="6" fill="#cbd5e1"/><text x="847" y="325" text-anchor="middle" class="small">best-effort；spawner nice 19 + idle I/O</text>
+
+  <rect x="45" y="398" width="1350" height="216" rx="17" fill="#fff" stroke="#fdba74" stroke-width="2"/>
+  <text x="70" y="433" class="head">仿真 DDS 路径：主动关闭 FIFO，避免高优先级线程反等 middleware worker</text>
+  <text x="70" y="458" class="small">controller_manager priority 0 · Servo priority 0 + prlimit rtprio=0 · DDS publish 独立线程</text>
+  <text x="70" y="503" class="body">CFS · controller update()</text><rect x="345" y="482" width="430" height="27" rx="6" fill="#0ea5e9"/><text x="560" y="501" text-anchor="middle" class="small">仅写 atomic latest-value</text>
+  <text x="70" y="550" class="body">CFS · DDS publisher</text><rect x="575" y="529" width="520" height="27" rx="6" fill="#f59e0b"/><text x="835" y="548" text-anchor="middle" class="small">KeepLast(1) · sleep_until · miss 后不追帧</text>
+  <text x="70" y="597" class="body">CFS · MuJoCo / DDS worker</text><rect x="775" y="576" width="575" height="27" rx="6" fill="#94a3b8"/><text x="1062" y="595" text-anchor="middle" class="small">依赖可以被正常调度，不被 FIFO 饿死</text>
+  <path d="M775 510 V529" class="dash"/><text x="790" y="524" class="axis">异步交接</text>
+
+  <text x="45" y="656" class="head">降低非确定性时延，我从四层处理</text>
+  <g transform="translate(45 680)"><rect width="315" height="156" rx="15" fill="#fef2f2" stroke="#fecaca"/><text x="22" y="34" class="head">1 · 内核</text><text x="22" y="64" class="body">PREEMPT_RT · CPU isolation</text><text x="22" y="88" class="body">CAP_SYS_NICE · cyclictest</text><text x="22" y="119" class="small">真机验收 SOP</text><text x="22" y="140" class="small">当前：Hardware Pending</text></g>
+  <g transform="translate(390 680)"><rect width="315" height="156" rx="15" fill="#f5f3ff" stroke="#ddd6fe"/><text x="22" y="34" class="head">2 · 内存与共享状态</text><text x="22" y="64" class="body">RealtimeBuffer · atomic</text><text x="22" y="88" class="body">固定维度 Eigen · 预配置</text><text x="22" y="119" class="small">减少 RT 路径锁等待</text><text x="22" y="140" class="small">不宣称完整 WCET 证明</text></g>
+  <g transform="translate(735 680)"><rect width="315" height="156" rx="15" fill="#eff6ff" stroke="#bfdbfe"/><text x="22" y="34" class="head">3 · 调度</text><text x="22" y="64" class="body">real FIFO 50 / 40</text><text x="22" y="88" class="body">sim priority 0 / prlimit</text><text x="22" y="119" class="small">按依赖链选择优先级</text><text x="22" y="140" class="small">防止 DDS 优先级反转</text></g>
+  <g transform="translate(1080 680)"><rect width="315" height="156" rx="15" fill="#ecfdf5" stroke="#a7f3d0"/><text x="22" y="34" class="head">4 · 架构</text><text x="22" y="64" class="body">1k / 500 / 125 / 100 / 10 Hz</text><text x="22" y="88" class="body">publish 移出 write()</text><text x="22" y="119" class="small">整数分频 · latest-value</text><text x="22" y="140" class="small">采样问题与调度问题分治</text></g>
+  <rect x="45" y="858" width="1350" height="30" rx="8" fill="#0f172a"/><text x="720" y="879" text-anchor="middle" style="font:700 14px Inter,'Noto Sans SC',Arial,sans-serif;fill:#fff">目标不是“平均更快”，而是缩短长尾、消除阻塞依赖，并让每一种 jitter 都能被单独观测</text>
+</svg>

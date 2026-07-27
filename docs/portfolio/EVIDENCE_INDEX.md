@@ -2,6 +2,22 @@
 
 阶段 1 证据资产索引。状态只能是 `keep`, `regenerate`, `relabel`, `move_to_legacy`, `archive`, `delete`。
 
+## 最小公开证据包（2026-07-27 冻结）
+
+对外不必提交大视频与完整 `runs/`，但至少公开以下可复核产物 + 生成命令（详见 [BOUNDARY_FREEZE.md §4](BOUNDARY_FREEZE.md#4-可公开复核的最小证据包)）：
+
+| 类别 | 权威路径 |
+| --- | --- |
+| canonical gate JSON | [public_evidence/canonical_v3/open_loop_gate_summary.json](public_evidence/canonical_v3/open_loop_gate_summary.json)；`configs/smolvla_s3/eval_gate_v3.lock.json` |
+| release / checkpoint SHA | [public_evidence/canonical_v3/release_checkpoint_summary.json](public_evidence/canonical_v3/release_checkpoint_summary.json) |
+| per-seed summary | [public_evidence/canonical_v3/s4_gate.json](public_evidence/canonical_v3/s4_gate.json) + [s4_per_seed_summary.json](public_evidence/canonical_v3/s4_per_seed_summary.json) |
+| unified report | [public_evidence/canonical_v3/unified_eval_summary.json](public_evidence/canonical_v3/unified_eval_summary.json) |
+| M6 ROS/DDS 安全反馈 | [public_evidence/m6_wiring_20260727/m6_timeline_summary.json](public_evidence/m6_wiring_20260727/m6_timeline_summary.json) + [安全反馈数据流图](policy_runtime_m6_fault_response_timeline.png) |
+| 来源与完整性 | [public_evidence/canonical_v3/provenance.json](public_evidence/canonical_v3/provenance.json) 记录原始路径、SHA256 与摘录规则 |
+| 生成命令 | [FINAL_PROJECT_SUMMARY.md §7](FINAL_PROJECT_SUMMARY.md#7-复现与追溯) |
+
+---
+
 | 资产 | 当前仓库 | 主线/Legacy | 数据来源 | 生成脚本 | 输入产物 | 能证明 | 不能证明 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `assets/diagrams/architecture.png` | 中游 | Legacy/design | 历史架构说明 | 未定位 | 历史文档 | 早期系统设计 | Panda canonical release/training 已实现 | move_to_legacy |
@@ -19,8 +35,18 @@
 | `docs/EVALUATION_REPORT.md` | 中游 | 主线/evidence | 2026-07-20 三仓知识审计 + E0–E3.6 运行产物 | `project_knowledge audit` + 手工证据核对 | E3 nominal20、E3.5 oracle、E3.6 5-seed gate | 当前评测漏斗、Go/No-Go 与对外口径 | 真机、Sim2Real、learned-policy 成功 | keep |
 | `docs/E2_E3_MODEL_CARD.md` | 中游 | 主线/evidence | 2026-07-19 30 vs 40-tight home/warm A/B | 手工固化 | `evidence/e3_act_random30_*` + `e3_act_random40_xyalign_tight_*` + checkpoint sha256 | E3 最终 ckpt 选型与止损；hash 可复核 | 任务成功率、真机、Sim2Real | keep |
 | `docs/E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md` | 中游 | 主线/process | 2026-07-20 E3.5 oracle 实验全过程 | 手工固化 | v1/v2b evidence + 上游 `run_isaac_scripted_oracle.sh` | 物理链 vs 策略归因、面试 STAR | learned-policy 成功、Sim2Real | keep |
-| `docs/portfolio/FINAL_PROJECT_SUMMARY.md` | 中游 | 主线/portfolio | 2026-07-25 P0 收口总结（唯一入口） | 手工固化自各 gate/JSON/lock/audit | gate_v3 report + relight `s4_gate.json` + checkpoint audit + unified bundle + oracle/ACT evidence | 项目定位、六层分栏、Pass/Hold/No-Go 全表、诚实边界 | 任务成功、Sim2Real、真机、唯一根因已证明 | keep |
-| `docs/portfolio/brain_cerebellum_runtime_system.svg` | 中游 | 主线/design | 2026-07-26 brain–cerebellum runtime 收口 | manual SVG from implementation roadmap + wiring manifest | `docs/POLICY_RUNTIME_HOC_IMPLEMENTATION_ROADMAP.md` + `evidence/policy_runtime_m6_wiring_20260726/evidence_manifest.json` | 三仓责任、Brain→Execution→Safety/HOC 主线与证据边界 | SmolVLA task success、authoritative cutover、Sim2Real、真机 | keep |
+| `docs/portfolio/BOUNDARY_FREEZE.md` | 中游 | 主线/governance | 2026-07-27 边界冻结 | 手工固化 | 三仓 README + 作品集对齐 | 对外定位、模块所有权、release 术语、最小证据包、提交冻结 | 任务成功、已解冻新功能 | keep |
+| `docs/portfolio/README.md` | 中游 | 主线/portfolio | 2026-07-27 压缩导航 | 手工固化 | BOUNDARY_FREEZE | 对外八份作品集入口 | 完整内部审计列表 | keep |
+| `docs/portfolio/PORTFOLIO_REFERENCE.md` | 中游 | 主线/portfolio | 2026-07-27 招聘经理 5 分钟 + 技术面试 30 分钟母版 | 手工编排自 FINAL_PROJECT_SUMMARY、canonical facts 与权威图片 | 项目价值、个人职责、架构、数据证据流、关键结果、Badcase 和面试追问 | 任务成功、Sim2Real、真机、唯一根因已证明 | keep |
+| `docs/portfolio/portfolio_fault_localization_chain.svg` | 中游 | 主线/design | 2026-07-27 软硬件故障定位主图 | 手工 SVG，事实源为三仓代码、合同与测试 | 感知、ROS 2、数据/模型、动作、控制/物理、Task GT 六层排查方法 | 实体硬件已验收、唯一根因已证明 | keep |
+| `docs/portfolio/portfolio_system_overview.svg` | 中游 | 主线/design | 2026-07-27 作品集人类可读主架构图 | 手工 SVG，事实源为 BOUNDARY_FREEZE 与三仓 README | 三仓职责、个人核心工作区与跨仓排查能力 | 运行性能、任务成功、authoritative cutover | keep |
+| `docs/portfolio/portfolio_control_safety_stack.svg` | 中游 | 主线/design | 2026-07-27 策略到驱动控制/安全链 | 手工 SVG，事实源为上游 controller、SystemInterface、virtual driver、watchdog | MoveIt Servo→阻抗→ros2_control→DDS/SocketCAN→DS402→GT，以及安全反馈边界 | 实体驱动 EMCY 闭环、Bus-Off 恢复、物理 E-Stop Pass | keep |
+| `docs/portfolio/portfolio_realtime_priority_gantt.svg` | 中游 | 主线/design | 2026-07-27 实时调度甘特与四层 jitter 治理 | 手工 SVG，事实源为 launch、rate profile、SystemInterface 与契约测试 | 真机 FIFO 50/40 设计、仿真 priority=0 防反转、多速率与内核/内存/调度/架构分治 | 实测 WCET、实体 PREEMPT_RT、零分配或零抖动 | keep |
+| `docs/portfolio/policy_runtime_m6_fault_response_timeline.png` | 中游 | 主线/live wiring evidence | 2026-07-27 有界 M6 ROS 2/DDS 多进程复跑 | `scripts/generate_m6_wiring_evidence_figure.py` | `evidence/policy_runtime_m6_wiring_20260727T075600Z/{m6_wiring_smoke.json,hoc_runtime_report.json}`；公开摘录 `public_evidence/m6_wiring_20260727/m6_timeline_summary.json` | 前向命令、反向 Hold/E-Stop、HOC 旁路取证的组件/topic 关系；3/3 四泳道关联；`R0→EXECUTED`、`R2→HELD`、`R3→ESTOPPED` | Task success、物理力矩归零、实体 E-Stop、SmolVLA cutover、仿真或真机能力 | keep |
+| `docs/portfolio/public_evidence/m6_wiring_20260727/m6_timeline_summary.json` | 中游 | 主线/machine-readable evidence | 同上；由原始 JSON 自动摘录 | 同上 | 原始两份 JSON 的 SHA256 + scope/checks/逐 command 四泳道 | 展示图可追溯到真实 wiring 原始产物，且边界机器可读 | 原始 ROS 日志全文、任务或物理执行成功 | keep |
+| `docs/portfolio/portfolio_data_evidence_flow.svg` | 中游 | 主线/design | 2026-07-27 训练线/评测线隔离图 | 手工 SVG，事实源为 Recovery release/checkpoint/gate/S4 产物 | train-only、fresh eval-only、Gate 与 runtime GT 的证据关系 | 原始运行已重放、任务成功、统计显著性 | keep |
+| `docs/portfolio/FINAL_PROJECT_SUMMARY.md` | 中游 | 主线/internal-facts | 2026-07-25 P0 收口详细事实底稿 | 手工固化自各 gate/JSON/lock/audit | gate_v3 report + relight `s4_gate.json` + checkpoint audit + unified bundle + oracle/ACT evidence | 项目定位、六层分栏、Pass/Hold/No-Go 全表、诚实边界 | 任务成功、Sim2Real、真机、唯一根因已证明 | keep |
+| `docs/portfolio/brain_cerebellum_runtime_system.svg` | 中游 | 主线/design | 2026-07-26 brain–cerebellum runtime 收口 | manual SVG from implementation roadmap + wiring evidence | `docs/POLICY_RUNTIME_HOC_IMPLEMENTATION_ROADMAP.md` + `public_evidence/m6_wiring_20260727/m6_timeline_summary.json` | 三仓责任、Brain→Execution→Safety/HOC 主线与证据边界 | SmolVLA task success、authoritative cutover、Sim2Real、真机 | keep |
 | `docs/portfolio/BADCASE_ATTRIBUTION_SUMMARY.md` | 中游 | 主线/analysis | 2026-07-25 分层 Badcase 归因 | 手工固化自各 evidence/telemetry | D1–D5 / I1–I4 / B1–B5 / T1–T4 / S1–S5 证据 | 每层排除项与止损决策；lift 0/5 责任层 | 协变量偏移为唯一根因、已修复、可扩种子 | keep |
 | `docs/FUTURE_WORK_ROADMAP.md` | 中游 | 主线/process | 2026-07-25 P0/P1/P2 登记表 | 手工固化 | 现有 gate/lock/契约状态 | P0 完成项与 P1/P2 待批清单、执行闸门 | P1/P2 已执行、已获批准 | keep |
 | `docs/SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md` | 中游 | 主线/process | 2026-07-25 open-loop 扰动分层设计 | 手工固化 | clean Pass 协议 + queued K5 合同 | clean 全帧不变；扰动用 6 锚点+close 窗口；禁 H=5/H=10 | 可改 Gate、任务成功 | keep |

@@ -3,14 +3,16 @@
 新人建议按以下顺序阅读：本索引 → [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) →
 [DATA_FLOW.md](DATA_FLOW.md) → [CLOSED_LOOP_RUNBOOK.md](CLOSED_LOOP_RUNBOOK.md)。
 作品集实验摘要见 [portfolio/CANONICAL_EXPERIMENT.md](portfolio/CANONICAL_EXPERIMENT.md)，
+**对外作品集（五份）**见 [portfolio/README.md](portfolio/README.md)，
+边界冻结见 [portfolio/BOUNDARY_FREEZE.md](portfolio/BOUNDARY_FREEZE.md)，
 机器可读证据入口见 [../evidence/README.md](../evidence/README.md)。
 
-面试和作品集展示优先看 **P0 文档**；Legacy PyBullet/KUKA 材料仅用于理解历史实现，不代表 Panda 当前主线。
+面试和作品集展示优先看 **portfolio/README.md** 所列五份；Legacy PyBullet/KUKA 材料仅用于理解历史实现，不代表 Panda 当前主线。
 
-**收口入口（2026-07-25）**：项目最终结论与定位见
-[portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md)，
-分层失败归因见 [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md)，
-后续路线（P1/P2 仅登记不执行）见 [FUTURE_WORK_ROADMAP.md](FUTURE_WORK_ROADMAP.md)。
+**收口入口（2026-07-27）**：作品集母版见 [portfolio/PORTFOLIO_REFERENCE.md](portfolio/PORTFOLIO_REFERENCE.md)；
+对外定位与模块所有权见 [portfolio/BOUNDARY_FREEZE.md](portfolio/BOUNDARY_FREEZE.md)；详细事实底稿见 [portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md)；
+失败归因 [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md)；
+后续路线（P1/P2 仅登记）见 [FUTURE_WORK_ROADMAP.md](FUTURE_WORK_ROADMAP.md)。
 诚实边界：open-loop Pass、interface Pass、`ran_isaac=true` 都**不是**任务成功、不是 Sim2Real、不是真机。
 
 ## 日常开发（优先看这里）
@@ -97,20 +99,31 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 
 ## 作品集 / 面试
 
+**对外主导航（五份）**：见 [portfolio/README.md](portfolio/README.md)。
+
 | 文档 | 用途 |
 |------|------|
-| [portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md) | **P0 收口** 项目定位、六层分栏、Pass/Hold/No-Go 全表、诚实边界 |
-| [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md) | **P0 收口** Data / Interface / Behavior / Task-GT / System 分层归因与止损记录 |
-| [portfolio/UNIFIED_EVAL_REPORT.md](portfolio/UNIFIED_EVAL_REPORT.md) | `unified_eval_report_v0` 三后端统一信封 |
-| [portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md](portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md) | Recovery v3 一页纸（量化事实 + STAR + 禁止话术） |
+| [portfolio/README.md](portfolio/README.md) | 压缩导航（五份对外 + 边界冻结指针） |
+| [portfolio/PORTFOLIO_REFERENCE.md](portfolio/PORTFOLIO_REFERENCE.md) | 对外作品集母版：5 分钟价值总览 + 30 分钟技术展开 |
+| [portfolio/BOUNDARY_FREEZE.md](portfolio/BOUNDARY_FREEZE.md) | 定位、模块所有权、release 术语、证据包、提交冻结 |
+| [portfolio/BADCASE_ATTRIBUTION_SUMMARY.md](portfolio/BADCASE_ATTRIBUTION_SUMMARY.md) | 失败归因案例 |
+| [portfolio/EVIDENCE_INDEX.md](portfolio/EVIDENCE_INDEX.md) | 证据索引 + 最小公开证据包 |
+| [portfolio/resume_description.md](portfolio/resume_description.md) | 简历话术 |
+
+### 内部审计（不进主导航）
+
+| 文档 | 用途 |
+|------|------|
+| [portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md) | 详细事实底稿与完整 Pass/Hold 表 |
+| [portfolio/THREE_REPO_CANONICAL_FACTS.md](portfolio/THREE_REPO_CANONICAL_FACTS.md) | 三仓事实源与证据状态标签 |
+| [portfolio/UNIFIED_EVAL_REPORT.md](portfolio/UNIFIED_EVAL_REPORT.md) | `unified_eval_report_v0` 跨后端信封 |
+| [portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md](portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md) | Recovery v3 一页纸 |
 | [portfolio/interview_walkthrough.md](portfolio/interview_walkthrough.md) | 3–5 分钟面试讲稿 |
-| [portfolio/resume_description.md](portfolio/resume_description.md) | **P0 收口** 三套简历版本 + 30 秒/2 分钟话术 + 失败归因案例 + Q&A |
 | [portfolio/project_status.md](portfolio/project_status.md) | 自动生成的进度快照 |
-| [portfolio/DATA_AND_ANALYSIS_PATHS.md](portfolio/DATA_AND_ANALYSIS_PATHS.md) | 中游 KUKA legacy 与 Panda 主线两条数据/分析路径说明 |
-| [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计、训练策略分层、下游评估架构与冗余说明 |
-| [portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md](portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md) | Isaac 具身操作模型评测岗位对齐、三仓复用边界与 E0–E5 实施路线 |
-| [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | 当前评测漏斗、实验结论与 Go/No-Go 审计入口 |
-| [E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | E3.5 oracle 完整实验日志（面试 STAR / 口述稿） |
+| [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计分析 |
+| [portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md](portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md) | 岗位对齐长文 |
+| [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | 评测漏斗与 Go/No-Go 审计 |
+| [E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | E3.5 oracle 实验日志 |
 
 ## Phase 命名对照（避免混淆）
 

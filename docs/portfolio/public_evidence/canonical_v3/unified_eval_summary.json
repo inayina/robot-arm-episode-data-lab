@@ -1,0 +1,13 @@
+{
+  "artifact_type": "public_unified_eval_summary",
+  "contract_version": "unified_eval_report_v0",
+  "evaluation_run_id": "smolvla_v3_eval_framework_relight_20260725",
+  "backends": [
+    {"backend_id": "smolvla_open_loop", "gate_decision": "pass", "interface_evaluated": true, "behavior_evaluated": true, "task_evaluated": false, "offline_evaluated": true, "failure_lane": "none"},
+    {"backend_id": "downstream_policy_runner", "gate_decision": "smoke_complete", "interface_evaluated": true, "behavior_evaluated": false, "task_evaluated": false, "is_closed_loop": false, "failure_lane": "none"},
+    {"backend_id": "isaac_s4_bounded", "gate_decision": "bounded_s4_hold_or_incomplete", "interface_evaluated": true, "task_evaluated": true, "policy_interface_pass": 5, "reach": 1, "grasp": 0, "lift": 0, "gate_pass": false, "failure_lane": "task_gt"}
+  ],
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "claims_online_autonomous_grasp": false
+}

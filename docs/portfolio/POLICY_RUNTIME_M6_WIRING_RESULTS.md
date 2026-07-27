@@ -1,6 +1,6 @@
 # Policy Runtime M6 Wiring Smoke Results
 
-**日期**：2026-07-26  
+**日期**：2026-07-27（最新复跑）
 **结果**：PASS  
 **合同**：`panda_policy_runtime_v1`  
 **证据边界**：真实 ROS 2/DDS wiring + mock PolicyBackend；未启动 PyBullet/Isaac、未加载模型、未训练、未切换 SmolVLA authoritative executor。
@@ -11,9 +11,9 @@
 该图片来自确定性的 Playwright frontend fixture，参考诊断 DAG 与 state timeline，展示最终裁决、
 原因链、四泳道 RUN→E_STOP→HOLD 历史和连续诊断。一级 Runtime Overview 已用浏览器测试固定为
 1920×1080 无页面纵向滚动；Diagnostics / Historical 作为下钻层。它不冒充本次 live wiring 截图。
-真实 wiring 结论仍以本报告和 `evidence_manifest.json` 为准。
+真实 wiring 结论仍以本次 `m6_wiring_smoke.json`、`hoc_runtime_report.json` 和公开 SHA 摘要为准。
 
-三个独立 ROS 2 进程在 55 秒硬 timeout 内运行：
+三个独立 ROS 2 进程在 45 秒硬 timeout 内运行：
 
 ```text
 M6 mock Policy Runtime
@@ -29,6 +29,15 @@ HOC → JSON report + panda_policy_trace_bundle_v1
 ```
 
 复现入口：下游 `scripts/run_policy_runtime_m6_wiring_smoke.sh <evidence_dir>`。
+
+最新安全反馈闭环数据流与证据图：
+
+![M6 ROS 2/DDS 安全反馈闭环数据流](policy_runtime_m6_fault_response_timeline.png)
+
+该图由 `scripts/generate_m6_wiring_evidence_figure.py` 直接读取本次
+`m6_wiring_smoke.json` 与 `hoc_runtime_report.json` 生成。主图先解释模块、topic、前向命令与
+反向安全反馈，再把三次已观测结果放在底部；蓝/绿/灰分别表示 mock 端点、真实 ROS 节点和
+本次未启动路径，不使用手填运行数字。
 
 ## 2. 验收结果
 
@@ -58,4 +67,6 @@ Fast DDS endpoint discovery 将 KEEP_LAST depth 报告为 `0`（unknown）；本
 - 本次不改变 Recovery v3 open-loop Pass 或 S4 lift 0/5 Hold。
 - 本次不证明闭环抓取、Sim2Real、真机或 authoritative SmolVLA cutover。
 
-持久化摘要与原始运行文件 SHA 见 `evidence/policy_runtime_m6_wiring_20260726/evidence_manifest.json`。
+本次原始产物位于 `evidence/policy_runtime_m6_wiring_20260727T075600Z/`；可公开的精简摘要、
+来源 SHA 与复现命令见
+[public_evidence/m6_wiring_20260727/README.md](public_evidence/m6_wiring_20260727/README.md)。

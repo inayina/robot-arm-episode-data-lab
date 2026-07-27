@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">Panda 三仓软硬件诊断与验证系统</title>
+  <desc id="desc">三个仓库从机器人运行、数据与模型到系统验收的职责，以及贯穿三仓的诊断能力。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .title{font:700 31px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .subtitle{font:15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+      .repo{font:700 20px Inter,"Noto Sans SC",Arial,sans-serif;fill:#fff}
+      .role{font:600 18px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .body{font:15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#334155}
+      .small{font:13px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+      .status{font:700 17px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+      .flow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .blueFlow{stroke:#2563eb;stroke-width:2.5;fill:none;marker-end:url(#arrowBlue)}
+      .dash{stroke:#dc2626;stroke-width:2;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="1440" height="760" fill="#f8fafc"/>
+  <text x="720" y="48" text-anchor="middle" class="title">三个仓库怎样组成一条可排查的机器人系统</text>
+  <text x="720" y="76" text-anchor="middle" class="subtitle">机器人现场、实验中枢和系统验收台各自拥有事实源，通过合同与 trace 连接</text>
+
+  <rect x="55" y="122" width="390" height="365" rx="18" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="2"/>
+  <rect x="55" y="122" width="390" height="62" rx="18" fill="#059669"/>
+  <rect x="55" y="164" width="390" height="20" fill="#059669"/>
+  <text x="250" y="160" text-anchor="middle" class="repo">上游 · 机器人现场</text>
+  <text x="82" y="221" class="role">ros2-arm-teleoperation-suite</text>
+  <text x="82" y="259" class="body">• ROS 2 / MuJoCo / Isaac 执行</text>
+  <text x="82" y="291" class="body">• 遥操作与 batch episode 采集</text>
+  <text x="82" y="323" class="body">• 在线 inference / scheduler / adapter</text>
+  <text x="82" y="355" class="body">• physical gate 与 continuous task GT</text>
+  <rect x="82" y="397" width="336" height="58" rx="10" fill="#fff" stroke="#a7f3d0"/>
+  <text x="99" y="422" class="small">主要输出</text>
+  <text x="99" y="446" class="body">episode + meta · runtime outcome</text>
+
+  <rect x="525" y="106" width="390" height="397" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="3"/>
+  <rect x="525" y="106" width="390" height="78" rx="18" fill="#2563eb"/>
+  <rect x="525" y="164" width="390" height="20" fill="#2563eb"/>
+  <text x="720" y="139" text-anchor="middle" class="repo">中游 · 实验中枢</text>
+  <text x="720" y="164" text-anchor="middle" style="font:600 13px Inter,'Noto Sans SC',Arial,sans-serif;fill:#dbeafe">我的核心工作</text>
+  <text x="552" y="221" class="role">robot-arm-episode-data-lab</text>
+  <text x="552" y="259" class="body">• state / action / camera 数据合同</text>
+  <text x="552" y="291" class="body">• immutable release 与 split 防泄漏</text>
+  <text x="552" y="323" class="body">• 训练、checkpoint audit、open-loop Gate</text>
+  <text x="552" y="355" class="body">• 六层评测、Badcase 归因与止损</text>
+  <rect x="552" y="397" width="336" height="74" rx="10" fill="#fff" stroke="#93c5fd"/>
+  <text x="569" y="422" class="small">主要输出</text>
+  <text x="569" y="446" class="body">release · checkpoint · handoff</text>
+  <text x="569" y="466" class="body">Gate report · unified evidence</text>
+
+  <rect x="995" y="122" width="390" height="365" rx="18" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <rect x="995" y="122" width="390" height="62" rx="18" fill="#ea580c"/>
+  <rect x="995" y="164" width="390" height="20" fill="#ea580c"/>
+  <text x="1190" y="160" text-anchor="middle" class="repo">下游 · 系统验收台</text>
+  <text x="1022" y="221" class="role">ros2-moveit-pybullet-bridge</text>
+  <text x="1022" y="259" class="body">• Handoff Loader 与 PolicyRunner replay</text>
+  <text x="1022" y="291" class="body">• Panda action adapter / PyBullet</text>
+  <text x="1022" y="323" class="body">• distribution monitor / risk / safety</text>
+  <text x="1022" y="355" class="body">• Brain / Execution / Safety / GT HOC</text>
+  <rect x="1022" y="397" width="336" height="58" rx="10" fill="#fff" stroke="#fed7aa"/>
+  <text x="1039" y="422" class="small">主要输出</text>
+  <text x="1039" y="446" class="body">replay benchmark · risk / HOC trace</text>
+
+  <path d="M445 326 H515" class="flow"/>
+  <text x="480" y="309" text-anchor="middle" class="small">episode</text>
+  <path d="M915 326 H985" class="flow"/>
+  <text x="950" y="309" text-anchor="middle" class="small">handoff</text>
+  <path d="M545 208 C500 188 468 191 428 209" class="blueFlow"/>
+  <text x="484" y="174" text-anchor="middle" class="small">contract / checkpoint</text>
+
+  <text x="720" y="552" text-anchor="middle" class="role">贯穿三仓的排查能力</text>
+  <rect x="55" y="583" width="310" height="90" rx="13" fill="#fff" stroke="#94a3b8"/>
+  <text x="210" y="617" text-anchor="middle" class="status">数据身份与合同</text>
+  <text x="210" y="647" text-anchor="middle" class="body">schema · split · release · SHA</text>
+  <rect x="395" y="583" width="310" height="90" rx="13" fill="#ecfdf5" stroke="#34d399"/>
+  <text x="550" y="617" text-anchor="middle" class="status">运行时可观测性</text>
+  <text x="550" y="647" text-anchor="middle" class="body">camera · command · latency · GT</text>
+  <rect x="735" y="583" width="310" height="90" rx="13" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="890" y="617" text-anchor="middle" class="status">跨层对照实验</text>
+  <text x="890" y="647" text-anchor="middle" class="body">oracle · replay · same seeds</text>
+  <rect x="1075" y="583" width="310" height="90" rx="13" fill="#fef2f2" stroke="#f87171"/>
+  <text x="1230" y="617" text-anchor="middle" class="status">分层事实所有权</text>
+  <text x="1230" y="643" text-anchor="middle" class="body">Data · Interface · Task · System</text>
+  <text x="1230" y="662" text-anchor="middle" class="small">每层只回答自己的问题</text>
+
+  <rect x="55" y="704" width="1330" height="30" rx="8" fill="#0f172a"/>
+  <text x="720" y="725" text-anchor="middle" style="font:600 14px Inter,'Noto Sans SC',Arial,sans-serif;fill:#fff">核心价值：异常能沿传感器、数据、策略、动作、物理和真值逐层复现与定位</text>
+</svg>

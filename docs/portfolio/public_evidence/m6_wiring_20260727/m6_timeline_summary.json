@@ -1,0 +1,70 @@
+{
+  "report_format": "m6_wiring_portfolio_evidence_v1",
+  "generated_at_utc": "2026-07-27T07:55:53.402274+00:00",
+  "status": "PASS",
+  "scope": {
+    "changed_s4_gate": false,
+    "claims_task_success": false,
+    "is_closed_loop": false,
+    "ran_ros_dds_wiring": true,
+    "ran_simulator": false,
+    "ran_training": false,
+    "uses_mock_policy_backend": true
+  },
+  "contract_version": "panda_policy_runtime_v1",
+  "contract_descriptor_sha256": "e78176b6d487b03e8602c1b58a437d88b9d7509af23dec499262bb679ada7447",
+  "source_sha256": {
+    "m6_wiring_smoke.json": "4d61eb9bb62e62a2eb063e99a41e86d65925f9bdcf5759451791e8ba34865cd2",
+    "hoc_runtime_report.json": "822b7cdb19785488cdd85ddfcf6e04a3be72dd58afcfe8b00ab914d63fab40ba"
+  },
+  "checks": {
+    "topic_discovery": true,
+    "hoc_four_lanes_correlated": true,
+    "hoc_trace_bundle_exported": true,
+    "r2_actual_hold_observed": true,
+    "r3_actual_estop_observed": true,
+    "task_gt_remained_unavailable": true,
+    "trace_issues": []
+  },
+  "commands": [
+    {
+      "command_sequence": 1,
+      "relative_trace_time_sec": 0.167389,
+      "inference_latency_ms": 23.0,
+      "queue_depth": 4,
+      "execution_decision": "EXECUTED",
+      "execution_accepted": true,
+      "safety_level": "R0",
+      "safety_actual_decision": "RUN",
+      "safety_reason": "none",
+      "task_gt": "UNAVAILABLE",
+      "task_gt_reason": "m6_wiring_has_no_task_gt"
+    },
+    {
+      "command_sequence": 2,
+      "relative_trace_time_sec": 0.760926,
+      "inference_latency_ms": 24.0,
+      "queue_depth": 0,
+      "execution_decision": "HELD",
+      "execution_accepted": false,
+      "safety_level": "R2",
+      "safety_actual_decision": "HOLD",
+      "safety_reason": "risk_r2_hold",
+      "task_gt": "UNAVAILABLE",
+      "task_gt_reason": "m6_wiring_has_no_task_gt"
+    },
+    {
+      "command_sequence": 3,
+      "relative_trace_time_sec": 1.261076,
+      "inference_latency_ms": 25.0,
+      "queue_depth": 0,
+      "execution_decision": "ESTOPPED",
+      "execution_accepted": false,
+      "safety_level": "R3",
+      "safety_actual_decision": "E_STOP",
+      "safety_reason": "risk_r3_latched",
+      "task_gt": "UNAVAILABLE",
+      "task_gt_reason": "m6_wiring_has_no_task_gt"
+    }
+  ]
+}

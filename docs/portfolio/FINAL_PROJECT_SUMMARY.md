@@ -1,17 +1,17 @@
-# 具身策略评测框架 — 最终项目总结（求职展示口径）
+# 具身策略评测框架 — 详细事实底稿
 
-**冻结日期**：2026-07-25；Policy Runtime M0–M6 事实更新：2026-07-26  
-**基线 commit**：`d7ba9d53e9df94c0c4565ba31114cf9b1511a878`（`main`，中游 `robot-arm-episode-data-lab`）  
-**本文定位**：三仓项目对外唯一入口式总结。所有数字均可回溯到机器可读产物（JSON / YAML lock / SHA256 / manifest）。  
+**冻结日期**：2026-07-27（边界冻结见 [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md)）；Policy Runtime M0–M6 事实更新：2026-07-26
+**基线 commit**：`d7ba9d53e9df94c0c4565ba31114cf9b1511a878`（`main`，中游 `robot-arm-episode-data-lab`）
+**本文定位**：详细事实底稿（对外叙事母版见 [PORTFOLIO_REFERENCE.md](PORTFOLIO_REFERENCE.md)，完整导航见 [README.md](README.md)）。所有数字均可回溯到机器可读产物（JSON / YAML lock / SHA256 / manifest）。
 **诚实边界（全文有效）**：**Not task success / Not Sim2Real / Not real robot**。open-loop Pass、interface Pass、`ran_isaac=true`、PolicyRunner smoke 完成，都不是任务成功、不是在线自主抓取、不是 Sim2Real、不是真机部署。所有评测产物 `claims_task_success=false`。
 
 ---
 
 ## 1. 项目一句话定位
 
-> **面向机器人模仿学习与 VLA 策略的数据质量、动作契约、open-loop、closed-loop、仿真执行和 Badcase 归因评测框架。**
+> **具身策略数据治理与分层验证框架**——以三仓数据链（采集 → 契约 → release → 训练 → handoff）为基础，Policy Runtime、Risk、HOC 作为**验证配套**（非并列产品线），在同一套 Panda 闭环上为多个策略候选建立可复现、可审计、防包装的判定链路。
 
-这不是一个「训练出能抓取的策略」的项目，而是一个**评测与验证工程**项目：在同一套 Panda 三仓闭环上，为多个策略候选（MLP BC / ACT / SmolVLA VLA / scripted oracle）建立可复现、可审计、防包装的判定链路，并在每一层明确「这一层能证明什么、不能证明什么」。
+这不是一个「训练出能抓取的策略」的项目，而是一个**数据治理 + 分层验证工程**项目：在每一层明确「这一层能证明什么、不能证明什么」。下游 `PolicyRunner` 定位为 **replay harness**（开环重放与接口 smoke），不是在线策略大脑。
 
 项目最有价值的产出是**三次止损判断**，而不是任何一条成功率：
 
@@ -29,11 +29,11 @@
 |---|---|---|
 | ![Brain–cerebellum runtime architecture](brain_cerebellum_runtime_system.svg) | 中游负责合同和证据；上游把观测变成 chunk 并通过 Execution Adapter 做 TTL、sequence、限幅与 Hold/E-stop；下游负责 Risk→Safety 与 Brain / Execution / Safety / Task GT 四泳道关联。红色回路是安全反馈，不是 Task GT。 | 不能由这张架构图声称 SmolVLA 已切到 authoritative、在线抓取成功或完成 Sim2Real。 |
 
-| 仓库 | 负责 | 明确不负责 | 权威输出 |
+| 仓库 | 模块所有权（冻结） | 明确不负责 | 权威输出 |
 |---|---|---|---|
-| 上游 `ros2-arm-teleoperation-suite` | 遥操作 / batch 采集、MoveIt Servo + 阻抗控制、MuJoCo 与 Isaac 物理执行、上游物理门禁、continuous task GT、scripted oracle | 中游 schema/release/训练；下游 replay/risk | `episode_*/train/` + `meta.json`、runtime outcome、`s4_gate.json` |
-| **中游（本仓）** | adapter、schema/数据健康度校验、immutable release、LoRA/ACT 训练、open-loop gate、统一评测信封、失败归因、handoff 打包 | ROS 2 实时控制、物理执行、重新推导上游 physical success | release manifest、checkpoint + audit、`s3_open_loop_report.json`、`unified_eval_report_v0` |
-| 下游 `ros2-moveit-pybullet-bridge` | handoff 静态校验、JSONL replay、Panda action adapter、tracking/漂移监控、Risk→Safety、四泳道 HOC、fault benchmark | 采集、清洗、训练、任务真值改判、真机驱动 | `benchmark_summary.json`、offline risk readiness、五轨 trace bundle |
+| 上游 `ros2-arm-teleoperation-suite` | **在线 inference**、**scheduler**（chunk/replan）、**execution adapter**（TTL/限幅/Hold）、**task GT**、采集与控制栈 | 中游合同/数据/训练；下游 replay harness | `episode_*/train/` + `meta.json`、runtime outcome、`s4_gate.json` |
+| **中游（本仓）** | **合同**、**数据**、**训练**、**离线评测**、**handoff** | ROS 2 实时控制、物理执行、重新推导上游 physical success | release manifest（immutable 须带 SHA）、checkpoint + audit、`s3_open_loop_report.json`、`unified_eval_report_v0` |
+| 下游 `ros2-moveit-pybullet-bridge` | **replay**（`PolicyRunner` = replay harness）、**monitor**、**risk**、**HOC** | 采集、清洗、训练、任务真值改判、真机驱动 | `benchmark_summary.json`、offline risk readiness、五轨 trace bundle |
 
 **硬边界**：中游 `filter_scope=training_split_only`，不得从 `observation.object_pose` 重新推导 lift/place 成败；下游 risk R-level 不得覆盖上游 GT 或改写 `failure_lane`。
 
@@ -86,11 +86,23 @@ state-transition/status-history 与工业 HMI display hierarchy 模式，用可�
 
 ## 4. 当前结论（Pass / Hold / No-Go 全表）
 
+### 4.0 小样本计数的统计解释（不可外推）
+
+核心比率用 **Wilson 95% CI**（实现：`evaluation/stats_interpretation.py`）描述点估计不确定度，**不是**扩种子授权：
+
+| 计数 | 点估计 | Wilson 95% CI | 不可外推到 |
+|---|---|---|---|
+| S4 lift **0/5**（relight 权威） | 0.000 | **[0.000, 0.435]** | 更大 N、OOD、Sim2Real、任务成功 |
+| oracle lift **5/5**（v2b） | 1.000 | **[0.566, 1.000]** | learned-policy 成功或真机 |
+| ACT E3 overall **0/20** | 0.000 | **[0.000, 0.161]** | 「再采一点就会过」 |
+
+`0/5` 的上界仍可到 ~43%，因此 **Hold + 停止扩种子** 是流程决策，不是「已证明永远为 0」。`5/5` 的下界 ~57%，只证明**该协议下物理链可过**，不等于策略成功率。
+
 ### 4.1 候选路线状态
 
 | 候选 | 当前状态 | 关键事实 | 权威证据 |
 |---|---|---|---|
-| **SmolVLA Recovery v3** | **open-loop Pass（gate_v3）/ 有界 Isaac S4 Hold** | prospective EE RMSE `0.0253 m`、grip BA `0.9943`；S4 interface 5/5、lift **0/5** | `runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/`、`evidence/smolvla_s4_bounded5_relight_20260724T151711Z/` |
+| **SmolVLA Recovery v3** | **open-loop Pass（gate_v3）/ 有界 Isaac S4 Hold** | prospective EE RMSE `0.0253 m`、grip BA `0.9943`；S4 interface 5/5、lift **0/5**（Wilson 95% CI 见 §4.0） | `runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/`、`evidence/smolvla_s4_bounded5_relight_20260724T151711Z/` |
 | SmolVLA S3 v1 / v2 | **Historical Hold** | v1 全帧 EE `0.0547 m`、grip BA `0.7128`、闭合提前 65 帧；v2 late-close 退化且事后审计发现 split 未过滤 | `runs/smolvla_s3/openloop_full_stride1_20260723T055500Z/`、`runs/smolvla_s3/openloop_v2_lateclose_full_stride1_20260723T161000Z/` |
 | **ACT** | **Frozen diagnostic baseline** | E3 nominal20 overall **0/20**（reach 10/20，Wilson 95% CI `[0.000, 0.161]`）；close→lift 定向模型 5-seed lift **0/5**、5/5 `HOME_NO_CLOSE` | `evidence/e3_nominal20_home_30ep_gt_v1_20260719/summary.json`、`evidence/e3p6_closelift40_5seed_home_20260720/smoke5_gate.json` |
 | **Scripted oracle** | **Active system reference（系统上界）** | v1 lift 0/5 → 修 pick 高度 / PD 夹爪 / 摩擦 / GT 阈值 → v2b lift **5/5**、`gate_pass=true` | `evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json` |
@@ -132,7 +144,7 @@ state-transition/status-history 与工业 HMI display hierarchy 模式，用可�
 
 ### 4.4 有界 Isaac S4 — **Hold**
 
-runtime 合同（单源 `configs/smolvla_s3/s4_runtime_contract.{yaml,json}`，上游包内字节相同副本 + 启动 assert）：`control_rate=10 Hz`、`chunk_size=10`、`execute_K=5`、`replan_period=0.5 s`、`gripper_command=clip(raw,0,1)`、scene-only camera、`observation.state[15]`、clamp + E-stop、**bounded seeds 1–5**。
+runtime 合同采用**中游权威合同 + 上游 SHA 锁定镜像**（上游包内字节相同镜像 + 启动 assert）：`control_rate=10 Hz`、`chunk_size=10`、`execute_K=5`、`replan_period=0.5 s`、`gripper_command=clip(raw,0,1)`、scene-only camera、`observation.state[15]`、clamp + E-stop、**bounded seeds 1–5**。当前 scheduler 为同步 replan；async double-buffer 只有离线 bench，在线节点仍未接线。
 
 | 项 | 首轮（近黑场景，**Superseded**） | **修光后权威** |
 |---|---|---|
@@ -232,17 +244,14 @@ python3 scripts/generate_smolvla_v3_portfolio_figures.py
 
 ## 8. 文档导航
 
+**对外主导航（五份）**：见 [README.md](README.md) 与 [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md)。
+
 | 入口 | 用途 |
 |---|---|
-| [BADCASE_ATTRIBUTION_SUMMARY.md](BADCASE_ATTRIBUTION_SUMMARY.md) | Data / Interface / Behavior / Task-GT / System 分层归因 |
-| [../FUTURE_WORK_ROADMAP.md](../FUTURE_WORK_ROADMAP.md) | P0 / P1 / P2 路线（P1/P2 只登记） |
-| [../SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md](../SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md) | clean / K5 / 扰动两层设计（登记不执行；禁 H=5·H=10） |
-| [resume_description.md](resume_description.md) | 三套简历版本 + 30 秒 / 2 分钟话术 + 失败归因案例 |
-| [THREE_REPO_CANONICAL_FACTS.md](THREE_REPO_CANONICAL_FACTS.md) | 三仓唯一事实源与证据状态标签 |
-| [SMOLVLA_RECOVERY_V3_PORTFOLIO.md](SMOLVLA_RECOVERY_V3_PORTFOLIO.md) | Recovery v3 一页纸（量化事实 + STAR） |
-| [UNIFIED_EVAL_REPORT.md](UNIFIED_EVAL_REPORT.md) | `unified_eval_report_v0` 跨后端信封 |
-| [EVIDENCE_INDEX.md](EVIDENCE_INDEX.md) | 每张图 / 每份证据的生成脚本与「能/不能证明」 |
-| [../SMOLVLA_V3_EVAL_SOP.md](../SMOLVLA_V3_EVAL_SOP.md) | v3 全链评测 SOP 与止损矩阵 |
-| [../SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md](../SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md) | S4 lift 0/5 的假设矩阵与遥测修订 |
-| [../EMBODIED_POLICY_EVALUATION_SOP.md](../EMBODIED_POLICY_EVALUATION_SOP.md) | 通用评测协议、判定标签、归因闭环 |
-| [../E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](../E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | oracle v1→v2b 物理链 triage 全过程 |
+| [README.md](README.md) | 压缩作品集导航 |
+| [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md) | 定位、模块所有权、release 术语、证据包、提交冻结 |
+| [BADCASE_ATTRIBUTION_SUMMARY.md](BADCASE_ATTRIBUTION_SUMMARY.md) | 失败归因案例 |
+| [EVIDENCE_INDEX.md](EVIDENCE_INDEX.md) | 证据索引 + 最小公开证据包 |
+| [resume_description.md](resume_description.md) | 简历话术 |
+
+**内部审计**（不进主导航）：[THREE_REPO_CANONICAL_FACTS.md](THREE_REPO_CANONICAL_FACTS.md)、[UNIFIED_EVAL_REPORT.md](UNIFIED_EVAL_REPORT.md)、[SMOLVLA_RECOVERY_V3_PORTFOLIO.md](SMOLVLA_RECOVERY_V3_PORTFOLIO.md)、[../FUTURE_WORK_ROADMAP.md](../FUTURE_WORK_ROADMAP.md)、[../SMOLVLA_V3_EVAL_SOP.md](../SMOLVLA_V3_EVAL_SOP.md)、[../EMBODIED_POLICY_EVALUATION_SOP.md](../EMBODIED_POLICY_EVALUATION_SOP.md) 等 — 见 [docs/README.md](../README.md)。

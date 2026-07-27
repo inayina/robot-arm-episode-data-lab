@@ -38,7 +38,7 @@ from evaluation.vla_contract.smolvla_panda_s2 import (  # noqa: E402
     load_video_frame_bgr,
     write_json,
 )
-from training.scripts import run_smolvla_s3_open_loop as ol  # noqa: E402
+from training.smolvla_s3 import open_loop_eval as ol  # noqa: E402
 from training.smolvla_s3.nuisance_perturbations import (  # noqa: E402
     apply_nuisance_bgr,
     condition_seed,

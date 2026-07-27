@@ -1,0 +1,33 @@
+{
+  "artifact_type": "public_open_loop_gate_summary",
+  "contract_version": "public_evidence_v1",
+  "gate_decision": "pass",
+  "gate_sha256": "37325a1fee3cce2e14361071d39f2a0a5b767044e25472114fcb8684c495d46f",
+  "prospective_evaluation": {
+    "eligible": true,
+    "evaluation_episode_count": 10,
+    "evaluated_num_frames": 2593,
+    "train_overlap": [],
+    "threshold_design_overlap": []
+  },
+  "sampling_contract": {
+    "inference_mode": "canonical_first_action",
+    "stride": 1,
+    "full_episode_coverage": true,
+    "executes_action_chunk_queue": false
+  },
+  "metrics": {
+    "ee_position_rmse_m": 0.0253369083666324,
+    "gripper_balanced_accuracy": 0.9942844469658416,
+    "raw_gripper_oob_beyond_epsilon_close_edge_ratio": 0.0038565368299267257,
+    "gripper_clip_adjustment_mae": 0.00691963336295802,
+    "gripper_clip_classification_change_ratio": 0.0,
+    "gripper_clip_close_timing_change_frames_max_abs": 0,
+    "latency_ms_p50": 356.25742468982935,
+    "latency_ms_p95": 452.77381148189306
+  },
+  "ran_isaac": false,
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "claims_online_autonomous_grasp": false
+}

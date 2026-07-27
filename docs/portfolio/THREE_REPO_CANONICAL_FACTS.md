@@ -2,9 +2,11 @@
 
 本文件是三仓当前统一事实源，只记录可追溯事实，不用行业经验补全项目状态。
 
-统一一句话主线：
+统一一句话主线（2026-07-27 冻结）：
 
-> Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环。
+> **具身策略数据治理与分层验证框架** — 三仓数据链为基础；Policy Runtime / Risk / HOC 为验证配套（非并列产品线）。
+
+历史表述「Panda 机械臂的多仓数据、训练、离线评估与 Sim2Sim / Sim2Real-readiness 验证闭环」仍可作为范围说明，但对外主语以冻结句为准。见 [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md)。
 
 当前证据充分确认的是软件仿真与下游 PyBullet replay/readiness 验证；当前项目证据不足，无法确认真实机械臂部署、已完成真实 Sim2Real、稳定在线自主抓取或离线 loss 提升等同于任务成功率提升。
 
@@ -23,7 +25,17 @@
 
 项目事实回答时还应区分：已实现、文档声明，代码未确认、基于证据的推断、通用背景知识。
 
-## Repository Roles
+## Repository Roles（模块所有权 · 2026-07-27 冻结）
+
+| 仓库 | 模块域 | 处理 | 输出 | 明确不负责 |
+| --- | --- | --- | --- | --- |
+| `ros2-arm-teleoperation-suite` | inference · scheduler · execution adapter · task GT | 安全与运动控制、MoveIt Servo、MuJoCo/Isaac、episode 录制、上游物理门禁、continuous GT | raw episode、`meta.json`、G0 validation | 中游合同/数据/训练/handoff；下游 replay harness |
+| `robot-arm-episode-data-lab` | 合同 · 数据 · 训练 · 离线评测 · handoff | adapter、schema、release（non-overwrite / immutable）、训练、open-loop gate、unified report、bridge handoff | `frames.jsonl`、manifest、checkpoint、evaluation report、handoff | ROS 实时控制、物理执行、PyBullet replay |
+| `ros2-moveit-pybullet-bridge` | replay · monitor · risk · HOC | handoff 校验、**PolicyRunner replay harness**、dist_monitor、risk、四泳道 HOC | benchmark summary、risk readiness、trace bundle | 采集、训练、任务 GT 改判、真机 |
+
+下游 `PolicyRunner` = **replay harness**（`is_closed_loop=false` 默认）。
+
+### Legacy role table（历史列式，保留审计）
 
 | 仓库 | 输入 | 处理 | 输出 | 明确不负责 | 状态 | 主要证据 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -51,7 +63,7 @@
 | SmolVLA Gate S1 | 官方 `smolvla_base` 加载+`select_action`：**pass**（peak ≈925 MiB / ~171 ms；合成帧；非 Panda） | `implemented_and_verified` | `docs/SMOLVLA_GATE_S1_OFFICIAL_REPRO.md`, `evaluation/examples/smolvla_gate_s1_report.json` |
 | SmolVLA Gate S2 | Panda v2.1 RGB+abs EEF open-loop：**interface pass / H-4 pass / H-3 no_go**（EE RMSE≈0.27 m；gripper acc 0；非任务成功） | `implemented_and_verified` | `docs/SMOLVLA_GATE_S2_OPEN_LOOP.md`, `evaluation/examples/smolvla_gate_s2_report.json` |
 | SmolVLA Gate S3（v1/v2，**Historical / Superseded**，被下一行 Recovery v3 取代） | v1 griptiming + α64 LoRA canonical 全帧 `stride=1` / 2,594 帧为 **Hold**：EE `0.0547 m`、gripper balanced accuracy `0.7128`，timing 提前 `65` 帧 / `6.5 s`、smoothness p90 `0.103 m`、raw gripper OOB `20.47%`。人工例外 Round-2 v2 late-close release（20 episodes / 7,765 frames）已完成真实 GPU preflight、1000-step LoRA、checkpoint audit，并完成同口径 8 条 / 3,108 帧 open-loop：仍为 **Hold**。v2 EE `0.0669 m`、gripper balanced accuracy `0.7203`，timing 提前 `68.625` 帧 / `6.862 s`、smoothness p90 `0.1196 m`、raw gripper OOB `21.07%`；8/8 episode 均提前闭合，失败项仍为 timing / smooth / sat。相对 v1，timing、smoothness、sat 与 EE 均退化，仅 grip balanced accuracy 小幅 +0.0076。**事后 split 审计发现**：v2 release 虽声明 12 train / 4 validation / 4 benchmark，但 AutoDL 合并训练根与训练日志均为 20 episodes，训练入口未按 split 过滤；因此该 8 条只能称 release-named slices，不能称真正 held-out/OOD，且当前结果是在训练见过这些 episode 的条件下仍 Hold。当前帧 `action[7]`、`action_delta_indices=range(50)`、reset 后 `select_action()` 首动作按序 `popleft()` 的索引链已排除；未执行 action-chunk queue，未跑 Isaac | `implemented_and_verified` v1/v2 full-frame Hold + v2 training/checkpoint audit + split-leak audit；**不是** Pass / 泛化 / 任务成功 | `runs/smolvla_s3/openloop_full_stride1_20260723T055500Z/s3_open_loop_summary.json`, `runs/smolvla_s3/openloop_v2_lateclose_full_stride1_20260723T161000Z/s3_open_loop_summary.json`, `runs/smolvla_s3/train_v2_lateclose_20260723T160000Z/train_log.txt`, `docs/SMOLVLA_S3_RECOVERY_IMPLEMENTATION_PLAN.md` |
-| SmolVLA Recovery v3 | train-only 36 episodes、`state[15]+scene RGB`、chunk10/K5、官方精确 PEFT 正则完成 5,705-step LoRA，checkpoint audit Pass（adapter SHA256 `4cfcc46e3270cd0b4fe267e36c87c823e1bb9a473742ac99f58652791910d2f7`）。历史 14 条 / 3,413 帧 canonical first-action 在冻结 `eval_gate_v1` 下为 Hold。2026-07-24 新采 10 条 / 2,673 帧 eval-only scene episode，QA/release Pass；真实 RTX 4090 D prospective `eval_gate_v2` 为 **Hold**（仅开爪边 raw 严重度三项）。同日冻结执行语义 `eval_gate_v3`（lock `gate_sha256=37325a1f…`）后，fresh seeds 70–74 / 2,593 帧 prospective **Pass**（EE `0.0253 m`、grip BA `0.9943`、close-edge beyond-ε `0.386%`、clip 分类/时序变化 0）。Pass 只代表**专家状态分布上的 first-action 离线判定**；`queued_diagnostic` 永不具备 canonical Pass 资格。CPU queue 合同 + online runner 已落地；异步 queue runtime 未实测 | `implemented_and_verified` for train/checkpoint/v1–v3 gates/prospective v3 Pass；**不是**任务成功 / Sim2Real / 泛化保证 | `runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json`, `runs/smolvla_s3/recovery_v3_lora_20260723T125632Z/checkpoint_config_audit.json`, `configs/smolvla_s3/eval_gate_v3.yaml`, `configs/smolvla_s3/eval_gate_v3.lock.json`, `training/smolvla_s3/runtime_s4.py`, `docs/portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md` |
+| SmolVLA Recovery v3 | train-only 36 episodes、`state[15]+scene RGB`、chunk10/K5、官方精确 PEFT 正则完成 5,705-step LoRA，checkpoint audit Pass（adapter SHA256 `4cfcc46e3270cd0b4fe267e36c87c823e1bb9a473742ac99f58652791910d2f7`）。历史 14 条 / 3,413 帧 canonical first-action 在冻结 `eval_gate_v1` 下为 Hold。2026-07-24 新采 10 条 / 2,673 帧 eval-only scene episode，QA/release Pass；真实 RTX 4090 D prospective `eval_gate_v2` 为 **Hold**（仅开爪边 raw 严重度三项）。同日冻结执行语义 `eval_gate_v3`（lock `gate_sha256=37325a1f…`）后，fresh seeds 70–74 / 2,593 帧 prospective **Pass**（EE `0.0253 m`、grip BA `0.9943`；close-edge beyond-ε `0.386%`、clip 分类/时序变化 0）。Pass 只代表**专家状态分布上的 first-action 离线判定**；`queued_diagnostic` 永不具备 canonical Pass 资格。CPU queue 合同 + online runner 已落地；中游离线 async queue bench 已实测，上游在线节点仍未接线 | `implemented_and_verified` for train/checkpoint/v1–v3 gates/prospective v3 Pass；**不是**任务成功 / Sim2Real / 泛化保证 | `runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json`, `runs/smolvla_s3/recovery_v3_lora_20260723T125632Z/checkpoint_config_audit.json`, `configs/smolvla_s3/eval_gate_v3.yaml`, `configs/smolvla_s3/eval_gate_v3.lock.json`, `training/smolvla_s3/runtime_s4.py`, `docs/portfolio/SMOLVLA_RECOVERY_V3_PORTFOLIO.md` |
 | Bounded Isaac S4（SmolVLA Recovery v3） | 人工批准的有界 rollout（`chunk10 / K5 / 10 Hz / clip(raw,0,1)` / scene-only / `state[15]`，seeds 1–5）已在本机 RTX PRO 500 跑完：`ran_isaac=true`；policy interface **5/5** PASS。**权威产物为修光后复测**（policy 输入 JPEG 均值 ≈154）：GT reach **1/5**、grasp **0/5**、lift **0/5**、`outcome_success 0/5`（`pass_threshold=1`）、`gate_pass=false` → **Hold**；5/5 seeds failure=`gripper never closed below 0.700`。首轮近黑场景运行（JPEG 均值 ≈0.3）为 reach 3/5、grasp 1/5、lift 0/5，其 reach/grasp 是失明走廊几何重叠 + `GRIPPER_CLOSE_MAX=0.70` 口径放大，已标注 **Superseded / historical**，不得作权威。默认不扩种子、不重训 | `implemented_and_verified` bounded Isaac run（Hold）；**不是**任务成功 / 在线自主抓取 / Sim2Real / 真机 | `evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json`（权威）, `evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json`（superseded）, `evidence/smolvla_s4_bounded5_telemetry_20260724T144549Z/`, `evidence/smolvla_s4_mujoco_bounded5_20260724T155513Z/s4_gate.json`（H2 训练域对照，`early_stopped=true`）, `docs/SMOLVLA_S4_LIFT0_OFFLINE_ATTRIBUTION.md`, `docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md` |
 | ACT HOME_NO_CLOSE hold | 假设—证据矩阵；禁止盲训/扩采/E4 | `implemented_and_verified` decision | `docs/ACT_HOME_NO_CLOSE_HYPOTHESIS_MATRIX.md` |
 

@@ -26,10 +26,10 @@ def _load_module(name: str, relative_path: str):
 
 
 CONTROL = _load_module(
-    "run_smolvla_s3_control_test", "training/scripts/run_smolvla_s3_control.py"
+    "run_smolvla_s3_control_test", "training/smolvla_s3/control_plane.py"
 )
 OPEN_LOOP = _load_module(
-    "run_smolvla_s3_open_loop_test", "training/scripts/run_smolvla_s3_open_loop.py"
+    "run_smolvla_s3_open_loop_test", "training/smolvla_s3/open_loop_eval.py"
 )
 RECOMPUTE = _load_module(
     "recompute_smolvla_s3_saved_open_loop_test",
@@ -674,7 +674,7 @@ def test_native_policy_state_uses_recovery_state15() -> None:
 
 def test_open_loop_exposes_separate_canonical_and_queued_modes() -> None:
     source = (
-        ROOT / "training" / "scripts" / "run_smolvla_s3_open_loop.py"
+        ROOT / "training" / "smolvla_s3" / "open_loop_eval.py"
     ).read_text(encoding="utf-8")
     assert "--inference-mode" in source
     assert "canonical_first_action" in source
@@ -741,7 +741,7 @@ def test_open_loop_shell_uses_selected_train_config_and_gate_is_fail_closed() ->
     shell = (ROOT / "scripts" / "run_smolvla_s3_open_loop.sh").read_text(
         encoding="utf-8"
     )
-    source = (ROOT / "training/scripts/run_smolvla_s3_open_loop.py").read_text(
+    source = (ROOT / "training/smolvla_s3/open_loop_eval.py").read_text(
         encoding="utf-8"
     )
     assert 'CONFIG="${S3_CONFIG:-' in shell

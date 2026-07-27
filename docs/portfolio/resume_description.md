@@ -1,7 +1,7 @@
 # 求职材料：三套简历版本 + 面试话术（具身策略评测框架）
 
-**冻结日期**：2026-07-25 · **基线 commit**：`d7ba9d53e9df94c0c4565ba31114cf9b1511a878`
-**岗位定位**：**系统验证 / 测试开发 / 评测工程**（具身智能方向）。**不是** VLA 算法研究员，不以「刷高任务成功率」为卖点，而以「建立可复现、防包装的策略评测与归因体系」为卖点。
+**冻结日期**：2026-07-27 · **基线 commit**：`d7ba9d53e9df94c0c4565ba31114cf9b1511a878`
+**岗位定位**：**系统验证 / 测试开发 / 评测工程**（具身智能方向）。边界冻结见 [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md)。
 **诚实边界（所有版本通用，必须保留）**：**Not task success / Not Sim2Real / Not real robot**。open-loop Pass、interface Pass、`ran_isaac=true` 都不是任务成功。所有评测产物 `claims_task_success=false`。
 
 **技术栈**：ROS 2 (Jazzy)、MoveIt Servo、MuJoCo、Isaac Sim、PyBullet、PyTorch、LeRobot / SmolVLA (LoRA / PEFT)、PyArrow (Parquet)、pytest、JSON Schema、Python、C++
@@ -31,7 +31,7 @@
 
 - **具身策略评测与验证系统（Franka Panda 三仓闭环，独立研发）**——为模仿学习 / VLA 策略设计**分层验证体系**：Data → Offline → Interface → Behavior → Task-GT → System 六层分栏，每层只判定自己的问题，禁止跨层升级结论。
 - 设计并**SHA256 冻结**评测门禁（`eval_gate_v3`，`37325a1f…`），把「预裁剪 raw 幅值」修订为**执行侧 `clip(raw,0,1)` 语义**，保留关爪边 beyond-ε（≤1%）与分类/时序不变式为硬安全项；**历史 Hold 判定不追溯改写**。
-- 建立 **immutable release + checkpoint/norm/Benchmark 三向绑定**：release manifest 逐文件 SHA256、`splits.json` 三段无交集、checkpoint config audit 核验 `state[15]` / camera / `action[8]` / chunk / K / PEFT 正则与 adapter SHA256，杜绝「训练配置与评测配置静默漂移」。
+- 建立 **权威合同 + SHA 锁定镜像**（immutable release 逐文件 SHA256、`release_content_sha256`、`splits.json` 三段无交集 + checkpoint config audit 核验 `state[15]` / camera / `action[8]` / chunk / K / PEFT 正则与 adapter SHA256），杜绝「训练配置与评测配置静默漂移」。
 - 用 **scripted oracle 隔离被测系统**：oracle v1 也 lift 0/5 → 定位为物理链缺陷（pick 高度 / PD 夹爪 / 摩擦 / GT 阈值），修复后 v2b lift **5/5**，从而把 learned policy 的失败**排除物理链嫌疑**。
 - 主动**证伪自己的正向指标**：有界 Isaac S4 首轮 reach 3/5 · grasp 1/5 看似部分成功，补相机遥测发现 policy 输入近黑（像素均值 ≈0.3 vs 训练域 ≈50），修光后同 seeds 复测降为 reach 1/5 · grasp 0/5 —— **更差但更真实**，并把首轮标注为 `Superseded`。
 - 交付**可复现回归**：三仓 CPU pytest 覆盖 gate 契约、统一报告 schema、checkpoint/manifest 引用、图表数据源、诚实声明不变式与失效链接；所有作品集图表由脚本从证据 JSON 重出，数字**不硬编码**。
@@ -68,9 +68,9 @@
 
 ## B.1 简历条
 
-- **具身操作策略 Benchmark 与数据治理（Panda 三仓，独立研发）**——把「专家示教 → immutable release → 训练 → 离线门禁 → 仿真执行 → 归因」做成契约化流水线，每一环产出机器可读产物（manifest / metrics / gate / unified report）。
+- **具身策略数据治理与分层验证（Panda 三仓，独立研发）**——把「专家示教 → immutable release → 训练 → 离线门禁 → replay harness 验证 → 归因」做成契约化流水线，每一环产出机器可读产物（manifest / metrics / gate / unified report）。
 - 设计 **Panda 数据契约**（`configs/robot_schemas/panda.yaml`）：`observation.state`、`ee_pose[7]`、`object_pose[7]`（privileged，禁入 policy state）、`ft[6]`、scene RGB 320×240@10 Hz、`action` 语义（ACT 的 `ee_delta_gripper[7]` 与 VLA 的 `absolute_eef_gripper[8]`）；入口静态校验，维度或通道漂移在**入口**拦截。
-- 建立 **immutable release + 数据健康度门禁**：逐文件 SHA256、`release_content_sha256`、`splits.json` 三段无交集、joint-step P99 与反向运动率过滤抖动/丢帧、`scene_rgb_complete_rate`、`filter_scope=training_split_only`（物理成败归上游，中游不重复推导）。
+- 建立 **immutable release + 数据健康度门禁**（non-overwrite 与 immutable 分层术语见 [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md)）：逐文件 SHA256、`release_content_sha256`、`splits.json` 三段无交集、joint-step P99 与反向运动率过滤抖动/丢帧、`scene_rgb_complete_rate`、`filter_scope=training_split_only`（物理成败归上游，中游不重复推导）。
 - **发现并修复一次训练/评测泄漏**：事后审计发现某 release 虽声明 12/4/4 split，训练根与训练日志却是全部 20 episodes；据此把该轮的「held-out / OOD」表述**降级为 release-named slices**，并在 Recovery 中强制 **train-only 物化**（36 episodes）。
 - 设计**prospective eval-only 采集**：为避免阈值设计污染评测集，为新 gate **重新采集** seeds 70–74 / 2,593 帧，保证与训练集和阈值设计过程零重叠，再出 Pass 结论。
 - 定义 **`unified_eval_report_v0` 跨后端信封**：open-loop / 下游 PyBullet PolicyRunner / Isaac 有界 rollout 三后端映射到同一 interface / behavior / task / offline 分栏，`claims_task_success` 等恒为 false，只 remap 已有字段、**不发明指标**；JSON Schema + normalizer + 单测固定。
@@ -107,20 +107,20 @@
 
 ## C.1 简历条
 
-- **多仿真后端具身闭环验证平台（MuJoCo / Isaac Sim / PyBullet 三仓解耦，独立研发）**——上游 ROS 2 + MoveIt Servo 末端笛卡尔伺服与阻抗控制（仿真主线 500 Hz，真机路径设计为 1 kHz）+ MuJoCo 采集；中游数据治理与训练；下游 PyBullet 无 ROS 依赖轻量重放与风险监控。
-- 设计**中立动作流 Handoff 机制**：模型预测导出为 `predicted_actions.jsonl` + manifest，下游不装 ROS / PyTorch 即可重放，实测 1-ep `panda_jsonl_replay` + `pybullet_ik`：1,105 行时序、mean 18.0 ms / max 357.7 ms、`is_closed_loop=false`。
-- 冻结 **Isaac 有界 rollout runtime 合同单源**：`chunk_size=10` / `execute_K=5` / `10 Hz` / `replan_period=0.5 s` / `gripper=clip(raw,0,1)` / scene-only / `state[15]` / clamp+E-stop / **seeds 1–5 有界**；上游包内保留字节相同副本并在启动时 assert，禁止静默双写，CPU 契约单测覆盖。
+- **多仿真后端具身数据治理与分层验证（MuJoCo / Isaac Sim / PyBullet 三仓解耦，独立研发）**——上游 ROS 2 + MoveIt Servo 末端笛卡尔伺服与阻抗控制（仿真主线 500 Hz）+ MuJoCo/Isaac 采集与 task GT；中游合同/数据/训练/离线评测/handoff；下游 **replay harness**（`PolicyRunner`）+ monitor/risk/HOC 验证配套。
+- 设计**中立 handoff**：模型预测导出为 `predicted_actions.jsonl` + manifest，**handoff artifact 与模型框架解耦**（下游重放不捆绑 PyTorch/LeRobot 训练栈）；实测 1-ep `panda_jsonl_replay` + `pybullet_ik`：1,105 行时序、mean 18.0 ms / max 357.7 ms、`is_closed_loop=false`。
+- 冻结 **Isaac 有界 rollout 权威合同 + SHA 锁定镜像**：`chunk_size=10` / `execute_K=5` / `10 Hz` / `replan_period=0.5 s` / `gripper=clip(raw,0,1)` / scene-only / `state[15]` / clamp+E-stop / **seeds 1–5 有界**；上游包内保留字节相同副本并在启动时 assert，禁止静默双写，CPU 契约单测覆盖。
 - 用 **scripted oracle 做仿真链自检**：oracle v1 lift 0/5 → 修 pick 高度、PD 夹爪、方块摩擦、grasp pause、5 cm 方块侧夹阈值 → v2b **lift 5/5 / `gate_pass=true`**，把「仿真抓不起来」与「策略抓不起来」彻底分开。
 - 做**跨后端同域对照**：同一 checkpoint 在 Isaac（修光后 policy 输入 JPEG≈154）与训练域 MuJoCo（JPEG≈50）均出现 `gripper never closed below 0.700`，因此**不把失败主要归因于 MuJoCo→Isaac 外观域差**，而指向闭环 BC；同时明确该对照是人工提前停止的 1-seed 结果，**不是完整 gate**。
 - 严格执行**运行卫生**：所有仿真 / ROS 任务带显式生命周期上限（`timeout` / `auto_record_seconds`），结束前强杀 `teleop_bringup` / `mujoco_sim` / `lerobot_recorder` / `servo_node` / `ros2_control`，不把清理推给下一次运行。
 
 ## C.2 100–150 字概述
 
-我搭建了一套跨 MuJoCo、Isaac Sim 和 PyBullet 的具身闭环验证平台。上游负责实时控制与采集，中游负责数据治理、训练与门禁，下游用无 ROS 依赖的中立动作包做轻量重放与风险监控，三仓通过 schema 与 handoff 契约解耦，避免依赖冲突。仿真侧我把运行时常量做成单源合同并在启动时校验，用 scripted oracle 自检物理链，用跨后端同域对照区分外观域差与闭环策略问题。当前结论是离线门禁通过、有界在线仿真 Hold，属于 Sim2Sim 与 Sim2Real-readiness，不宣称真机。
+我搭建了一套跨 MuJoCo、Isaac Sim 和 PyBullet 的**具身策略数据治理与分层验证**体系。上游负责实时控制与采集，中游负责合同、数据、训练与离线门禁，下游以 **replay harness** 与 risk/HOC 作验证配套；三仓通过 schema 与 handoff 解耦，**handoff artifact 与模型框架解耦**。仿真侧我把运行时常量做成**权威合同 + SHA 锁定镜像**并在上游启动时 assert，用 scripted oracle 自检物理链，用跨后端同域对照区分外观域差与闭环策略问题。当前结论是离线门禁通过、有界在线仿真 Hold，属于 Sim2Sim 与 Sim2Real-readiness，不宣称真机。
 
 ## C.3 30 秒介绍
 
-> 「我做的是多仿真后端的闭环验证平台。三个仓分别跑实时控制、训练治理和轻量重放，靠 schema 和中立动作包解耦，下游不用装 ROS 或 PyTorch 就能重放策略输出。仿真评测这块我做了三件关键事：把 runtime 常量（chunk、K、控制频率、夹爪 clip）做成**单源合同**并在上游启动时 assert，防止双写漂移；用 scripted oracle 自检物理链，v1 也抓不起来时先修仿真而不是骂模型，修完 5/5；做跨后端同域对照，确认失败不是 MuJoCo 到 Isaac 的外观差。范围上我说清楚这是 Sim2Sim 和 Sim2Real-readiness，不是真机。」
+> 「我做的是**具身策略数据治理与分层验证**。三个仓：上游 inference/scheduler/execution/task GT，中游合同/数据/训练/离线评测/handoff，下游 replay harness + monitor/risk/HOC 作验证配套，不是三条并列产品线。靠 schema 和中立 handoff 解耦，**handoff artifact 与模型框架解耦**，下游重放不必捆绑训练栈。仿真评测我做了三件关键事：把 runtime 常量做成**权威合同 + SHA 锁定镜像**并在上游 assert；用 scripted oracle 自检物理链，v1 也抓不起来时先修仿真，修完 5/5；做跨后端同域对照，确认失败不是 MuJoCo 到 Isaac 的外观差。范围上我说清楚这是 Sim2Sim 和 Sim2Real-readiness，不是真机。」
 
 ## C.4 2 分钟案例：用 scripted oracle 隔离物理链
 
@@ -176,7 +176,7 @@
 
 ### Q1：为什么分三个仓？
 
-> 「环境冲突与实时性隔离。上游要 ROS 2 实时控制栈，中游要 PyTorch/CUDA 深度学习环境，下游物理重放要高频碰撞结算。塞一个仓里依赖会互相踩。我用**中立动作流 Handoff** 解耦：中游输出标准 `jsonl` 动作包 + manifest，下游不装 ROS 或 PyTorch，只要 Python + PyBullet 就能重放。这既方便本地轻量调试，也为将来上真机留了接口 —— 但目前明确还没有做真机。」
+> 「环境冲突与实时性隔离。上游要 ROS 2 实时控制栈，中游要 PyTorch/CUDA 深度学习环境，下游物理重放要高频碰撞结算。我用**中立 handoff** 解耦：**handoff artifact 与模型框架解耦** —— 中游输出标准 `jsonl` 动作包 + manifest，下游重放不必捆绑 PyTorch/LeRobot 训练栈（Bridge 侧仍有 ROS 集成面用于 monitor/risk launch）。这既方便本地调试，也为将来上真机留了接口 —— 但目前明确还没有做真机。」
 
 ### Q2：数据契约规范了什么？
 

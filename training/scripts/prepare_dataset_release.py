@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare an immutable-ish Panda dataset release for training/evaluation."""
+"""Prepare a non-overwrite Panda dataset release for training/evaluation.
+
+Refuses to write into a non-empty output directory (non-overwrite release).
+For SHA-locked immutable release (split + per-file hash + content fingerprint),
+use ``prepare_smolvla_s3_release`` or see ``docs/portfolio/BOUNDARY_FREEZE.md`` §3.
+"""
 
 from __future__ import annotations
 

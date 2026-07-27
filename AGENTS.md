@@ -61,7 +61,7 @@ Canonical 三仓 Agent 总览。各仓实现映射见：
 | **Handoff Loader** | `learning/panda_handoff.py` | 静态校验 handoff bundle |
 | **Replay / Policy** | `PolicyRunner` + `PandaActionAdapter` | JSONL → PyBullet 关节命令 |
 | **Risk / Monitor** | `dist_monitor` + `risk_engine` | 漂移、E-stop、Hold |
-| **Sensor Fusion** | `sensor_fusion_node` | 多源对齐、接触估计（Sim2Sim） |
+| **Sensor Fusion** | `sensor_fusion_node`（**experimental**） | 多源对齐、接触估计；相机像素未用 |
 
 ---
 

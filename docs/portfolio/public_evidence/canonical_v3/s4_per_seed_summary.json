@@ -1,0 +1,19 @@
+{
+  "artifact_type": "public_s4_per_seed_summary",
+  "contract_version": "public_evidence_v1",
+  "evaluation_run_id": "smolvla_s4_bounded5_20260724T231714Z",
+  "evaluator": {
+    "owner_repository": "ros2-arm-teleoperation-suite",
+    "evaluator_id": "panda_continuous_gt_v0",
+    "ground_truth_source": "runtime_ground_truth"
+  },
+  "episodes": [
+    {"seed": 1, "execution_status": "completed", "success": false, "failure_stage": "grasp", "failure_reason": "gripper never closed below 0.700", "reach": true, "grasp": false, "lift": false, "completion_time_s": 52.4418362840006, "path_length_m": 1.0410662335431038, "peak_force_n": 0.6255546951408852, "estop_triggered": false},
+    {"seed": 2, "execution_status": "completed", "success": false, "failure_stage": "reach", "failure_reason": "gripper never closed below 0.700", "reach": false, "grasp": false, "lift": false, "completion_time_s": 54.64263552199918, "path_length_m": 0.8576690700802316, "peak_force_n": 0.7303513362167171, "estop_triggered": false},
+    {"seed": 3, "execution_status": "completed", "success": false, "failure_stage": "reach", "failure_reason": "gripper never closed below 0.700", "reach": false, "grasp": false, "lift": false, "completion_time_s": 52.796032971000386, "path_length_m": 0.8195037173876489, "peak_force_n": 0.5625494605774283, "estop_triggered": false},
+    {"seed": 4, "execution_status": "completed", "success": false, "failure_stage": "reach", "failure_reason": "gripper never closed below 0.700", "reach": false, "grasp": false, "lift": false, "completion_time_s": 53.75289124799929, "path_length_m": 1.0564344248622295, "peak_force_n": 0.7520541150125636, "estop_triggered": false},
+    {"seed": 5, "execution_status": "completed", "success": false, "failure_stage": "reach", "failure_reason": "gripper never closed below 0.700", "reach": false, "grasp": false, "lift": false, "completion_time_s": 48.55305162500008, "path_length_m": 0.9132109768258183, "peak_force_n": 0.8004198132527269, "estop_triggered": false}
+  ],
+  "claims_task_success": false,
+  "claims_sim2real": false
+}

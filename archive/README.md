@@ -19,11 +19,17 @@ docs/DATA_CLEANING_AND_LEROBOT.md
 
 ## Legacy PyBullet / KUKA 代码路径
 
-代码仍保留在仓库根目录以便 CI 与历史 demo 可复现，但应视为 **archive runtime**，不要与 Panda training release 混用：
+代码仍保留在仓库根目录以便 CI 与历史 demo 可复现，但应视为 **archive runtime**，不要与 Panda training release 混用。
+
+**隔离方式（2026-07-27）**：
+
+- 目录标记：`core/LEGACY_KUKA.md`、`agents/LEGACY_KUKA.md`
+- CI job：`.github/workflows/ci.yml` → **`legacy-kuka-pybullet`**（与 `panda-contract-and-test` 分离）
+- 配置：`configs/default.yaml` → `robot: kuka_iiwa`
 
 | 路径 | 说明 |
 |---|---|
-| `core/` | HAL、IK、RRT、PyBullet world、episode writer |
+| `core/` | HAL、IK、RRT、PyBullet world、episode writer（Legacy KUKA） |
 | `agents/` | legacy task FSM / evaluator（PyBullet 采集链路） |
 | `scripts/collect_episode.py` | legacy 单 episode 采集 |
 | `scripts/batch_collect.py` | legacy 批量采集 |

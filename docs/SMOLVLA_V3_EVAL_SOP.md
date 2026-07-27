@@ -90,7 +90,7 @@ python3 training/scripts/run_smolvla_s3_open_loop.py \
 ## 4. Step C — 有界 Isaac S4（需人工批准；≤5 seeds）
 
 - **前置**：Step B canonical **Pass** + 人工批准记录（见 `docs/SMOLVLA_S3_ISAAC_S4_RUN_CHECKLIST.md` §3 勾选）。
-- **runtime 合同单源**：`configs/smolvla_s3/s4_runtime_contract.{yaml,json}`（chunk10 / K5 / 10 Hz / gripper clip / async double-buffer）；上游包内 SHA 相同副本，启动时 assert。
+- **runtime 权威合同 + SHA 锁定镜像**：中游 `configs/smolvla_s3/s4_runtime_contract.{yaml,json}` 冻结 chunk10 / K5 / 10 Hz / gripper clip；上游包内保留同 SHA 镜像并在启动时 assert。当前在线 scheduler 为同步 replan；async double-buffer 仅有离线 bench，在线未接线。
 
 ```bash
 export ISAAC_FRANKA_USD=$HOME/isaac_assets/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd

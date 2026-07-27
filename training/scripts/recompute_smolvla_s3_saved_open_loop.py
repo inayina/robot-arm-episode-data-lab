@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evaluation.vla_contract.smolvla_panda_s2 import write_json  # noqa: E402
-from training.scripts.run_smolvla_s3_open_loop import (  # noqa: E402
+from training.smolvla_s3.open_loop_eval import (  # noqa: E402
     EVALUATOR_CONTRACT_VERSION,
     GRIPPER_TOLERANCE,
     _binary_gripper_metrics,

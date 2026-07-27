@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training.scripts.run_smolvla_s3_control import (  # noqa: E402
+from training.smolvla_s3.control_plane import (  # noqa: E402
     _load_config,
     audit_trained_checkpoint,
     finalize_train_run,

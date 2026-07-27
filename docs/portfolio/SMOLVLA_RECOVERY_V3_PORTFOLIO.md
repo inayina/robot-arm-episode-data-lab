@@ -16,7 +16,7 @@
 | 相对 S2 基线 | EE 相对改善 ≈ **90.7%**（S2 EE 0.273 m） | `configs/smolvla_s3/eval_gate_v3.yaml` baselines |
 | 执行不变式 | clip 分类变化 **0**、关爪时序变化 **0**、mapped==clip | 同上 report |
 | 物理链上界（非本策略） | Isaac scripted oracle lift **5/5** | `evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/` |
-| S4 runtime 合同 | chunk10 / K5 / 10 Hz / gripper clip；**单源** `configs/smolvla_s3/s4_runtime_contract.json`（上游包内同 SHA）；CPU 单测 Pass | `training/smolvla_s3/runtime_s4.py` |
+| S4 runtime 合同 | chunk10 / K5 / 10 Hz / gripper clip；**中游权威合同 + 上游 SHA 锁定镜像**；CPU 单测 Pass；在线 async double-buffer 未接线 | `training/smolvla_s3/runtime_s4.py` |
 | Bounded Isaac S4（修光后权威） | seeds 1–5；interface 5/5；reach 1/5；grasp **0/5**；lift **0/5**；Hold；JPEG≈154 | `evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json` |
 | S4 首轮（近黑场景，**Superseded**） | reach 3/5 · grasp 1/5 · lift 0/5；JPEG≈0.3；reach/grasp 为失明走廊几何重叠 + `close_max=0.70` 口径放大，**不作权威** | `evidence/smolvla_s4_bounded5_20260724T203700Z/s4_gate.json` |
 | 训练域 MuJoCo H2 对照（提前停止） | 同 ckpt、JPEG≈50；seed1 `gripper never closed below 0.700`（`grip_min≈0.976`）→ 倾向闭环 BC，**不是**完整 5-seed gate | `evidence/smolvla_s4_mujoco_bounded5_20260724T155513Z/s4_gate.json` |
@@ -51,7 +51,8 @@
 
 ## 关联
 
-- **最终项目总结（统一入口）**：`docs/portfolio/FINAL_PROJECT_SUMMARY.md`
+- **作品集母版（统一叙事入口）**：`docs/portfolio/PORTFOLIO_REFERENCE.md`
+- 详细事实底稿：`docs/portfolio/FINAL_PROJECT_SUMMARY.md`
 - 分层 Badcase 归因：`docs/portfolio/BADCASE_ATTRIBUTION_SUMMARY.md`
 - 后续路线（P1/P2 仅登记）：`docs/FUTURE_WORK_ROADMAP.md`
 - v3 全链评测 SOP：`docs/SMOLVLA_V3_EVAL_SOP.md`

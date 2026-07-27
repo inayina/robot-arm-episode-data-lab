@@ -8,10 +8,72 @@ on:
   pull_request:
 
 jobs:
-  validate-and-test:
-    name: Validate dataset and run tests
+  panda-contract-and-test:
+    name: Panda contract + mainline pytest
     runs-on: ubuntu-latest
 
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check out upstream runtime repository
+        uses: actions/checkout@v4
+        with:
+          repository: inayina/ros2-arm-teleoperation-suite
+          ref: main
+          path: _repos/ros2-arm-teleoperation-suite
+
+      - name: Check out downstream validation repository
+        uses: actions/checkout@v4
+        with:
+          repository: inayina/ros2-moveit-pybullet-bridge
+          ref: main
+          path: _repos/ros2-moveit-pybullet-bridge
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Three-repo CPU contract (required)
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+        run: |
+          python scripts/run_three_repo_contract_ci.py \
+            --upstream-s4 _repos/ros2-arm-teleoperation-suite/src/isaac_sim_adapter/isaac_sim_adapter/s4_runtime_contract.json \
+            --downstream-root _repos/ros2-moveit-pybullet-bridge \
+            --require-cross-repo
+          pytest -q tests/test_three_repo_contract_ci.py tests/test_policy_runtime_contract.py
+
+      - name: Run mainline pytest (excludes legacy KUKA job scope)
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+        run: |
+          pytest -q \
+            --ignore=tests/test_collect_integration.py \
+            --ignore=tests/test_grasp.py \
+            --ignore=tests/test_gripper.py \
+            --ignore=tests/test_validate_dataset.py
+
+      - name: Panda closed loop smoke (mock upstream)
+        env:
+          CLOSED_LOOP_USE_MOCK: "1"
+          CLOSED_LOOP_OUTPUT_ROOT: /tmp/panda_closed_loop_ci
+          PYTHON: python
+        run: ./scripts/run_three_repo_closed_loop.sh
+
+  legacy-kuka-pybullet:
+    name: Legacy KUKA/PyBullet (isolated)
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,7 +92,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Generate standard sample episode
+      - name: Generate legacy sample episode
         run: |
           python scripts/collect_episode.py \
             --config configs/default.yaml \
@@ -39,10 +101,10 @@ jobs:
             --width 640 \
             --height 480
 
-      - name: Validate sample episode
+      - name: Validate legacy sample episode
         run: python scripts/validate_dataset.py dataset_sample/episode_000001
 
-      - name: Generate pick_and_lift sample episode
+      - name: Legacy pick_and_lift smoke
         run: |
           python scripts/collect_episode.py \
             --task pick_and_lift \
@@ -51,18 +113,14 @@ jobs:
             --width 64 \
             --height 48 \
             --seed 7
+          python scripts/validate_dataset.py dataset_sample/episode_pick_ci
 
-      - name: Validate pick_and_lift sample episode
-        run: python scripts/validate_dataset.py dataset_sample/episode_pick_ci
-
-      - name: Run pytest
+      - name: Legacy pytest subset
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-        run: pytest -q
-
-      - name: Panda closed loop smoke (mock upstream)
-        env:
-          CLOSED_LOOP_USE_MOCK: "1"
-          CLOSED_LOOP_OUTPUT_ROOT: /tmp/panda_closed_loop_ci
-          PYTHON: python
-        run: ./scripts/run_three_repo_closed_loop.sh
+        run: |
+          pytest -q \
+            tests/test_collect_integration.py \
+            tests/test_grasp.py \
+            tests/test_gripper.py \
+            tests/test_validate_dataset.py

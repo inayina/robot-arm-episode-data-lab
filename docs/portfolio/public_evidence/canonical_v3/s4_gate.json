@@ -1,0 +1,17 @@
+{
+  "gate_id": "smolvla_s4_bounded5_lift",
+  "seeds_planned": 5,
+  "episodes_recorded": 5,
+  "policy_reports": 5,
+  "policy_interface_pass": 5,
+  "reach": 1,
+  "grasp": 0,
+  "lift": 0,
+  "outcome_success": 0,
+  "pass_threshold": 1,
+  "gate_pass": false,
+  "ran_isaac": true,
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "interpretation": "bounded_s4_hold_or_incomplete"
+}

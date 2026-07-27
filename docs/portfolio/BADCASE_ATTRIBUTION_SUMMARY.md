@@ -143,7 +143,7 @@
 | D1 split 泄漏 + D2 state 契约错 | Recovery 重做 train-only + `state[15]` + 官方 PEFT，而不是继续调超参 | 没有开第三次 data-fix |
 | D3 wrist 不可见 | 冻结 scene-only，跳过 P1 | 没有继续调相机位姿 |
 | S2 相机近黑 | 补遥测 → 修光 → 同 seeds 复测；把首轮降级为 Superseded | 没有把 reach 3/5 写成部分成功 |
-| T2 S4 lift 0/5 + B4/B5 | 冻结候选、转评测框架收口（P1 统一信封、P2 runtime 单源、P3 offline risk 对照） | 没有扩种子、没有重训、没有上真机 |
+| T2 S4 lift 0/5 + B4/B5 | 冻结候选、转评测框架收口（P1 统一信封、P2 中游权威合同 + 上游 SHA 锁定镜像、P3 offline risk 对照） | 没有扩种子、没有重训、没有上真机 |
 
 ## 8. 关联文档
 

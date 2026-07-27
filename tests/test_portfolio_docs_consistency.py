@@ -24,12 +24,14 @@ DOCS = ROOT / "docs"
 PORTFOLIO = DOCS / "portfolio"
 
 FINAL_SUMMARY = PORTFOLIO / "FINAL_PROJECT_SUMMARY.md"
+PORTFOLIO_MASTER = PORTFOLIO / "PORTFOLIO_REFERENCE.md"
 BADCASE = PORTFOLIO / "BADCASE_ATTRIBUTION_SUMMARY.md"
 ROADMAP = DOCS / "FUTURE_WORK_ROADMAP.md"
 PERTURBATION_DESIGN = DOCS / "SMOLVLA_OPENLOOP_PERTURBATION_DESIGN.md"
 RESUME = PORTFOLIO / "resume_description.md"
 CANONICAL_FACTS = PORTFOLIO / "THREE_REPO_CANONICAL_FACTS.md"
 EVIDENCE_INDEX = PORTFOLIO / "EVIDENCE_INDEX.md"
+PORTFOLIO_NAV = PORTFOLIO / "README.md"
 UNIFIED_DOC = PORTFOLIO / "UNIFIED_EVAL_REPORT.md"
 V3_PORTFOLIO = PORTFOLIO / "SMOLVLA_RECOVERY_V3_PORTFOLIO.md"
 V3_SOP = DOCS / "SMOLVLA_V3_EVAL_SOP.md"
@@ -49,12 +51,13 @@ OPEN_LOOP_REPORT = (
 RECOVERY_DECISIONS = ROOT / "configs" / "smolvla_s3" / "recovery_decisions.yaml"
 FIGURE_SCRIPT = ROOT / "scripts" / "generate_smolvla_v3_portfolio_figures.py"
 
-REQUIRED_DOCS = (FINAL_SUMMARY, BADCASE, ROADMAP, RESUME)
+REQUIRED_DOCS = (PORTFOLIO_MASTER, FINAL_SUMMARY, BADCASE, ROADMAP, RESUME)
 
 # Docs that describe the *current* project state; stale wording here misleads readers.
 CURRENT_STATE_DOCS = (
     README,
     AGENTS,
+    PORTFOLIO_MASTER,
     FINAL_SUMMARY,
     BADCASE,
     ROADMAP,
@@ -89,7 +92,46 @@ def test_final_summary_covers_required_sections() -> None:
         "诚实边界",
     ):
         assert heading in text, f"FINAL_PROJECT_SUMMARY missing section: {heading}"
-    assert "面向机器人模仿学习与 VLA 策略的数据质量、动作契约" in text
+    assert "具身策略数据治理与分层验证框架" in text
+
+
+def test_portfolio_master_supports_five_and_thirty_minute_readers() -> None:
+    text = _read(PORTFOLIO_MASTER)
+    for marker in (
+        "我把一个机器人学习 demo，做成了可排查、可验证的软硬件系统",
+        "30 秒看懂这个项目",
+        "我做了什么",
+        "系统如何工作",
+        "一次跨软硬件链条的排查",
+        "技术面试可以从哪里继续",
+        "可以聊半小时的问题",
+        "portfolio_fault_localization_chain.svg",
+        "portfolio_system_overview.svg",
+        "portfolio_control_safety_stack.svg",
+        "portfolio_realtime_priority_gantt.svg",
+        "portfolio_data_evidence_flow.svg",
+        "smolvla_recovery_v3_openloop_ee_vs_s2.png",
+        "smolvla_s4_bounded5_funnel.png",
+        "内核层",
+        "内存层",
+        "FIFO 50",
+        "priority=0",
+        "EMCY",
+        "奈奎斯特",
+        "Hardware Pending",
+        "Not task success",
+    ):
+        assert marker in text, f"portfolio master missing: {marker}"
+
+
+def test_portfolio_navigation_promotes_master_and_human_architecture() -> None:
+    text = _read(PORTFOLIO_NAV)
+    assert "PORTFOLIO_REFERENCE.md" in text
+    assert "portfolio_fault_localization_chain.svg" in text
+    assert "portfolio_system_overview.svg" in text
+    assert "portfolio_control_safety_stack.svg" in text
+    assert "portfolio_realtime_priority_gantt.svg" in text
+    assert "5 分钟" in text and "30 分钟" in text
 
 
 def test_badcase_summary_is_layered_and_stays_hypothesis_scoped() -> None:
@@ -139,12 +181,13 @@ def test_resume_description_has_three_variants_and_talk_tracks() -> None:
     text = _read(RESUME)
     for marker in ("系统验证", "具身数据评测", "仿真评测", "30 秒", "2 分钟", "失败归因"):
         assert marker in text, f"resume_description missing: {marker}"
-    # Positioning: test/verification engineer, not VLA algorithm researcher.
-    assert re.search(r"不是\**\s*VLA 算法研究员", text)
+    # Positioning: test/verification engineer, not algorithm tuning.
+    assert "具身策略数据治理与分层验证" in text
+    assert "不是算法调参" in text
 
 
 @pytest.mark.parametrize(
-    "path", (FINAL_SUMMARY, BADCASE, RESUME, V3_PORTFOLIO, UNIFIED_DOC), ids=lambda p: p.name
+    "path", (PORTFOLIO_MASTER, FINAL_SUMMARY, BADCASE, RESUME, V3_PORTFOLIO, UNIFIED_DOC), ids=lambda p: p.name
 )
 def test_portfolio_docs_carry_honest_boundaries(path: Path) -> None:
     text = _read(path)
@@ -262,7 +305,7 @@ def test_figure_script_defaults_to_authoritative_evidence() -> None:
 
 @pytest.mark.parametrize(
     "path",
-    (FINAL_SUMMARY, BADCASE, ROADMAP, RESUME, V3_PORTFOLIO, UNIFIED_DOC, EVIDENCE_INDEX, V3_SOP),
+    (PORTFOLIO_MASTER, FINAL_SUMMARY, BADCASE, ROADMAP, RESUME, V3_PORTFOLIO, UNIFIED_DOC, EVIDENCE_INDEX, V3_SOP),
     ids=lambda p: p.name,
 )
 def test_relative_markdown_links_resolve(path: Path) -> None:

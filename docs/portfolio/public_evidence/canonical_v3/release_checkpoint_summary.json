@@ -1,0 +1,29 @@
+{
+  "artifact_type": "public_release_checkpoint_summary",
+  "contract_version": "public_evidence_v1",
+  "release": {
+    "release_id": "smolvla_s3_panda_abs_eef_scene_v3_phaseaware50",
+    "immutable": true,
+    "release_content_sha256": "97d26b6a1455bfd8b0f5239f492f71bef4130b303846333e61c41b950ec9cbb1",
+    "split_counts": {
+      "train": 36,
+      "validation": 4,
+      "benchmark": 10
+    }
+  },
+  "checkpoint_audit": {
+    "passed": true,
+    "adapter_model_sha256": "4cfcc46e3270cd0b4fe267e36c87c823e1bb9a473742ac99f58652791910d2f7",
+    "observation_state_dim": 15,
+    "camera_keys": ["observation.images.camera1"],
+    "action_dim": 8,
+    "chunk_size": 10,
+    "n_action_steps": 5,
+    "peft_type": "LORA",
+    "lora_rank": 64,
+    "steps": 5705,
+    "all_contract_checks_passed": true
+  },
+  "claims_task_success": false,
+  "claims_sim2real": false
+}

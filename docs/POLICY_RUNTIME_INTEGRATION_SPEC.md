@@ -140,7 +140,7 @@ bridge_handoff/predicted_actions.jsonl
 
 新旧路径先并行计算但只允许旧路径执行；通过逐步命令一致性检查后，才切换新 adapter 为唯一命令源。
 
-### P6：单源合同
+### P6：权威合同 + SHA 锁定镜像
 
 中游保存 canonical schema 与 lock；上游、下游只保存 byte-identical runtime copy，并在启动时校验 SHA256。
 

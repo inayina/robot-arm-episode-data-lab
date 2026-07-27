@@ -1,0 +1,16 @@
+{
+  "artifact_type": "public_evidence_provenance",
+  "contract_version": "public_evidence_v1",
+  "frozen_at": "2026-07-27",
+  "transformation": "field_select_and_remove_local_absolute_paths",
+  "sources": [
+    {"path": "runs/smolvla_s3/openloop_recovery_v3_prospective_eval10_gate_v3_20260724T065300Z/s3_open_loop_report.json", "sha256": "e4e9985037ac5a59339aa7f1551117919809180166a406de24fd218d1f8bfb70", "public_derivative": "open_loop_gate_summary.json"},
+    {"path": "data/releases/smolvla_s3_panda_abs_eef_scene_v3_phaseaware50/manifest.json", "sha256": "17b5772c670451df69dc35fecb705b0478106b7d47654d40397aaaffeba6db80", "public_derivative": "release_checkpoint_summary.json"},
+    {"path": "runs/smolvla_s3/recovery_v3_lora_20260723T125632Z/checkpoint_config_audit.json", "sha256": "28a629f8b553a6ce3d669b3893b5d054e0838d1b24009337c90bed88e79e85e3", "public_derivative": "release_checkpoint_summary.json"},
+    {"path": "evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json", "sha256": "85dbf36bfed54aafb342e8234e32fe1f94d7e8eaa35f1ed811920d9042782702", "public_derivative": "s4_gate.json"},
+    {"path": "evidence/smolvla_s4_bounded5_relight_20260724T151711Z/episode_results.jsonl", "sha256": "192983c6a8694f3c82a481e1f696a029bd0b34f9fa18abadaa946b5302ddf608", "public_derivative": "s4_per_seed_summary.json"},
+    {"path": "evidence/smolvla_v3_eval_framework_relight_20260725/smolvla_v3_eval_framework_bundle.json", "sha256": "5639739b1beaae17880578684610d74e26b780ce67b5331f9b2e41f44268e247", "public_derivative": "unified_eval_summary.json"}
+  ],
+  "claims_task_success": false,
+  "claims_sim2real": false
+}

@@ -52,7 +52,7 @@
 
 关联：[`EVALUATION_CONTRACT.md`](../EVALUATION_CONTRACT.md) §7 六层分栏、[`POLICY_ADAPTER_CONTRACT.md`](../POLICY_ADAPTER_CONTRACT.md) `failure_lane`。
 
-**P2（S4 runtime 常量单源）**：chunk/K/gripper/workspace 以中游 `configs/smolvla_s3/s4_runtime_contract.json` 为准；上游 Isaac 路径加载包内同 SHA 副本并在启动时 assert，禁止静默双写。这不改变任何评测 Pass/Hold 结论，也不声称任务成功。
+**P2（S4 runtime 权威合同 + SHA 锁定镜像）**：chunk/K/gripper/workspace 以中游 `configs/smolvla_s3/s4_runtime_contract.json` 为权威；上游 Isaac 路径加载包内同 SHA 镜像并在启动时 assert，禁止静默漂移。这不改变任何评测 Pass/Hold 结论，也不声称任务成功。
 
 **P3（offline RiskAggregator readiness对照）**：用下游 `RiskAggregator` 对 PolicyRunner timeseries（+ 可选 S4 trial reports 作 companion）做离线六维风险对照；产物见 [`evidence/downstream/smolvla_v3_ep0_risk_offline_20260724T215900Z.json`](../../evidence/downstream/smolvla_v3_ep0_risk_offline_20260724T215900Z.json)。可经 `--risk-readiness` 挂到 bundle `appendix.risk_readiness`。**硬约束**：`claims_task_success=false`、`overrides_failure_lane=false`、`use_as_task_go_no_go=false`；不得覆盖 ContinuousTaskEvaluator / S4 GT funnel。
 

@@ -15,7 +15,7 @@
 | E3.5 Isaac harness | scripted oracle v2b lift 5/5：`evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720` |
 | abs-EEF 执行夹紧 | 上游 `policy_control.bound_absolute_eef_gripper` + 中游 `training/smolvla_s3/runtime_s4.py` |
 | Online S4 runner | 上游 `scripts/run_isaac_smolvla_s4.sh` + `isaac_sim_adapter.smolvla_policy_inference_node`；中游薄封装 `scripts/run_smolvla_s4_bounded_isaac.sh` |
-| Runtime 合同 | Recovery §8；**P2 单源**：`configs/smolvla_s3/s4_runtime_contract.{yaml,json}`（中游权威）+ 上游包内字节相同副本；CPU 契约测试 `tests/test_smolvla_s3_runtime_s4.py` / 上游 `tests/test_scene_smolvla_runtime_helpers.py` |
+| Runtime 合同 | Recovery §8；**P2 权威合同 + SHA 锁定镜像**：`configs/smolvla_s3/s4_runtime_contract.{yaml,json}`（中游权威）+ 上游包内字节相同镜像；CPU 契约测试 `tests/test_smolvla_s3_runtime_s4.py` / 上游 `tests/test_scene_smolvla_runtime_helpers.py` |
 
 ## 2. 批准的有界 runtime（首批）
 

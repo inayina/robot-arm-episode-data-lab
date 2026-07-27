@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-labelledby="title desc">
+  <title id="title">从策略到驱动的控制与安全链</title>
+  <desc id="desc">Panda 策略目标经过运动生成、阻抗控制、ros2_control 硬件接口、DDS 或 SocketCAN、DS402 驱动到机器人，并由看门狗、急停和任务真值形成安全闭环。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <marker id="redArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/></marker>
+    <style>
+      .title{font:700 31px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}.subtitle{font:15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#475569}
+      .head{font:700 17px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}.body{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#334155}
+      .small{font:12.5px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}.tag{font:700 12px Inter,"Noto Sans SC",Arial,sans-serif}
+      .flow{stroke:#475569;stroke-width:2.3;fill:none;marker-end:url(#arrow)}.safety{stroke:#dc2626;stroke-width:2.3;fill:none;marker-end:url(#redArrow)}
+      .feedback{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1440" height="780" fill="#f8fafc"/>
+  <text x="720" y="48" text-anchor="middle" class="title">策略只是目标，真正落地要穿过整条控制与安全链</text>
+  <text x="720" y="76" text-anchor="middle" class="subtitle">每一层都有独立输入、输出、故障模式与可观测证据</text>
+
+  <g transform="translate(35 128)">
+    <rect width="170" height="214" rx="15" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="85" y="36" text-anchor="middle" class="head">策略运行时</text><text x="85" y="63" text-anchor="middle" class="body">EEF / gripper</text>
+    <text x="85" y="87" text-anchor="middle" class="body">10 Hz · chunk/K</text><line x1="18" y1="108" x2="152" y2="108" stroke="#ddd6fe"/>
+    <text x="18" y="136" class="small">查：TTL · sequence</text><text x="18" y="158" class="small">查：raw / clipped</text>
+    <rect x="18" y="177" width="134" height="23" rx="7" fill="#ede9fe"/><text x="85" y="193" text-anchor="middle" class="tag" fill="#6d28d9">上游已实现</text>
+  </g>
+  <g transform="translate(235 128)">
+    <rect width="170" height="214" rx="15" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="85" y="36" text-anchor="middle" class="head">MoveIt Servo</text><text x="85" y="63" text-anchor="middle" class="body">pose / twist</text>
+    <text x="85" y="87" text-anchor="middle" class="body">joint target · 125 Hz</text><line x1="18" y1="108" x2="152" y2="108" stroke="#bfdbfe"/>
+    <text x="18" y="136" class="small">查：目标是否连续</text><text x="18" y="158" class="small">查：target rate</text>
+    <rect x="18" y="177" width="134" height="23" rx="7" fill="#dbeafe"/><text x="85" y="193" text-anchor="middle" class="tag" fill="#1d4ed8">已实现</text>
+  </g>
+  <g transform="translate(435 128)">
+    <rect width="170" height="214" rx="15" fill="#ecfeff" stroke="#67e8f9" stroke-width="2"/>
+    <text x="85" y="36" text-anchor="middle" class="head">阻抗控制器</text><text x="85" y="63" text-anchor="middle" class="body">FK / J / K / D</text>
+    <text x="85" y="87" text-anchor="middle" class="body">sim 500 · real 1k</text><line x1="18" y1="108" x2="152" y2="108" stroke="#a5f3fc"/>
+    <text x="18" y="136" class="small">查：误差与力矩</text><text x="18" y="158" class="small">查：limit / E-stop</text>
+    <rect x="18" y="177" width="134" height="23" rx="7" fill="#cffafe"/><text x="85" y="193" text-anchor="middle" class="tag" fill="#0e7490">已实现</text>
+  </g>
+  <g transform="translate(635 128)">
+    <rect width="170" height="214" rx="15" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <text x="85" y="36" text-anchor="middle" class="head">SystemInterface</text><text x="85" y="63" text-anchor="middle" class="body">read / write</text>
+    <text x="85" y="87" text-anchor="middle" class="body">joint effort contract</text><line x1="18" y1="108" x2="152" y2="108" stroke="#fed7aa"/>
+    <text x="18" y="136" class="small">查：command 到达</text><text x="18" y="158" class="small">查：feedback 返回</text>
+    <rect x="18" y="177" width="134" height="23" rx="7" fill="#ffedd5"/><text x="85" y="193" text-anchor="middle" class="tag" fill="#c2410c">双后端已实现</text>
+  </g>
+  <g transform="translate(835 112)">
+    <rect width="190" height="246" rx="15" fill="#fff" stroke="#94a3b8" stroke-width="2"/>
+    <text x="95" y="34" text-anchor="middle" class="head">传输后端分叉</text>
+    <rect x="16" y="55" width="158" height="72" rx="10" fill="#eff6ff"/><text x="95" y="79" text-anchor="middle" class="body">仿真：DDS 背板</text>
+    <text x="95" y="102" text-anchor="middle" class="small">KeepLast(1) · 独立线程</text>
+    <rect x="16" y="140" width="158" height="87" rx="10" fill="#fff7ed"/><text x="95" y="166" text-anchor="middle" class="body">CAN：SocketCAN</text>
+    <text x="95" y="188" text-anchor="middle" class="small">SYNC · RPDO · TPDO</text><text x="95" y="211" text-anchor="middle" class="tag" fill="#b45309">实体总线 Pending</text>
+  </g>
+  <g transform="translate(1055 128)">
+    <rect width="170" height="214" rx="15" fill="#fefce8" stroke="#fde047" stroke-width="2"/>
+    <text x="85" y="36" text-anchor="middle" class="head">DS402 驱动</text><text x="85" y="63" text-anchor="middle" class="body">NMT · SDO · PDO</text>
+    <text x="85" y="87" text-anchor="middle" class="body">EMCY · heartbeat</text><line x1="18" y1="108" x2="152" y2="108" stroke="#fef08a"/>
+    <text x="18" y="136" class="small">查：statusword</text><text x="18" y="158" class="small">查：fault code</text>
+    <rect x="18" y="177" width="134" height="23" rx="7" fill="#fef9c3"/><text x="85" y="193" text-anchor="middle" class="tag" fill="#a16207">虚拟驱动已实现</text>
+  </g>
+  <g transform="translate(1255 128)">
+    <rect width="150" height="214" rx="15" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="2"/>
+    <text x="75" y="36" text-anchor="middle" class="head">机器人与真值</text><text x="75" y="63" text-anchor="middle" class="body">joint / contact</text>
+    <text x="75" y="87" text-anchor="middle" class="body">reach / grasp / lift</text><line x1="16" y1="108" x2="134" y2="108" stroke="#a7f3d0"/>
+    <text x="16" y="136" class="small">仿真 GT 已实现</text><text x="16" y="158" class="small">实体 Panda Pending</text>
+    <rect x="16" y="177" width="118" height="23" rx="7" fill="#d1fae5"/><text x="75" y="193" text-anchor="middle" class="tag" fill="#047857">Hardware No-Go</text>
+  </g>
+
+  <path d="M205 235 H227" class="flow"/><path d="M405 235 H427" class="flow"/><path d="M605 235 H627" class="flow"/><path d="M805 235 H827" class="flow"/><path d="M1025 235 H1047" class="flow"/><path d="M1225 235 H1247" class="flow"/>
+
+  <rect x="35" y="414" width="1370" height="257" rx="18" fill="#fff" stroke="#fecaca" stroke-width="2"/>
+  <text x="65" y="454" class="head">安全反馈链：故障不能只停留在日志里</text>
+  <g transform="translate(65 486)"><rect width="260" height="116" rx="12" fill="#fef2f2"/><text x="20" y="31" class="head">Watchdog / Monitor</text><text x="20" y="59" class="body">teleop heartbeat stale</text><text x="20" y="83" class="body">joint state stale / limit</text><text x="20" y="105" class="small">C++ 单元测试覆盖 timeout</text></g>
+  <g transform="translate(395 486)"><rect width="260" height="116" rx="12" fill="#fff7ed"/><text x="20" y="31" class="head">锁存 E-Stop</text><text x="20" y="59" class="body">Reliable + Transient Local</text><text x="20" y="83" class="body">人工安全 reset</text><text x="20" y="105" class="small">旧订阅者也接收当前状态</text></g>
+  <g transform="translate(725 486)"><rect width="280" height="116" rx="12" fill="#fefce8"/><text x="20" y="31" class="head">执行安全动作</text><text x="20" y="59" class="body">仿真：立即零力矩</text><text x="20" y="83" class="body">CAN：DS402 Quick Stop</text><text x="20" y="105" class="small">0x6040 = 0x0002</text></g>
+  <g transform="translate(1075 486)"><rect width="280" height="116" rx="12" fill="#ecfdf5"/><text x="20" y="31" class="head">状态与恢复证据</text><text x="20" y="59" class="body">statusword · fault code</text><text x="20" y="83" class="body">HOLD / E-stop / Task GT</text><text x="20" y="105" class="small">实体 EMCY 消费仍 Pending</text></g>
+  <path d="M325 544 H387" class="safety"/><path d="M655 544 H717" class="safety"/><path d="M1005 544 H1067" class="safety"/>
+  <path d="M1320 486 C1320 400 1140 402 1140 350" class="feedback"/>
+  <rect x="35" y="703" width="1370" height="38" rx="9" fill="#0f172a"/>
+  <text x="720" y="728" text-anchor="middle" style="font:700 14px Inter,'Noto Sans SC',Arial,sans-serif;fill:#fff">已实现的是仿真预检与硬件接口代码路径；实体驱动、物理急停和现场 jitter 仍需 Hardware Pass</text>
+</svg>
