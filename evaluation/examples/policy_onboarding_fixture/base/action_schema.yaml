@@ -1,0 +1,19 @@
+template_version: 1
+schema_id: panda_absolute_eef_gripper_v0
+action:
+  representation: absolute_eef
+  dtype: float32
+  dimension: 8
+  semantic_order: [ee_x, ee_y, ee_z, quaternion_x, quaternion_y, quaternion_z, quaternion_w, gripper]
+  units: m,unitless,unitless
+  command_rate_hz: 10
+  chunk_size: 10
+  executed_steps_per_inference: 5
+limits:
+  lower: [-1.0, -1.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0]
+  upper: [1.0, 1.0, 1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+  out_of_bounds_policy: reject
+frame:
+  source: panda_link0
+  target: panda_hand
+  transform_owner: upstream_execution

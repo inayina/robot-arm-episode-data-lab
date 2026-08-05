@@ -1,0 +1,23 @@
+template_version: 1
+currency: "<ISO 4217 code>"
+assumptions:
+  evaluation_hours: "<hours>"
+  gpu_hours: "<hours>"
+  simulation_hours: "<hours>"
+  engineer_hours: "<hours>"
+line_items:
+  - category: compute
+    quantity: "<number>"
+    unit: "<GPU-hour|CPU-hour>"
+    unit_cost: "<quoted cost>"
+    subtotal: "<quantity times unit cost>"
+  - category: engineering
+    quantity: "<number>"
+    unit: engineer-hour
+    unit_cost: "<loaded rate or internal assumption>"
+    subtotal: "<quantity times unit cost>"
+contingency_percent: "<explicit percentage>"
+total_estimate: "<calculated total>"
+measurement_status: estimate_only
+roi_claimed: false
+approval_required_before_billable_compute: true

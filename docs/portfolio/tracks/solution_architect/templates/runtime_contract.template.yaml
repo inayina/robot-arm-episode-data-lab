@@ -1,0 +1,26 @@
+template_version: 1
+contract_id: "<runtime contract id>"
+policy_id: "<must match policy identity>"
+observation_schema_id: "<must match observation schema>"
+action_schema_id: "<must match action schema>"
+sequencing:
+  sequence_must_increase: true
+  duplicate_policy: reject
+  rollback_policy: reject
+timing:
+  command_ttl_ms: "<positive integer>"
+  inference_deadline_ms: "<positive integer>"
+  stale_command_policy: hold
+validation:
+  reject_nan: true
+  reject_inf: true
+  reject_wrong_dimension: true
+  reject_unknown_schema: true
+safety_response:
+  invalid_command: hold
+  risk_r2: hold
+  risk_r3: estop
+claims:
+  task_success: false
+  sim2real: false
+  online_autonomous_grasp: false

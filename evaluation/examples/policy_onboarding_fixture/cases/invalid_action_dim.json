@@ -1,0 +1,13 @@
+{
+  "case_id": "invalid_action_dim",
+  "description": "The action sample has seven values while the declared absolute EEF schema requires eight.",
+  "mutations": [
+    {
+      "document": "sample_action",
+      "path": ["action"],
+      "value": [0.45, 0.0, 0.35, 0.0, 0.0, 0.0, 1.0]
+    }
+  ],
+  "expected_status": "invalid",
+  "expected_reason_code": "action_dimension_invalid"
+}

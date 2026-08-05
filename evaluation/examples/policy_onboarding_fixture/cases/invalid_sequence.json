@@ -1,0 +1,13 @@
+{
+  "case_id": "invalid_sequence",
+  "description": "The second command rolls its sequence number back to zero.",
+  "mutations": [
+    {
+      "document": "commands",
+      "path": [1, "command_sequence"],
+      "value": 0
+    }
+  ],
+  "expected_status": "hold",
+  "expected_reason_code": "command_sequence_regression"
+}

@@ -114,6 +114,10 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 
 | 文档 | 用途 |
 |------|------|
+| [portfolio/tracks/README.md](portfolio/tracks/README.md) | 求职材料三轨总导航：技术面试、产品解决方案架构、RA 科研助理独立文档包 |
+| [portfolio/tracks/technical_interview/README.md](portfolio/tracks/technical_interview/README.md) | 技术面试：系统链路、专题矩阵、current FAQ 使用规则、STAR 与 readiness |
+| [portfolio/tracks/solution_architect/README.md](portfolio/tracks/solution_architect/README.md) | 解决方案架构：客户叙事、文档包、PoC、验收与交付清单 |
+| [portfolio/tracks/research_assistant/README.md](portfolio/tracks/research_assistant/README.md) | RA 科研助理：RQ、研究材料、实验与论文交付清单 |
 | [portfolio/FINAL_PROJECT_SUMMARY.md](portfolio/FINAL_PROJECT_SUMMARY.md) | 详细事实底稿与完整 Pass/Hold 表 |
 | [portfolio/THREE_REPO_CANONICAL_FACTS.md](portfolio/THREE_REPO_CANONICAL_FACTS.md) | 三仓事实源与证据状态标签 |
 | [portfolio/UNIFIED_EVAL_REPORT.md](portfolio/UNIFIED_EVAL_REPORT.md) | `unified_eval_report_v0` 跨后端信封 |
@@ -122,6 +126,8 @@ python3 -m project_knowledge.cli impact --base HEAD~1 --head HEAD
 | [portfolio/project_status.md](portfolio/project_status.md) | 自动生成的进度快照 |
 | [portfolio/DEEP_DESIGN_ANALYSIS.md](portfolio/DEEP_DESIGN_ANALYSIS.md) | 三仓库深度设计分析 |
 | [portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md](portfolio/EMBODIED_EVALUATION_ENGINEER_ALIGNMENT.md) | 岗位对齐长文 |
+| [portfolio/RA_RESEARCH_ASSISTANT_STRENGTHENING_SPEC.md](portfolio/RA_RESEARCH_ASSISTANT_STRENGTHENING_SPEC.md) | RA 科研助理方向补强：研究问题、假设、实验协议、统计与论文式交付 |
+| [portfolio/PRODUCT_SOLUTION_ARCHITECT_STRENGTHENING_SPEC.md](portfolio/PRODUCT_SOLUTION_ARCHITECT_STRENGTHENING_SPEC.md) | 产品解决方案架构方向补强：客户场景、reference architecture、PoC、验收与移交 |
 | [EVALUATION_REPORT.md](EVALUATION_REPORT.md) | 评测漏斗与 Go/No-Go 审计 |
 | [E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md](E3P5_ISAAC_SCRIPTED_ORACLE_EXPERIMENT.md) | E3.5 oracle 实验日志 |
 

@@ -1,0 +1,44 @@
+identity_version: ra_evaluation_study_v1
+title: Embodied Policy Offline-to-Closed-Loop Gap Evaluation Study
+frozen_at: "2026-07-30"
+repository_commit_at_identity_creation: 3c06c2bcf07901090b1da5c49871e734f6e85bc8
+research_question_version: rq_offline_closed_loop_gap_v1
+policy:
+  family: SmolVLA Recovery v3
+  checkpoint_artifact_sha256: c9b93c4d994539c240b795242663f3758a578343ee245dfd20697180b129fe6d
+  observation_contract: state15_scene_only
+  action_contract: panda_absolute_eef_gripper_v0
+  runtime_contract: chunk10_k5_10hz
+data:
+  training_release: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+  train_episode_count: 36
+  prospective_evaluation_id: recovery_v3_prospective_eval10_gate_v3_20260724
+  prospective_episode_count: 10
+  release_splits_sha256: 8a4d4b99f50ffe4276869d85c4949155ac0da6d0e28009ab0637f87545a9fc72
+evaluation:
+  gate_contract: smolvla_s3_eval_gate_v3_threshold_lock_v1
+  gate_sha256: 37325a1fee3cce2e14361071d39f2a0a5b767044e25472114fcb8684c495d46f
+  canonical_mode: canonical_first_action
+  canonical_stride: 1
+  canonical_full_episode: true
+  closed_loop_evidence: evidence/smolvla_s4_bounded5_relight_20260724T151711Z/s4_gate.json
+  oracle_evidence: evidence/e3p5_isaac_scripted_oracle_5x_lift_v2b_20260720/oracle_gate.json
+artifact_status:
+  open_loop_recovery_v3: current
+  bounded_s4_relight: current
+  bounded_s4_dark_first_run: superseded
+  smolvla_v1_v2: historical
+  act_e3: frozen_diagnostic_baseline
+planned_analysis:
+  closed_loop_shift_quantification:
+    status: completed_diagnostic
+    report: evidence/closed_loop_shift_v1/report.json
+    conditioning: normalized_progress_proxy_phase_unavailable
+    h2_assessment: directional_support_not_causal_proof
+    gate_eligible: false
+    authorization_required: false
+claims:
+  causal_proof: false
+  task_success: false
+  sim2real: false
+  real_robot: false

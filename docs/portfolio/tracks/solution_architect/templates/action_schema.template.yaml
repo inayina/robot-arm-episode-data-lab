@@ -1,0 +1,27 @@
+template_version: 1
+schema_id: "<action schema id>"
+action:
+  representation: "<absolute_eef|delta_eef|joint_position>"
+  dtype: float32
+  dimension: 8
+  semantic_order:
+    - ee_x
+    - ee_y
+    - ee_z
+    - quaternion_x
+    - quaternion_y
+    - quaternion_z
+    - quaternion_w
+    - gripper
+  units: "m,unitless,unitless"
+  command_rate_hz: "<positive number>"
+  chunk_size: "<positive integer>"
+  executed_steps_per_inference: "<positive integer>"
+limits:
+  lower: ["<8 values>"]
+  upper: ["<8 values>"]
+  out_of_bounds_policy: reject
+frame:
+  source: "<frame id>"
+  target: "<frame id>"
+  transform_owner: "<component or team>"

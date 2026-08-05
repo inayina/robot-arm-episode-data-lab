@@ -1,0 +1,23 @@
+template_version: 1
+policy:
+  policy_id: "<stable policy identifier>"
+  family: "<ACT|SmolVLA|other>"
+  version: "<immutable version>"
+  framework: "<framework and version>"
+  checkpoint_uri: "<customer-controlled URI or relative path>"
+  checkpoint_sha256: "<64 lowercase hex characters>"
+  created_at_utc: "<RFC3339 timestamp>"
+  owner: "<team or person>"
+training_provenance:
+  dataset_release_id: "<release id>"
+  dataset_manifest_sha256: "<64 lowercase hex characters>"
+  training_config_sha256: "<64 lowercase hex characters>"
+  train_validation_split_statement: "<what is truly held out>"
+approval:
+  approved_for_preflight_by: "<name>"
+  approved_for_simulation: false
+  approved_for_real_robot: false
+claims:
+  task_success: false
+  sim2real: false
+  online_autonomous_grasp: false

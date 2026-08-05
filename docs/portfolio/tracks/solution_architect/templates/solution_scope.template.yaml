@@ -1,0 +1,33 @@
+# Customer discovery output. Replace every <...> placeholder before sign-off.
+template_version: 1
+engagement:
+  customer: "<customer>"
+  use_case: "<bounded use case>"
+  business_outcome: "<measurable outcome>"
+  decision_date: "<YYYY-MM-DD>"
+scope:
+  in_scope:
+    - policy artifact intake
+    - contract and provenance preflight
+    - offline and interface evaluation
+  out_of_scope:
+    - real robot deployment
+    - safety certification
+    - task-success guarantee
+assumptions:
+  - "<assumption and owner>"
+dependencies:
+  - "<dependency, due date, owner>"
+stop_conditions:
+  - schema or artifact identity cannot be verified
+  - safety owner or task-ground-truth owner is missing
+raci:
+  data: "<accountable owner>"
+  model: "<accountable owner>"
+  execution: "<accountable owner>"
+  safety: "<accountable owner>"
+  task_ground_truth: "<accountable owner>"
+claims:
+  task_success: false
+  sim2real: false
+  real_robot: false

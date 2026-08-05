@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robot-arm-episode-data-lab.local/schemas/evaluation/closed_loop_shift_report.schema.json",
+  "title": "Closed-loop state-shift diagnostic report",
+  "type": "object",
+  "required": [
+    "contract_version", "artifact_type", "created_at", "status", "provenance",
+    "method", "analysis", "conclusion", "diagnostic_only", "gate_eligible",
+    "claims_causal_proof", "claims_task_success", "claims_sim2real", "claims_real_robot"
+  ],
+  "properties": {
+    "contract_version": {"const": "closed_loop_shift_report_v1"},
+    "artifact_type": {"const": "closed_loop_shift_report"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["pass", "hold", "invalid"]},
+    "provenance": {"type": "object"},
+    "method": {"type": "object"},
+    "analysis": {"type": "object"},
+    "conclusion": {"type": "object"},
+    "diagnostic_only": {"const": true},
+    "gate_eligible": {"const": false},
+    "claims_causal_proof": {"const": false},
+    "claims_task_success": {"const": false},
+    "claims_sim2real": {"const": false},
+    "claims_real_robot": {"const": false}
+  },
+  "additionalProperties": false
+}

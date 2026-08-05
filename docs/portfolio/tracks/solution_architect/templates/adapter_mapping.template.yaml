@@ -1,0 +1,23 @@
+template_version: 1
+adapter_id: "<adapter id and version>"
+source_contract:
+  observation_schema_id: "<source observation schema>"
+  action_schema_id: "<source action schema>"
+target_contract:
+  observation_schema_id: "<target observation schema>"
+  action_schema_id: "<target action schema>"
+observation_mappings:
+  - source: "<source key/slice>"
+    target: "<target key/slice>"
+    transform: "<identity|normalize|frame transform>"
+action_mappings:
+  - source: "<source key/slice>"
+    target: "<target key/slice>"
+    transform: "<identity|scale|frame transform>"
+lossy_mappings: []
+unsupported_fields: []
+validation:
+  finite_required: true
+  dimension_check: true
+  bounds_check: true
+owner: "<component and accountable team>"

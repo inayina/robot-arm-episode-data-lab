@@ -1,0 +1,23 @@
+template_version: 1
+adapter_id: fixture_absolute_eef_identity_v1
+source_contract:
+  observation_schema_id: panda_state15_scene_rgb_v1
+  action_schema_id: panda_absolute_eef_gripper_v0
+target_contract:
+  observation_schema_id: panda_state15_scene_rgb_v1
+  action_schema_id: panda_absolute_eef_gripper_v0
+observation_mappings:
+  - source: observation.state
+    target: observation.state
+    transform: identity
+action_mappings:
+  - source: action
+    target: action
+    transform: identity
+lossy_mappings: []
+unsupported_fields: []
+validation:
+  finite_required: true
+  dimension_check: true
+  bounds_check: true
+owner: midstream_contract_owner

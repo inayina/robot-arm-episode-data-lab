@@ -1,0 +1,27 @@
+{
+  "template_version": 1,
+  "report_version": "solution_policy_preflight_v1",
+  "bundle_id": "<bundle id>",
+  "case_id": "<case id or direct_bundle>",
+  "evaluated_at_utc": "<RFC3339 timestamp>",
+  "source_bundle": "<source bundle path>",
+  "case_source": null,
+  "status": "not_run",
+  "allowed_statuses": ["not_run", "pass", "hold", "no_go", "invalid"],
+  "next_allowed_stage": "remediation_only",
+  "checks": [
+    {
+      "gate": "G0_identity",
+      "status": "not_run",
+      "reason_code": "none",
+      "evidence": [],
+      "errors": []
+    }
+  ],
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "claims_online_autonomous_grasp": false,
+  "authorized_simulation": false,
+  "authorized_training": false,
+  "authorized_real_robot": false
+}

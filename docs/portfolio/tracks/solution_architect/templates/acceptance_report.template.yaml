@@ -1,0 +1,26 @@
+template_version: 1
+engagement_id: "<engagement id>"
+decision: not_run
+layers:
+  data: {status: not_run, evidence: [], owner: "<owner>"}
+  offline: {status: not_run, evidence: [], owner: "<owner>"}
+  interface: {status: not_run, evidence: [], owner: "<owner>"}
+  behavior: {status: not_run, evidence: [], owner: "<owner>"}
+  task: {status: not_run, evidence: [], owner: "<owner>"}
+  system: {status: not_run, evidence: [], owner: "<owner>"}
+allowed_statuses: [not_run, pass, hold, no_go, invalid]
+known_limitations:
+  - "<limitation, impact, owner>"
+next_decision:
+  action: "<stop|remediate|run approved next phase>"
+  owner: "<owner>"
+  due_date: "<YYYY-MM-DD>"
+signoff:
+  customer: "<name/date>"
+  delivery: "<name/date>"
+  safety: "<name/date or not applicable>"
+claims:
+  task_success: false
+  sim2real: false
+  online_autonomous_grasp: false
+  risk_overrides_failure_lane: false

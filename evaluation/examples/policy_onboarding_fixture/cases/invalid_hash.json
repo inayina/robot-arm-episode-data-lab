@@ -1,0 +1,18 @@
+{
+  "case_id": "invalid_hash",
+  "description": "The manifest claims an all-zero checkpoint SHA instead of the artifact digest.",
+  "mutations": [
+    {
+      "document": "artifact_manifest",
+      "path": ["artifacts", 0, "sha256"],
+      "value": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "document": "policy_identity",
+      "path": ["policy", "checkpoint_sha256"],
+      "value": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "expected_status": "invalid",
+  "expected_reason_code": "contract_mismatch"
+}

@@ -1,0 +1,21 @@
+template_version: 1
+schema_id: panda_state15_scene_rgb_v1
+robot: panda
+features:
+  - key: observation.state
+    dtype: float32
+    shape: [15]
+    semantic_order: [joint_position_0_to_6, ee_pose_xyz_quaternion_xyzw, gripper_scalar]
+    units: rad,m,unitless
+    normalization: checkpoint_bound
+  - key: observation.images.scene
+    dtype: uint8
+    shape: [3, 240, 320]
+    color_order: RGB
+    required: true
+timing:
+  sampling_hz: 10
+  timestamp_clock: monotonic
+  maximum_age_ms: 200
+missing_feature_policy: reject
+unknown_feature_policy: reject

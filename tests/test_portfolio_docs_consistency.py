@@ -36,6 +36,67 @@ UNIFIED_DOC = PORTFOLIO / "UNIFIED_EVAL_REPORT.md"
 V3_PORTFOLIO = PORTFOLIO / "SMOLVLA_RECOVERY_V3_PORTFOLIO.md"
 V3_SOP = DOCS / "SMOLVLA_V3_EVAL_SOP.md"
 S3_READY = DOCS / "SMOLVLA_GATE_S3_READY.md"
+TRACKS = PORTFOLIO / "tracks"
+TRACKS_NAV = TRACKS / "README.md"
+TECHNICAL_INTERVIEW_TRACK = TRACKS / "technical_interview" / "README.md"
+SOLUTION_ARCHITECT_TRACK = TRACKS / "solution_architect" / "README.md"
+RESEARCH_ASSISTANT_TRACK = TRACKS / "research_assistant" / "README.md"
+RESEARCH_ASSISTANT_DIR = TRACKS / "research_assistant"
+RESEARCH_ASSISTANT_DOCS = tuple(
+    RESEARCH_ASSISTANT_DIR / name
+    for name in (
+        "RESEARCH_BRIEF.md",
+        "HYPOTHESIS_EVIDENCE_MATRIX.md",
+        "EXPERIMENT_PREREGISTRATION.md",
+        "CLOSED_LOOP_SHIFT_RESULTS.md",
+        "RELATED_WORK_MATRIX.md",
+        "NEGATIVE_RESULTS_AND_THREATS.md",
+        "REPRODUCIBILITY_GUIDE.md",
+        "RA_APPLICATION_BRIEF.md",
+        "RA_RESEARCH_SLIDES.md",
+    )
+)
+RESEARCH_IDENTITY = RESEARCH_ASSISTANT_DIR / "research_identity.yaml"
+SOLUTION_TRACK_DIR = TRACKS / "solution_architect"
+SOLUTION_TRACK_DOCS = tuple(
+    SOLUTION_TRACK_DIR / name
+    for name in (
+        "SOLUTION_BRIEF.md",
+        "CUSTOMER_DISCOVERY_QUESTIONNAIRE.md",
+        "REFERENCE_ARCHITECTURE.md",
+        "POLICY_ONBOARDING_GUIDE.md",
+        "CUSTOMER_ACCEPTANCE_MATRIX.md",
+        "DEPLOYMENT_AND_OPERATIONS_RUNBOOK.md",
+        "POC_DEMO_SCRIPT.md",
+        "SECURITY_COST_CHECKLIST.md",
+        "SOLUTION_ARCHITECT_EXECUTIVE_DECK.md",
+    )
+)
+SOLUTION_TEMPLATE_DIR = SOLUTION_TRACK_DIR / "templates"
+SOLUTION_YAML_TEMPLATES = tuple(
+    SOLUTION_TEMPLATE_DIR / name
+    for name in (
+        "solution_scope.template.yaml",
+        "policy_identity.template.yaml",
+        "observation_schema.template.yaml",
+        "action_schema.template.yaml",
+        "runtime_contract.template.yaml",
+        "adapter_mapping.template.yaml",
+        "acceptance_report.template.yaml",
+        "cost_estimate.template.yaml",
+    )
+)
+SOLUTION_JSON_TEMPLATES = tuple(
+    SOLUTION_TEMPLATE_DIR / name
+    for name in (
+        "artifact_manifest.template.json",
+        "preflight_report.template.json",
+    )
+)
+RA_STRENGTHENING_SPEC = PORTFOLIO / "RA_RESEARCH_ASSISTANT_STRENGTHENING_SPEC.md"
+SOLUTION_ARCHITECT_STRENGTHENING_SPEC = (
+    PORTFOLIO / "PRODUCT_SOLUTION_ARCHITECT_STRENGTHENING_SPEC.md"
+)
 README = ROOT / "README.md"
 AGENTS = ROOT / "AGENTS.md"
 
@@ -132,6 +193,57 @@ def test_portfolio_navigation_promotes_master_and_human_architecture() -> None:
     assert "portfolio_control_safety_stack.svg" in text
     assert "portfolio_realtime_priority_gantt.svg" in text
     assert "5 分钟" in text and "30 分钟" in text
+
+
+@pytest.mark.parametrize("path", SOLUTION_TRACK_DOCS, ids=lambda p: p.name)
+def test_solution_architect_docs_exist_and_are_substantive(path: Path) -> None:
+    assert path.is_file(), f"missing solution architect deliverable: {path}"
+    text = _read(path)
+    assert len(text) > 1200
+    assert "task success" in text.lower() or "任务成功" in text
+
+
+@pytest.mark.parametrize("path", SOLUTION_YAML_TEMPLATES, ids=lambda p: p.name)
+def test_solution_yaml_templates_are_parseable_and_non_claiming(path: Path) -> None:
+    payload = yaml.safe_load(_read(path))
+    assert isinstance(payload, dict)
+    assert payload.get("template_version") == 1
+    text = _read(path).lower()
+    if "claims" in payload:
+        assert payload["claims"].get("task_success") is False
+    assert "real_robot: true" not in text
+    assert "sim2real: true" not in text
+
+
+@pytest.mark.parametrize("path", SOLUTION_JSON_TEMPLATES, ids=lambda p: p.name)
+def test_solution_json_templates_are_parseable_and_non_claiming(path: Path) -> None:
+    payload = json.loads(_read(path))
+    assert payload["template_version"] == 1
+    assert payload.get("claims_task_success") is False
+    assert payload.get("claims_sim2real") is False
+
+
+@pytest.mark.parametrize("path", RESEARCH_ASSISTANT_DOCS, ids=lambda p: p.name)
+def test_research_assistant_docs_exist_and_are_substantive(path: Path) -> None:
+    assert path.is_file(), f"missing RA deliverable: {path}"
+    text = _read(path)
+    assert len(text) > 1800
+    assert "task success" in text.lower() or "任务成功" in text
+
+
+def test_research_identity_is_frozen_and_non_claiming() -> None:
+    identity = yaml.safe_load(_read(RESEARCH_IDENTITY))
+    assert identity["identity_version"] == "ra_evaluation_study_v1"
+    assert identity["evaluation"]["gate_sha256"] == (
+        "37325a1fee3cce2e14361071d39f2a0a5b767044e25472114fcb8684c495d46f"
+    )
+    shift = identity["planned_analysis"]["closed_loop_shift_quantification"]
+    assert shift["status"] == "completed_diagnostic"
+    assert shift["report"] == "evidence/closed_loop_shift_v1/report.json"
+    assert shift["conditioning"] == "normalized_progress_proxy_phase_unavailable"
+    assert shift["h2_assessment"] == "directional_support_not_causal_proof"
+    assert shift["gate_eligible"] is False
+    assert all(value is False for value in identity["claims"].values())
 
 
 def test_badcase_summary_is_layered_and_stays_hypothesis_scoped() -> None:
@@ -305,7 +417,25 @@ def test_figure_script_defaults_to_authoritative_evidence() -> None:
 
 @pytest.mark.parametrize(
     "path",
-    (PORTFOLIO_MASTER, FINAL_SUMMARY, BADCASE, ROADMAP, RESUME, V3_PORTFOLIO, UNIFIED_DOC, EVIDENCE_INDEX, V3_SOP),
+    (
+        PORTFOLIO_MASTER,
+        FINAL_SUMMARY,
+        BADCASE,
+        ROADMAP,
+        RESUME,
+        V3_PORTFOLIO,
+        UNIFIED_DOC,
+        EVIDENCE_INDEX,
+        V3_SOP,
+        TRACKS_NAV,
+        TECHNICAL_INTERVIEW_TRACK,
+        SOLUTION_ARCHITECT_TRACK,
+        RESEARCH_ASSISTANT_TRACK,
+        RA_STRENGTHENING_SPEC,
+        SOLUTION_ARCHITECT_STRENGTHENING_SPEC,
+        *SOLUTION_TRACK_DOCS,
+        *RESEARCH_ASSISTANT_DOCS,
+    ),
     ids=lambda p: p.name,
 )
 def test_relative_markdown_links_resolve(path: Path) -> None:

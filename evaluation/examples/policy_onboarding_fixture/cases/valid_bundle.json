@@ -1,0 +1,7 @@
+{
+  "case_id": "valid_bundle",
+  "description": "Unmodified bundle passes contract preflight.",
+  "mutations": [],
+  "expected_status": "pass",
+  "expected_reason_code": "none"
+}

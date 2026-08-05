@@ -1,0 +1,23 @@
+template_version: 1
+policy:
+  policy_id: fixture_policy_v1
+  family: fixture
+  version: v1
+  framework: no_model_loaded
+  checkpoint_uri: artifacts/policy.ckpt
+  checkpoint_sha256: 129cafe2846f1174d258ee8db0fcffddc0f5be911695b3dde3f1205579824143
+  created_at_utc: "2026-07-30T00:00:00Z"
+  owner: solution_architecture_fixture
+training_provenance:
+  dataset_release_id: fixture_release_v1
+  dataset_manifest_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  training_config_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  train_validation_split_statement: synthetic fixture only; no model training performed
+approval:
+  approved_for_preflight_by: repository_contract_tests
+  approved_for_simulation: false
+  approved_for_real_robot: false
+claims:
+  task_success: false
+  sim2real: false
+  online_autonomous_grasp: false

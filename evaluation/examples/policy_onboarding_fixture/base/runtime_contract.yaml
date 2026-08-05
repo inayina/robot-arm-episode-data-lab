@@ -1,0 +1,26 @@
+template_version: 1
+contract_id: fixture_runtime_v1
+policy_id: fixture_policy_v1
+observation_schema_id: panda_state15_scene_rgb_v1
+action_schema_id: panda_absolute_eef_gripper_v0
+sequencing:
+  sequence_must_increase: true
+  duplicate_policy: reject
+  rollback_policy: reject
+timing:
+  command_ttl_ms: 200
+  inference_deadline_ms: 100
+  stale_command_policy: hold
+validation:
+  reject_nan: true
+  reject_inf: true
+  reject_wrong_dimension: true
+  reject_unknown_schema: true
+safety_response:
+  invalid_command: hold
+  risk_r2: hold
+  risk_r3: estop
+claims:
+  task_success: false
+  sim2real: false
+  online_autonomous_grasp: false
