@@ -1,0 +1,34 @@
+{
+  "figure": "data_gate_flow",
+  "caption_class": "visualization regenerated from recorded evidence",
+  "generated_at": "2026-08-17T13:15:29.436849+00:00",
+  "offline": {
+    "gate_decision": "pass",
+    "ee_position_rmse_m": 0.0253369083666324,
+    "gripper_balanced_accuracy": 0.9942844469658416
+  },
+  "s4": {
+    "interface": 5,
+    "n": 5,
+    "reach": 1,
+    "grasp": 0,
+    "lift": 0,
+    "gate_pass": false
+  },
+  "claims_task_success": false,
+  "claims_sim2real": false,
+  "sources": {
+    "open_loop": {
+      "path": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/public_evidence/canonical_v3/open_loop_gate_summary.json",
+      "sha256": "c2603b38a893e496a52c9d50eba1695b3dcb9fd2f4ea6031270a4129ca2cb82c"
+    },
+    "s4_gate": {
+      "path": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/public_evidence/canonical_v3/s4_gate.json",
+      "sha256": "85dbf36bfed54aafb342e8234e32fe1f94d7e8eaa35f1ed811920d9042782702"
+    },
+    "unified": {
+      "path": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/public_evidence/canonical_v3/unified_eval_summary.json",
+      "sha256": "bba728cffe6acd9fe03d19e6cb4a14b1a9bb35aaafa92649812a7b64aa5369fc"
+    }
+  }
+}

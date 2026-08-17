@@ -1,0 +1,10 @@
+{
+  "figures": [
+    "system_overview",
+    "teleop_control_chain"
+  ],
+  "caption_class": "architecture diagram based on current repository implementation",
+  "generated_at": "2026-08-17T13:45:49.953805+00:00",
+  "claims_task_success": false,
+  "claims_sim2real": false
+}

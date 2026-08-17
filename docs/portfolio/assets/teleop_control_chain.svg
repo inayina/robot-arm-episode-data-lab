@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="380" viewBox="0 0 1440 380" role="img">
+  <title>遥操作控制链与已验证仿真频率</title>
+  <desc>architecture diagram based on current repository implementation</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <style>
+    .title{font:700 26px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#0f172a}
+    .sub{font:13px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#64748b}
+    .h{font:700 15px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#0f172a}
+    .e{font:12px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#334155}
+    .cap{font:12px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#64748b}
+    .hz{font:700 13px Arial,sans-serif;fill:#1d4ed8}
+    .flow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+</style>
+  </defs>
+  <rect width="1440" height="380" fill="#ffffff"/>
+  <text x="720" y="42" text-anchor="middle" class="title">人给出笛卡尔目标，控制链按整数倍频率往下走</text>
+  <text x="720" y="68" text-anchor="middle" class="sub">architecture diagram based on current repository implementation · rates from HEAD config</text>
+  <rect x="40" y="108" width="200" height="168" rx="14" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="140" y="148" text-anchor="middle" class="h">Human Input</text>
+  <text x="140" y="178" text-anchor="middle" class="e">Keyboard / Gamepad</text>
+  <text x="140" y="204" text-anchor="middle" class="e">/teleop/cmd_pose</text>
+  <text x="140" y="242" text-anchor="middle" class="cap">笛卡尔位姿 + 心跳</text>
+  <rect x="270" y="108" width="200" height="168" rx="14" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="370" y="148" text-anchor="middle" class="h">C++ Safety</text>
+  <text x="370" y="178" text-anchor="middle" class="e">safety_monitor</text>
+  <text x="370" y="204" text-anchor="middle" class="e">/safe_master_pose</text>
+  <text x="370" y="242" text-anchor="middle" class="cap">limit / watchdog / E-stop</text>
+  <rect x="500" y="108" width="200" height="168" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="600" y="148" text-anchor="middle" class="h">MoveIt Servo</text>
+  <text x="600" y="178" text-anchor="middle" class="e">pose tracking</text>
+  <text x="600" y="204" text-anchor="middle" class="hz">~125 Hz</text>
+  <text x="600" y="242" text-anchor="middle" class="cap">publish_period 0.008</text>
+  <rect x="730" y="108" width="220" height="168" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
+  <text x="840" y="148" text-anchor="middle" class="h">Impedance + CM</text>
+  <text x="840" y="178" text-anchor="middle" class="e">ros2_control plugin</text>
+  <text x="840" y="204" text-anchor="middle" class="hz">sim ~500 Hz</text>
+  <text x="840" y="242" text-anchor="middle" class="cap">control_rate_sim.yaml</text>
+  <rect x="980" y="108" width="200" height="168" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="1080" y="148" text-anchor="middle" class="h">MuJoCo Panda</text>
+  <text x="1080" y="178" text-anchor="middle" class="e">physics_rate</text>
+  <text x="1080" y="204" text-anchor="middle" class="hz">~1 kHz</text>
+  <text x="1080" y="242" text-anchor="middle" class="cap">encoder 500 Hz</text>
+  <rect x="1210" y="108" width="190" height="168" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="1305" y="148" text-anchor="middle" class="h">Virtual bus</text>
+  <text x="1305" y="178" text-anchor="middle" class="e">vcan0 DS402</text>
+  <text x="1305" y="204" text-anchor="middle" class="e">MockModbus gripper</text>
+  <text x="1305" y="242" text-anchor="middle" class="cap">不是真实硬件</text>
+  <path d="M240 192 H264" class="flow"/>
+  <path d="M470 192 H494" class="flow"/>
+  <path d="M700 192 H724" class="flow"/>
+  <path d="M950 192 H974" class="flow"/>
+  <path d="M1180 192 H1204" class="flow"/>
+  <text x="720" y="328" text-anchor="middle" class="cap">Servo tip = panda_ee · impedance FK = panda_link7 · real 1 kHz is reserved path only</text>
+  <text x="720" y="356" text-anchor="middle" class="cap">软件安全路径，不是认证功能安全 · Isaac 10 Hz 仅有界评测</text>
+</svg>

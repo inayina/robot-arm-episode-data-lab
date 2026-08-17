@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="460" viewBox="0 0 1440 460" role="img">
+  <title>数据质量与分层 Gate</title>
+  <desc>visualization regenerated from recorded evidence. Offline Pass is not task success. Interface Pass is not lift success.</desc>
+  <style>
+    .title{font:700 28px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+    .sub{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+    .h{font:700 15px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+    .e{font:12px Inter,Arial,sans-serif;fill:#334155}
+    .cap{font:13px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+    .call{font:700 16px Inter,"Noto Sans SC",Arial,sans-serif;fill:#b91c1c}
+    .ok{font:700 13px Inter,Arial,sans-serif;fill:#047857}
+    .hold{font:700 13px Inter,Arial,sans-serif;fill:#c2410c}
+    .flow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="1440" height="460" fill="#ffffff"/>
+  <text x="720" y="40" text-anchor="middle" class="title">每一层 Gate 只回答一个问题，不能越级升级</text>
+  <text x="720" y="66" text-anchor="middle" class="sub">visualization regenerated from recorded evidence · public_evidence/canonical_v3</text>
+
+  <rect x="36" y="100" width="175" height="150" rx="14" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="123" y="138" text-anchor="middle" class="h">Raw Episode</text>
+  <text x="123" y="166" text-anchor="middle" class="e">Data Gate</text>
+  <text x="123" y="190" text-anchor="middle" class="e">schema · meta.json</text>
+  <text x="123" y="214" text-anchor="middle" class="e">upstream physical gate</text>
+
+  <rect x="236" y="100" width="175" height="150" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="323" y="138" text-anchor="middle" class="h">Release</text>
+  <text x="323" y="166" text-anchor="middle" class="e">QA / split / SHA</text>
+  <text x="323" y="190" text-anchor="middle" class="e">immutable manifest</text>
+  <text x="323" y="214" text-anchor="middle" class="e">train ≠ eval leak</text>
+
+  <rect x="436" y="100" width="175" height="150" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="523" y="138" text-anchor="middle" class="h">Offline Gate</text>
+  <text x="523" y="166" text-anchor="middle" class="e">open-loop first-action</text>
+  <text x="523" y="196" text-anchor="middle" class="ok">Pass</text>
+  <text x="523" y="220" text-anchor="middle" class="e">EE 0.0253 m · BA 0.994</text>
+
+  <rect x="636" y="100" width="175" height="150" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="723" y="138" text-anchor="middle" class="h">Handoff</text>
+  <text x="723" y="166" text-anchor="middle" class="e">JSONL + manifest</text>
+  <text x="723" y="190" text-anchor="middle" class="e">not a PyTorch bundle</text>
+  <text x="723" y="214" text-anchor="middle" class="e">replay_check</text>
+
+  <rect x="836" y="100" width="175" height="150" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
+  <text x="923" y="138" text-anchor="middle" class="h">Interface Gate</text>
+  <text x="923" y="166" text-anchor="middle" class="e">policy I/O · clip</text>
+  <text x="923" y="196" text-anchor="middle" class="ok">5 / 5</text>
+  <text x="923" y="220" text-anchor="middle" class="e">bounded Isaac S4</text>
+
+  <rect x="1036" y="100" width="175" height="150" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="1123" y="138" text-anchor="middle" class="h">Task Gate</text>
+  <text x="1123" y="166" text-anchor="middle" class="e">reach 1/5 grasp 0/5</text>
+  <text x="1123" y="196" text-anchor="middle" class="hold">Hold · lift 0/5</text>
+  <text x="1123" y="220" text-anchor="middle" class="e">relight S4 权威</text>
+
+  <rect x="1236" y="100" width="168" height="150" rx="14" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="1320" y="138" text-anchor="middle" class="h">System Gate</text>
+  <text x="1320" y="166" text-anchor="middle" class="e">replay · risk · HOC</text>
+  <text x="1320" y="190" text-anchor="middle" class="e">not task go/no-go</text>
+  <text x="1320" y="214" text-anchor="middle" class="e">Hold / E-stop 可观测</text>
+
+  <path d="M211 175 H230" class="flow"/>
+  <path d="M411 175 H430" class="flow"/>
+  <path d="M611 175 H630" class="flow"/>
+  <path d="M811 175 H830" class="flow"/>
+  <path d="M1011 175 H1030" class="flow"/>
+  <path d="M1211 175 H1230" class="flow"/>
+
+  <rect x="120" y="292" width="560" height="56" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="400" y="327" text-anchor="middle" class="call">Offline Pass ≠ Task Success</text>
+  <rect x="760" y="292" width="560" height="56" rx="12" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="1040" y="327" text-anchor="middle" class="call">Interface Pass ≠ Lift Success</text>
+
+  <text x="720" y="392" text-anchor="middle" class="cap">unified claims_task_success=false · claims_sim2real=false</text>
+  <text x="720" y="424" text-anchor="middle" class="cap">Isaac 有界评测不是默认主栈 · scripted oracle 不在本图冒充 learned policy</text>
+</svg>

@@ -1,0 +1,73 @@
+{
+  "figure": "geometry_camera_consistency",
+  "caption_class": "visualization regenerated from recorded evidence",
+  "generated_at": "2026-08-17T13:16:01.309777+00:00",
+  "physical": "NOT_RUN/UNAVAILABLE",
+  "claims_sim2real": false,
+  "frame_from": "panda_link0",
+  "frame_to": "panda_ee",
+  "controller_reference": "panda_link7",
+  "moveit_servo_tip": "panda_ee",
+  "fixed_chain_z_m": 0.20699999999999996,
+  "residuals": {
+    "urdf_vs_kdl": {
+      "n": 8,
+      "max_dp_m": 2.2473876566261383e-16,
+      "max_dr_rad": 2.9802322387695312e-08
+    },
+    "urdf_vs_live_tf": {
+      "n": 8,
+      "max_dp_m": 4.053169429671442e-16,
+      "max_dr_rad": 2.1073424255447017e-08
+    },
+    "live_tf_vs_mujoco": {
+      "n": 8,
+      "max_dp_m": 5.91460214581653e-12,
+      "max_dr_rad": 6.664001874625058e-08
+    },
+    "urdf_vs_mujoco": {
+      "n": 8,
+      "max_dp_m": 5.914395990602983e-12,
+      "max_dr_rad": 7.300048299977716e-08
+    },
+    "scene_renderer_vs_tf": {
+      "n": 7,
+      "max_dp_m": 0.0,
+      "max_dr_rad": 0.0,
+      "min_dp_m": 0.0
+    },
+    "wrist_renderer_vs_tf": {
+      "n": 7,
+      "max_dp_m": 1.1857187100668868e-16,
+      "max_dr_rad": 0.0,
+      "min_dp_m": 3.1031676915590914e-17
+    },
+    "wrist_T_hand_spread_m": 1.3018519034864975e-16
+  },
+  "sources": {
+    "live_tf_csv": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/geometry_stage1_live_tf/geometry_samples.csv",
+      "sha256": "73c3e1f2c49cafcb6f1ff2685d0d18d9bc259c81d35ae948cdd5d62bf11e13b4"
+    },
+    "live_tf_manifest": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/geometry_stage1_live_tf/run_manifest.json",
+      "sha256": "547cf73e2e4fafaadde816d37a995d237eae7f8eae7e5d1aa52b8e88c07a108f"
+    },
+    "scene_csv": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/camera_stage3_scene/camera_samples.csv",
+      "sha256": "1ffc0a4d9bb2ecdf6fc9275bfc4858d78277c9a568cac997eabbe75d5a74bef6"
+    },
+    "scene_manifest": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/camera_stage3_scene/run_manifest.json",
+      "sha256": "dcf81ae9bf8e35211264bc55219fa334506f16186453b9ba2c3ba0cd3eb1374d"
+    },
+    "wrist_csv": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/camera_stage3_wrist/camera_samples.csv",
+      "sha256": "9c270a9b2379e9f5ad6498f6a3a16ec4930146a594c62362b3edeae04f7c554d"
+    },
+    "wrist_manifest": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/evidence/camera_stage3_wrist/run_manifest.json",
+      "sha256": "03201c75d05d3117c62ae0614e5db6e0cae9a2b641b9d6c06373cdf79bbd3a46"
+    }
+  }
+}

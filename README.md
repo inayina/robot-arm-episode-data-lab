@@ -1,142 +1,121 @@
 # robot-arm-episode-data-lab
 
 [![CI](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml)
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Robot](https://img.shields.io/badge/Robot-Franka%20Panda-0f766e)
-![Role](https://img.shields.io/badge/Role-Midstream%20contracts%20%26%20delivery-2563eb)
 
-**跨仓接口合同、版本化交付与分层验证控制平面**
+**Panda 模仿学习数据管线、策略训练与分层评测**
 
-把上游 episode 的状态与动作语义固定下来，做 schema/质量/split 检查，生成 non-overwrite 或 immutable Release，组织训练与离线评测作为**接口与执行链的验证负载**，再导出版本化 Handoff。目标是防止接口漂移、结论越级和不可复现——不是在线控制机械臂。
+上游机械臂录下来的 episode，还不能直接拿去训练：字段语义会漂、split 会漏、loss 下降也容易被写成「已经会抓」。本仓把示教收成**有 schema、有版本、有指纹**的训练集，跑 ACT / SmolVLA，再用**分层门禁**分开回答：数据合不合格、离线动作准不准、接口能不能跑、物体有没有被抓起来。
 
-面向：**机器人系统软件工程师｜ROS 2、C++、Linux、设备通信、执行监督与系统验证**（本仓侧重合同、交付物与分层验收）。
+这是三仓机械臂项目的**中游**：不跑 ROS 实时控制，也不在 PyBullet 里执行动作。
 
-<div align="right">
+![SmolVLA Recovery v3 三后端评测总览](docs/portfolio/smolvla_v3_eval_framework_summary.png)
 
-[中文](#中文) | [English](#english-brief)
+<p align="center"><sub>同一套报告信封，三列互不替代：离线 Pass、接口 smoke、Isaac 任务真值 Hold。不是任务成功，也不是 Sim2Real。</sub></p>
 
-</div>
+| Python | PyTorch | LeRobot | ACT | SmolVLA LoRA / PEFT | JSON Schema | SHA256 release |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
-## 中文
+---
 
-### 解决什么系统问题
+## 整个项目做了什么
 
-执行链能跑，不代表交付物可信。常见失败是：
+一套 **Franka Panda 从示教到评测的软件闭环**。三个仓故意分开，因为实时控制、深度学习、回放监控的环境和职责都不同：
 
-- 上游字段语义悄悄变化，下游仍按旧合同消费；
-- Release 可被覆盖，实验结果无法复现；
-- 把 offline loss、open-loop Pass 或 interface Pass 写成任务成功；
-- 训练框架绑定的产物无法交给独立的 replay / risk 栈验证。
+1. [上游 teleop suite](https://github.com/inayina/ros2-arm-teleoperation-suite) — ROS 2 + MuJoCo，让手臂动并录 episode  
+2. **本仓** — 数据契约、训练、离线评测、handoff  
+3. [下游 bridge](https://github.com/inayina/ros2-moveit-pybullet-bridge) — PyBullet 回放、风险监控、HOC 控制台  
 
-本仓把“合同 → 检查 → 版本化交付 → 分层 Gate → Handoff”做成可重复的控制平面。
+本仓读完，应能回答：**数据怎么清洗和锁定、模型怎么训、评测为什么没有把「加载成功」写成「抓取成功」。** 控制频率、CAN、相机标定请看上游；回放仪表盘请看下游。
 
-### 在三仓架构中的位置
+---
 
-```text
-ros2-arm-teleoperation-suite（上游）
-  在线执行 · 控制 · 设备接口 · 采集 · Task GT
-                     │ raw episode
-                     ▼
-robot-arm-episode-data-lab（本仓 · 中游）
-  合同 · Release · 训练 · 离线评测 · Handoff
-                     │ actions / reports
-                     ▼
-ros2-moveit-pybullet-bridge（下游）
-  Replay · Monitor · Risk · Safety · HOC
-```
+## 本仓解决什么问题
 
-<p align="center">
-  <img src="docs/portfolio/readme_three_repo_overview.svg" alt="Franka Panda 三仓执行、交付与验证架构" width="100%">
-</p>
+模仿学习项目常见的失败不是「没训起来」，而是结论越级：
 
-上游拥有在线执行与物理 Task GT；本仓拥有数据/离线合同与交付；下游拥有 replay harness 与风险观测。完整边界：[BOUNDARY_FREEZE.md](docs/portfolio/BOUNDARY_FREEZE.md)。
+- 上游改了 `action` 维度，下游还按旧合同吃；
+- 训练集和评测集其实见过同一条 episode；
+- 离线 RMSE 好看，就被写成任务成功率；
+- 接口 5/5 能下发动作，就被写成已经会抓。
 
-### 输入 · 处理 · 输出
-
-| 方向 | 内容 |
-| --- | --- |
-| **输入** | 上游 `episode_*/train/` + `meta.json`（含 `upstream_gate`、`success` 等） |
-| **处理** | 语义适配 → inspect → Release →（可选）训练/checkpoint 审计/离线评测 → Handoff 打包 |
-| **输出** | adapted frames、`manifest.json` / immutable fingerprint、checkpoint 审计、分层评测报告、`bridge_handoff/` |
+本仓把流水线做成可重复的交付，而不是一次 notebook：
 
 ```text
-状态、Episode 与任务真值
+上游 episode_*/train/ + meta.json
         ↓
-数据和动作接口合同
+schema / 动作语义适配（不重判抓没抓住）
         ↓
-版本化 Release 与 Handoff
+质检 + train/val/benchmark split
+        ↓
+non-overwrite 或 SHA 锁定的 immutable release
+        ↓
+训练（MLP BC / ACT / SmolVLA LoRA）+ checkpoint 审计
+        ↓
+离线 open-loop 门禁
+        ↓
+bridge_handoff/（JSONL 动作包，不捆绑 PyTorch）
 ```
 
-### 核心模块
+物理上抓没抓住，只认上游 / Isaac 的连续任务真值。本仓 **`filter_scope=training_split_only`** 时，不会从 `object_pose` 再推一遍 lift/place。
+
+---
+
+## 我在本仓具体做了什么
+
+**数据契约。** `configs/robot_schemas/panda.yaml` 固定观测和动作语义。上游关节是 `state[7]` + 单独夹爪；训练常用 `state[8]`（关节+夹爪）或 SmolVLA 的 `state[15]`（关节 + 末端位姿 + 夹爪）。ACT 动作是 `ee_delta_gripper[7]`；VLA 路线用 `absolute_eef_gripper[8]`。`object_pose` 是仿真特权信息，禁止进 policy state。
+
+**不可变交付。** `prepare_dataset_release.py` 拒绝覆盖非空目录（non-overwrite）。immutable release 另有逐文件 SHA256、`release_content_sha256`、无交集的 `splits.json`。对外说「SHA 锁定」必须指向后者，不能把普通 release 说成不可变。
+
+**训练当验证负载，不是作品集主语。** 这里训过 MLP BC、LeRobot ACT、SmolVLA LoRA。当前活动预训练候选是 **SmolVLA Recovery v3**；ACT 已冻成诊断基线，不再盲训。训练用来压测契约（state 维、相机 key、chunk、PEFT），不把 loss 当成功率。
+
+**分层评测。** Data / Offline / Interface / Behavior / Task / System 六层各答各的题。`unified_eval_report_v0` 把开环、PyBullet 回放、Isaac 有界 rollout 映射到同一信封；`claims_task_success` 等字段恒为 false。
+
+**Handoff 与训练框架解耦。** `prepare_bridge_handoff.py` 导出 `predicted_actions.jsonl` + manifest，下游回放不必捆绑 LeRobot。
 
 | 模块 | 路径 | 职责 |
 | --- | --- | --- |
-| Data Adapter | `training/adapters/upstream_m6.py` | 上游字段 → 固定 Panda state/action 语义；**不**重判物理 lift/place |
-| Dataset Inspector | `training/scripts/inspect_dataset.py` | schema、图像、轨迹健康度、训练 split |
-| Non-overwrite Release | `training/scripts/prepare_dataset_release.py` | 拒绝覆盖非空目录；写入 manifest + inspection |
-| Immutable Release | `training/scripts/prepare_smolvla_s3_release.py` | split + 逐文件 SHA + content fingerprint |
-| Checkpoint 审计 | `training/smolvla_s3/`、相关 audit 脚本 | 核对 state/camera/action/chunk/PEFT 实际配置 |
-| 分层评测 | `docs/EVALUATION_CONTRACT.md`、`evaluation/` | Data / Offline / Interface / Behavior / Task / System 分层 |
-| Handoff | `training/scripts/prepare_bridge_handoff.py` | 框架中立 JSONL + manifest，供下游 replay |
-| 合同 CI | `scripts/run_three_repo_contract_ci.py` | 跨仓 schema/语义/S4 合同哈希/handoff loader smoke |
-| 事实检索 | `project_knowledge/` | 三仓只读 RAG、审计与 Git 影响分析 |
+| Adapter | `training/adapters/upstream_m6.py` | 上游字段 → 固定 Panda state/action |
+| Inspector | `training/scripts/inspect_dataset.py` | schema、图像完整性、轨迹健康、split |
+| Release | `training/scripts/prepare_dataset_release.py` | non-overwrite |
+| Immutable release | `training/scripts/prepare_smolvla_s3_release.py` | SHA / fingerprint / splits |
+| 训练 | `training/scripts/train_act_lerobot.py`、`training/smolvla_s3/` | ACT 诊断；SmolVLA LoRA |
+| Checkpoint 审计 | `training/smolvla_s3/` | 核对 state / camera / action / chunk / PEFT |
+| 评测 | `evaluation/`、`docs/EVALUATION_CONTRACT.md` | 六层门禁 + 统一信封 |
+| Handoff | `training/scripts/prepare_bridge_handoff.py` | 给下游的 JSONL 动作包 |
+| 合同 CI | `scripts/run_three_repo_contract_ci.py` | 跨仓 schema / 语义 / S4 合同哈希 |
 
-训练（MLP BC、ACT smoke、SmolVLA LoRA 等）在本仓存在，定位为**验证接口与执行链合同的工作负载**，不是本 README 的主叙事。
+---
 
-### 正常交付链
+## 数字怎么读（当前结论）
 
-```text
-Raw Episode
-  → Schema 与动作语义适配（upstream_m6）
-  → 数据与 split 检查（inspect；不重复推导上游物理成败）
-  → 版本化 Release（non-overwrite 或 immutable）
-  → 训练与离线评测（验证负载）
-  → Handoff（predicted_actions.jsonl + manifest）
-```
+这些数字都有机器可读 JSON，不是口头估计。
 
-### 异常 / 故障链
+| 候选 | 离线 / 接口 | 任务真值 | 怎么说 |
+| --- | --- | --- | --- |
+| **SmolVLA Recovery v3** | 独立 10 条 / 2,593 帧 open-loop：**Pass**（EE RMSE 0.0253 m，夹爪 balanced accuracy 0.9943） | 有界 Isaac seeds 1–5：interface 5/5，lift **0/5** → **Hold** | 专家轨迹上拟合过了；仿真里还没抓起来 |
+| **ACT** | 诊断训练完成 | E3 nominal20 overall **0/20** | 冻结基线，不再盲训 |
+| **Scripted oracle** | — | 修物理链后 lift **5/5** | 说明仿真链能完成任务，不能算策略成功 |
+| **LingBot-VLA** | 兼容性审计 | 未训练 | 路线已归档 |
 
-```text
-Schema 或动作语义不兼容 / split 泄漏 / release 目录非空
-  → 合同或 inspect 检查失败
-  → 阻止 Release 或 Handoff
-  → 不进入下游验证
-```
+![离线 EE 误差相对 S2 基线](docs/portfolio/smolvla_recovery_v3_openloop_ee_vs_s2.png)
 
-分层 Gate 规则：某一层 Pass **不得**自动升级为更高层结论。例如 Offline open-loop Pass ≠ Task Success；Interface Pass ≠ Reach/Grasp/Lift。
+<p align="center"><sub>Recovery v3 相对 S2 的末端位置误差下降。这只证明离线拟合，不证明闭环抓取。</sub></p>
 
-<p align="center">
-  <img src="docs/portfolio/portfolio_data_evidence_flow.svg" alt="SmolVLA Recovery v3 训练数据、独立评测数据与闭环任务真值的证据流" width="100%">
-</p>
+面试里最重要的一次判断：Isaac 首轮看似 reach 3/5、grasp 1/5，补相机遥测发现策略输入近黑；修光后同种子变成 reach 1/5、grasp 0/5。**看起来更差，但更真实**，首轮已标成历史结果。权威 S4：[`s4_gate.json`](https://github.com/inayina/robot-arm-episode-data-lab/blob/main/docs/portfolio/public_evidence/canonical_v3/s4_gate.json)。
 
-<p align="center"><sub>训练线与评测线隔离：open-loop 只回答专家状态上的 first-action 拟合；bounded runtime 的连续 Task GT 才能裁决任务结果。</sub></p>
+没有真机，没有完成 Sim2Real。open-loop Pass、interface Pass、`ran_isaac=true` 都不是任务成功。
 
-### 当前已验证状态
+---
 
-- 三仓数据合同、handoff 静态校验与纯 CPU 合同 CI 已贯通。
-- Release 术语已冻结：**non-overwrite** ≠ **immutable**（后者必须有 SHA / fingerprint）。
-- SmolVLA Recovery v3：独立 prospective 数据上 canonical first-action open-loop Gate **Pass**（10 episodes / 2,593 frames）。
-- 同一策略有界 Isaac S4（修光权威证据）：interface 5/5，reach 1/5，grasp 0/5，lift **0/5** → **Hold**（`gate_pass=false`）。
-- Scripted oracle 同物理链 lift 5/5：证明物理链能力，**不能**替代 learned policy。
-- ACT 为冻结诊断基线，不继续盲目训练。
-- Policy Runtime / Risk / HOC 是验证配套；SmolVLA authoritative 在线切流**未启用**。
-- **Not task success / Not Sim2Real / Not real robot。**
+## 快速开始
 
-权威总结与证据路径：[FINAL_PROJECT_SUMMARY.md](docs/portfolio/FINAL_PROJECT_SUMMARY.md) · [THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md) · 公开最小包 [public_evidence/canonical_v3](docs/portfolio/public_evidence/canonical_v3/README.md)。
+理解项目（招聘经理 / 面试官）：
 
-### 快速开始
-
-理解项目：
-
-- [作品集母版](docs/portfolio/PORTFOLIO_REFERENCE.md)
-- [架构图](docs/portfolio/portfolio_system_overview.svg)
-- [作品集入口](docs/portfolio/README.md)
+- [作品集入口](docs/portfolio/README.md) · [一页母版](docs/portfolio/PORTFOLIO_REFERENCE.md) · [简历话术](docs/portfolio/resume_description.md)
 
 开发与合同检查：
 
 ```bash
-python3 training/scripts/inspect_dataset.py --help
-
 python3 scripts/run_three_repo_contract_ci.py --require-cross-repo
 
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q \
@@ -146,7 +125,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q \
   --ignore=tests/test_validate_dataset.py
 ```
 
-已有上游 episode 时的主线入口：
+已有上游 episode 时的主线脚本：
 
 ```text
 training/scripts/adapt_upstream_panda_dataset.py
@@ -158,54 +137,12 @@ training/scripts/prepare_bridge_handoff.py
 
 一键离线闭环（adapt → release → smoke train → handoff）：`./scripts/run_three_repo_closed_loop.sh`
 
-### 目录导航
-
-| 目录 | 主要内容 |
-| --- | --- |
-| `configs/` | Panda schema、Gate、runtime 合同 |
-| `training/adapters/` | 上游语义转换 |
-| `training/scripts/` | inspect / release / train / handoff |
-| `training/smolvla_s3/` | SmolVLA 控制面与离线评测（验证负载） |
-| `evaluation/` | 统一报告 schema、适配器合同、fixture |
-| `project_knowledge/` | 三仓事实检索 |
-| `scripts/` | 合同 CI 与闭环入口 |
-| `docs/portfolio/` | 对外总结、边界冻结、证据索引 |
-| `agents/`、`core/` | **Legacy** KUKA/PyBullet，不与 Panda 主线混用 |
-
-### 跨仓接口
-
-| 交接 | 内容 |
-| --- | --- |
-| ← 上游 | raw episode + `meta.json`；物理 Gate 结论由上游给出 |
-| → 下游 | `bridge_handoff/`（manifest + `predicted_actions.jsonl` + replay_check） |
-| ↔ 上游 | S4 runtime 合同 JSON 字节级对齐（合同 CI 断言） |
-
-下游 `PolicyRunner` 是 **replay harness**，不是在线策略大脑。任务真值仍以上游/Isaac 连续 GT 为准；本仓离线报告不得覆盖 `failure_lane`。
-
-### 边界与未完成事项
-
-**本仓不负责：** ROS 2 实时控制、设备驱动、在线 Servo、PyBullet 执行、风险到硬件 E-stop 的生产接入。
-
-**真实性边界：**
-
-- 无真实 Panda；无完成 Sim2Real；MuJoCo/Isaac/PyBullet 均非实机证据。
-- Open-loop Pass ≠ 闭环任务成功；Interface Pass ≠ Reach/Grasp/Lift；`ran_isaac=true` ≠ 任务成功。
-- Replay 完成、Risk readiness、HOC 状态 ≠ 任务成功或功能安全认证。
-- 不得因 Hold 自动扩种子、重训或新增 Gate（见 [FUTURE_WORK_ROADMAP.md](docs/FUTURE_WORK_ROADMAP.md)：P1/P2 仅登记）。
-- 香橙派、`robot-control-runtime`、真实 Modbus 等**尚未接入**，不在本仓声称。
-
-进一步阅读：[BOUNDARY_FREEZE](docs/portfolio/BOUNDARY_FREEZE.md) · [BADCASE 归因](docs/portfolio/BADCASE_ATTRIBUTION_SUMMARY.md) · [EVALUATION_CONTRACT](docs/EVALUATION_CONTRACT.md) · [AGENTS.md](AGENTS.md) · [文档索引](docs/README.md)
-
-### 面向招聘者的 30 秒摘要
-
-这是三仓系统的**中游控制平面**：把上游 episode 收成可复现的数据合同与版本化 Release，用分层 Gate 区分 Data / Offline / Interface / Behavior / Task / System，再导出 handoff 给下游 replay 与风险观测。训练与 SmolVLA 评测用来压测接口，不把 offline Pass 写成抓取成功。当前 open-loop Pass、Isaac lift 0/5 Hold；无实机、无 Sim2Real。
+公开最小证据包：[public_evidence/canonical_v3](docs/portfolio/public_evidence/canonical_v3/README.md)
 
 ---
 
 ## English Brief
 
-**Midstream interface-contract, versioned delivery, and layered-evaluation control plane** for a three-repo Franka Panda stack. It adapts upstream episode semantics, inspects schema/quality/splits, produces non-overwrite or SHA-locked immutable releases, runs training and offline evaluation as **verification workloads**, and exports framework-neutral handoffs.
+Midstream **dataset contracts, versioned releases, imitation-learning / VLA training, and layered evaluation** for a simulated Franka Panda. Upstream episodes are adapted, inspected, SHA-locked, trained (ACT diagnostic; SmolVLA Recovery v3 LoRA), and exported as framework-neutral JSONL handoffs.
 
-It does not run ROS 2 realtime control or re-judge physical lift/place. Offline or interface Pass is not task success. Recovery v3 open-loop Gate is Pass; bounded Isaac S4 remains Hold (lift 0/5). Not real robot, not completed Sim2Real. Downstream `PolicyRunner` is a replay harness, not an online policy brain.
-
-Start with [BOUNDARY_FREEZE.md](docs/portfolio/BOUNDARY_FREEZE.md), [FINAL_PROJECT_SUMMARY.md](docs/portfolio/FINAL_PROJECT_SUMMARY.md), or [portfolio README](docs/portfolio/README.md).
+SmolVLA Recovery v3 open-loop Gate is **Pass** (EE RMSE 0.0253 m on 2,593 held-out frames). Bounded Isaac S4 is **Hold** (lift 0/5). Not task success, not Sim2Real, not a real robot. This repo does not run ROS 2 realtime control. Sister repos: [teleop/control](https://github.com/inayina/ros2-arm-teleoperation-suite), [replay/risk](https://github.com/inayina/ros2-moveit-pybullet-bridge).

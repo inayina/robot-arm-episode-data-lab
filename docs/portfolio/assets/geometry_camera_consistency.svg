@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img">
+  <title>仿真几何与相机一致性</title>
+  <desc>visualization regenerated from recorded evidence. Residuals auto-read from Stage 1 live TF CSV and Stage 3 camera manifests. Not Sim2Real. PHYSICAL=NOT_RUN.</desc>
+  <style>
+    .title{font:700 28px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+    .sub{font:14px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+    .h{font:700 16px Inter,"Noto Sans SC",Arial,sans-serif;fill:#0f172a}
+    .e{font:13px Inter,Arial,sans-serif;fill:#334155}
+    .num{font:700 15px ui-monospace,Menlo,monospace;fill:#0f172a}
+    .cap{font:12px Inter,"Noto Sans SC",Arial,sans-serif;fill:#64748b}
+    .unit{font:12px Inter,Arial,sans-serif;fill:#64748b}
+  </style>
+  <rect width="1440" height="560" fill="#ffffff"/>
+  <text x="720" y="40" text-anchor="middle" class="title">同一关节状态下，模型、TF、仿真真值与渲染器对得上</text>
+  <text x="720" y="66" text-anchor="middle" class="sub">visualization regenerated from recorded evidence · frame panda_link0 → panda_ee · 不是 Sim2Real</text>
+
+  <rect x="40" y="96" width="300" height="150" rx="14" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="190" y="128" text-anchor="middle" class="h">URDF / KDL FK</text>
+  <text x="190" y="156" text-anchor="middle" class="e">MODEL</text>
+  <text x="190" y="186" text-anchor="middle" class="num">max ‖Δp‖ 2.2e-16 m</text>
+  <text x="190" y="212" text-anchor="middle" class="unit">max geodesic 3.0e-08 rad</text>
+
+  <rect x="380" y="96" width="300" height="150" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="530" y="128" text-anchor="middle" class="h">Live TF</text>
+  <text x="530" y="156" text-anchor="middle" class="e">robot_state_publisher</text>
+  <text x="530" y="186" text-anchor="middle" class="num">vs URDF 4.1e-16 m</text>
+  <text x="530" y="212" text-anchor="middle" class="unit">n=8 poses · 2.1e-08 rad</text>
+
+  <rect x="720" y="96" width="300" height="150" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="870" y="128" text-anchor="middle" class="h">MuJoCo GT</text>
+  <text x="870" y="156" text-anchor="middle" class="e">SIM_GT · site panda_ee</text>
+  <text x="870" y="186" text-anchor="middle" class="num">vs live TF 5.9e-12 m</text>
+  <text x="870" y="212" text-anchor="middle" class="unit">vs URDF 5.9e-12 m</text>
+
+  <rect x="1060" y="96" width="340" height="150" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="1230" y="128" text-anchor="middle" class="h">Camera Renderer / TF</text>
+  <text x="1230" y="156" text-anchor="middle" class="e">scene scene_camera_optical_frame</text>
+  <text x="1230" y="186" text-anchor="middle" class="num">renderer↔TF 0 m</text>
+  <text x="1230" y="212" text-anchor="middle" class="unit">manifest max 0 m · rot 0 rad</text>
+
+  <text x="720" y="278" text-anchor="middle" class="h">已知合同差，不是未解释误差</text>
+  <rect x="80" y="296" width="1280" height="92" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="110" y="328" class="e">阻抗解析 FK 参考点 = panda_link7　·　MoveIt Servo tip = panda_ee</text>
+  <text x="110" y="356" class="e">panda_link7 → panda_hand → panda_ee 固定链 z ≈ 0.207 m。比较前先规范化到 panda_ee，禁止把 0.207 m 写成标定误差。</text>
+
+  <rect x="80" y="404" width="620" height="88" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="100" y="434" class="h">Wrist camera · H_knuckle_z05</text>
+  <text x="100" y="460" class="e">T_hand_camera spread 1.3e-16 m　·　T_world spread 0.8653 m</text>
+  <text x="100" y="480" class="cap">eye-in-hand 随手臂动；renderer↔TF max 1.2e-16 m</text>
+
+  <rect x="720" y="404" width="640" height="88" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="740" y="434" class="h">验证条件</text>
+  <text x="740" y="460" class="e">离线 CLI + 隔离 RSP；PHYSICAL=NOT_RUN/UNAVAILABLE</text>
+  <text x="740" y="480" class="cap">仿真一致性 ≠ Sim2Real　·　不是手眼标定　·　REPORT_ONLY</text>
+</svg>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" role="img">
+  <title>仿真遥操作数据基础设施总览</title>
+  <desc>architecture diagram based on current repository implementation</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+    </marker>
+    <style>
+    .title{font:700 26px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#0f172a}
+    .sub{font:13px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#64748b}
+    .h{font:700 15px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#0f172a}
+    .e{font:12px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#334155}
+    .cap{font:12px Arial,"Noto Sans CJK SC","Droid Sans Fallback",sans-serif;fill:#64748b}
+    .hz{font:700 13px Arial,sans-serif;fill:#1d4ed8}
+    .flow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+</style>
+  </defs>
+  <rect width="1440" height="420" fill="#ffffff"/>
+  <text x="720" y="42" text-anchor="middle" class="title">从人的输入到可验证数据：一条仿真遥操作流水线</text>
+  <text x="720" y="68" text-anchor="middle" class="sub">architecture diagram based on current repository implementation · Franka Panda · not real robot / not Sim2Real</text>
+  <rect x="28" y="110" width="150" height="150" rx="14" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="103" y="148" text-anchor="middle" class="h">Human Input</text>
+  <text x="103" y="176" text-anchor="middle" class="e">Keyboard / Gamepad</text>
+  <text x="103" y="198" text-anchor="middle" class="e">笛卡尔目标</text>
+  <rect x="202" y="110" width="150" height="150" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
+  <text x="277" y="148" text-anchor="middle" class="h">Teleop + Safety</text>
+  <text x="277" y="176" text-anchor="middle" class="e">teleop_input</text>
+  <text x="277" y="198" text-anchor="middle" class="e">C++ safety_monitor</text>
+  <rect x="376" y="110" width="150" height="150" rx="14" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="451" y="148" text-anchor="middle" class="h">Motion Control</text>
+  <text x="451" y="176" text-anchor="middle" class="e">MoveIt Servo</text>
+  <text x="451" y="198" text-anchor="middle" class="e">Impedance + ros2_control</text>
+  <rect x="550" y="110" width="150" height="150" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="625" y="148" text-anchor="middle" class="h">Simulation</text>
+  <text x="625" y="176" text-anchor="middle" class="e">MuJoCo Panda</text>
+  <text x="625" y="198" text-anchor="middle" class="e">Isaac = bounded</text>
+  <rect x="724" y="110" width="150" height="150" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="799" y="148" text-anchor="middle" class="h">Capture</text>
+  <text x="799" y="176" text-anchor="middle" class="e">RGB / wrist / tactile</text>
+  <text x="799" y="198" text-anchor="middle" class="e">LeRobot episode</text>
+  <rect x="898" y="110" width="150" height="150" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="973" y="148" text-anchor="middle" class="h">Contract / QA</text>
+  <text x="973" y="176" text-anchor="middle" class="e">schema / split</text>
+  <text x="973" y="198" text-anchor="middle" class="e">immutable release</text>
+  <rect x="1072" y="110" width="150" height="150" rx="14" fill="#fefce8" stroke="#fde047"/>
+  <text x="1147" y="148" text-anchor="middle" class="h">Handoff</text>
+  <text x="1147" y="176" text-anchor="middle" class="e">JSONL actions</text>
+  <text x="1147" y="198" text-anchor="middle" class="e">manifest + SHA</text>
+  <rect x="1246" y="110" width="166" height="150" rx="14" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="1329" y="148" text-anchor="middle" class="h">Replay / Risk</text>
+  <text x="1329" y="176" text-anchor="middle" class="e">PyBullet / HOC</text>
+  <text x="1329" y="198" text-anchor="middle" class="e">Hold / E-stop</text>
+  <path d="M178 185 H196" class="flow"/>
+  <path d="M352 185 H370" class="flow"/>
+  <path d="M526 185 H544" class="flow"/>
+  <path d="M700 185 H718" class="flow"/>
+  <path d="M874 185 H892" class="flow"/>
+  <path d="M1048 185 H1066" class="flow"/>
+  <path d="M1222 185 H1240" class="flow"/>
+  <text x="720" y="310" text-anchor="middle" class="cap">上游执行与采集 · 中游合同与评测 · 下游回放与风险 · Isaac 不是默认采集栈</text>
+  <text x="720" y="348" text-anchor="middle" class="h">Offline Pass != Task Success · Interface Pass != Lift Success</text>
+  <text x="720" y="392" text-anchor="middle" class="cap">HEAD-checked 2026-08-17 · no real Franka · no Sim2Real claim</text>
+</svg>

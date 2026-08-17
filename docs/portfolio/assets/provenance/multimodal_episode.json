@@ -1,0 +1,41 @@
+{
+  "figure": "multimodal_episode",
+  "caption_class": "visualization regenerated from recorded evidence",
+  "generated_at": "2026-08-17T13:30:12.643579+00:00",
+  "episode_root": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/assets/evidence/waveform_episode_20260817T132722Z/layout",
+  "n_frames": 215,
+  "duration_s": 21.400193214416504,
+  "joint0_ptp": 0.3352262765988683,
+  "ee_z_ptp": 0.5155368779959819,
+  "meta": {
+    "success": true,
+    "upstream_gate": "batch_generator",
+    "action_fill": "teleop_command",
+    "task": "teleop"
+  },
+  "claims_task_success": false,
+  "sources": {
+    "parquet": {
+      "path": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/assets/evidence/waveform_episode_20260817T132722Z/layout/data/chunk-000/episode_000000.parquet",
+      "sha256": "45cc490b90def8fbd89ee47278504a2a1fb8e573b2289845ca9149ea26631ba2",
+      "git_tracked": false,
+      "note": "local-only; pre-commit blocks *.parquet. Git-visible figure is multimodal_episode.png"
+    },
+    "meta": {
+      "path": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/assets/evidence/waveform_episode_20260817T132722Z/layout/episode_000000/meta.json",
+      "sha256": "f2e61197979372a502586c4dbd89905a5d47a3d7711db76f1cac5c8979b2a94a"
+    },
+    "scene_mp4": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/assets/evidence/waveform_episode_20260817T132722Z/layout/videos/chunk-000/observation.images.scene/episode_000000.mp4",
+    "wrist_mp4": "/home/ina/robot-sim-lab/robot-arm-episode-data-lab/docs/portfolio/assets/evidence/waveform_episode_20260817T132722Z/layout/videos/chunk-000/observation.images.wrist/episode_000000.mp4",
+    "tactile_left": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/media/m6/tactile_left_view.png",
+      "sha256": "98deec6700bebc656053d552ad84ad9ebdfce5d5f23c89a27c9c0f35b99045ee",
+      "note": "M6 media still"
+    },
+    "tactile_right": {
+      "path": "/home/ina/dev/ros2-arm-teleoperation-suite/media/m6/tactile_right_view.png",
+      "sha256": "5d1560ba8f16c73f9304e2ed84f81294b7e027f148ff5f5015817ed2365756fa",
+      "note": "M6 media still"
+    }
+  }
+}

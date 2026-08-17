@@ -14,6 +14,9 @@ venv/
 *.swp
 *.code-workspace
 
+# Parquet is blocked by .githooks/pre-commit. Portfolio figures use PNG/mp4/json.
+*.parquet
+
 # Local/generated episode data (regenerate with scripts/batch_collect.py)
 dataset/
 dataset/v1/
