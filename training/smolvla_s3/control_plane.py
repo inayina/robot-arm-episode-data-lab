@@ -241,17 +241,15 @@ def _policy_feature_overrides(
     if state_dim is None:
         return None, None
     camera_variant = str((cfg.get("inference") or {}).get("camera_variant") or "")
-    if camera_variant != "scene_only":
-        raise ValueError(
-            "Recovery policy feature override currently supports scene_only only"
-        )
+    from training.smolvla_s3.policy_features import policy_visual_features
+
+    visuals = policy_visual_features(camera_variant)
+    if len(visuals) > 2:
+        raise ValueError("wrist ablation / Recovery forbid a third policy camera")
     return (
         {
             "observation.state": {"type": "STATE", "shape": [state_dim]},
-            "observation.images.camera1": {
-                "type": "VISUAL",
-                "shape": [3, 240, 320],
-            },
+            **visuals,
         },
         {"action": {"type": "ACTION", "shape": [8]}},
     )
@@ -443,10 +441,22 @@ def audit_trained_checkpoint(
         checks["preprocessor_action_dim"] = (
             actual["preprocessor_action_dim"] == expected["action_dim"]
         )
-        checks["preprocessor_rename_map"] = (
-            actual["preprocessor_rename_map"].get("observation.images.scene")
-            == "observation.images.camera1"
+        from training.smolvla_s3.policy_features import camera_rename_map
+
+        camera_variant = str((cfg.get("inference") or {}).get("camera_variant") or "")
+        expected_rename = camera_rename_map(camera_variant)
+        actual_rename = actual["preprocessor_rename_map"]
+        checks["preprocessor_rename_map"] = all(
+            actual_rename.get(src) == dst for src, dst in expected_rename.items()
         )
+        extra_rename_dst = [
+            dst
+            for dst in actual_rename.values()
+            if str(dst).startswith("observation.images.")
+            and dst not in expected_rename.values()
+        ]
+        if extra_rename_dst:
+            checks["preprocessor_rename_map"] = False
     failures = [name for name, passed in checks.items() if not passed]
     return {
         "passed": not failures,
@@ -1037,7 +1047,11 @@ def run_train_guarded(
         "train_root_validated": False,
     }
     if train_root:
-        merge_path = Path(__file__).resolve().parent / "prepare_smolvla_s3_merged_v30.py"
+        merge_path = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "prepare_smolvla_s3_merged_v30.py"
+        )
         spec = importlib.util.spec_from_file_location(
             "prepare_smolvla_s3_merged_v30", merge_path
         )

@@ -518,6 +518,8 @@ def test_train_shell_passes_and_audits_frozen_fields() -> None:
         "--checkpoint-dir",
         'export ACCELERATE_MIXED_PRECISION="$PRECISION"',
         "verified entry requires LeRobot 0.5.x",
+        "camera_rename_map",
+        '--rename_map="$RENAME_MAP"',
     ):
         assert flag in shell
     assert "checkpoint config verified" in shell

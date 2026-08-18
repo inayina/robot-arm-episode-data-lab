@@ -198,6 +198,22 @@ _, outputs = _policy_feature_overrides(cfg)
 print("" if outputs is None else json.dumps(outputs, separators=(",", ":")))
 PY
 )
+RENAME_MAP=$(python3 - "$CONFIG" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+root = Path(sys.argv[1]).resolve().parents[2]
+sys.path.insert(0, str(root))
+from training.smolvla_s3.policy_features import camera_rename_map
+
+cfg = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+variant = str((cfg.get("inference") or {}).get("camera_variant") or "scene_only")
+print(json.dumps(camera_rename_map(variant), separators=(",", ":")))
+PY
+)
 MODEL_ID=$(cfg_value base_checkpoint.model_id)
 BASE_REVISION="${SMOLVLA_BASE_REVISION:-$(cfg_value base_checkpoint.revision)}"
 MODEL_SOURCE="${SMOLVLA_BASE_DIR:-$MODEL_ID}"
@@ -281,6 +297,7 @@ CHECKPOINT_DIR="$LEROBOT_OUT/checkpoints/$(printf '%06d' "$STEPS")/pretrained_mo
   echo "lr=$LR weight_decay=$WEIGHT_DECAY max_grad_norm=$MAX_GRAD_NORM warmup=$WARMUP_STEPS"
   echo "log_freq=$LOG_FREQ eval_freq=$EVAL_FREQ save_freq=$SAVE_FREQ workers=$NUM_WORKERS chunk=$CHUNK_SIZE action_steps=$ACTION_STEPS empty_cameras=$EMPTY_CAMERAS"
   echo "model_id=$MODEL_ID model_source=$MODEL_SOURCE base_revision=$BASE_REVISION"
+  echo "rename_map=$RENAME_MAP"
   echo "dataset=$DATASET_ROOT"
   echo "lerobot_output=$LEROBOT_OUT"
 } | tee "$OUT/train_launch.env"
@@ -294,7 +311,6 @@ export S3_LORA_ALPHA="$ALPHA"
 export S3_LORA_DROPOUT="$DROPOUT"
 export S3_LORA_BIAS="$BIAS"
 set -x
-# Panda S3 release uses a single scene RGB key; map to SmolVLA camera1 and pad empty cams.
 python3 "$ROOT/training/scripts/lerobot_train_with_peft_overrides.py" \
   --s3-lora-alpha="$ALPHA" \
   --s3-lora-dropout="$DROPOUT" \
@@ -302,6 +318,7 @@ python3 "$ROOT/training/scripts/lerobot_train_with_peft_overrides.py" \
   --policy.path="$MODEL_SOURCE" \
   --dataset.repo_id="${S3_DATASET_REPO_ID:-local/smolvla_s3_merged}" \
   --dataset.root="$DATASET_ROOT" \
+  --dataset.video_backend="${S3_VIDEO_BACKEND:-pyav}" \
   --dataset.use_imagenet_stats=false \
   --batch_size="$BS" \
   --steps="$STEPS" \
@@ -317,7 +334,7 @@ python3 "$ROOT/training/scripts/lerobot_train_with_peft_overrides.py" \
   --policy.scheduler_warmup_steps="$WARMUP_STEPS" \
   --policy.chunk_size="$CHUNK_SIZE" \
   --policy.n_action_steps="$ACTION_STEPS" \
-  --rename_map='{"observation.images.scene":"observation.images.camera1"}' \
+  --rename_map="$RENAME_MAP" \
   --policy.empty_cameras="$EMPTY_CAMERAS" \
   "${POLICY_FEATURE_ARGS[@]}" \
   --peft.method_type=LORA \

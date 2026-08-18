@@ -470,6 +470,11 @@ def _run_policy_on_episodes(
         for ep_i, ep_meta in enumerate(episodes, start=1):
             parquet = Path(ep_meta["parquet"])
             video = Path(ep_meta["video"])
+            video_wrist = (
+                Path(ep_meta["video_wrist"])
+                if ep_meta.get("video_wrist")
+                else None
+            )
             import pyarrow.parquet as pq
 
             n_rows = pq.read_table(parquet).num_rows
@@ -534,6 +539,15 @@ def _run_policy_on_episodes(
                         "observation.images.scene": torch.from_numpy(img).unsqueeze(0),
                         "task": [task],
                     }
+                    if video_wrist is None:
+                        raise FileNotFoundError(
+                            "native dual-camera evaluation requires video_wrist"
+                        )
+                    wrist_bgr = load_video_frame_bgr(video_wrist, fi)
+                    wrist_img = _bgr_to_chw_hw(wrist_bgr, 240, 320)
+                    batch_in["observation.images.wrist"] = torch.from_numpy(
+                        wrist_img
+                    ).unsqueeze(0)
 
                 batch = preprocess(batch_in)
                 with torch.inference_mode():
@@ -1105,7 +1119,18 @@ def main() -> int:
                 / "observation.images.scene"
                 / f"episode_{ep_i:06d}.mp4"
             )
-            if not parquet.is_file() or not video.is_file():
+            video_wrist = (
+                root
+                / "videos"
+                / "chunk-000"
+                / "observation.images.wrist"
+                / f"episode_{ep_i:06d}.mp4"
+            )
+            if (
+                not parquet.is_file()
+                or not video.is_file()
+                or not video_wrist.is_file()
+            ):
                 raise FileNotFoundError(f"missing data for {ref} under {root}")
             episodes.append(
                 {
@@ -1113,6 +1138,7 @@ def main() -> int:
                     "slice": slice_name,
                     "parquet": str(parquet),
                     "video": str(video),
+                    "video_wrist": str(video_wrist),
                 }
             )
 

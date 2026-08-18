@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Repeatable AutoDL env setup for SmolVLA S3. Does not use system Python.
 # Does not download full model weights unless SMOLVLA_S3_DOWNLOAD_BASE=1.
+# CPU-only install (no GPU yet): S3_SKIP_GPU_CHECK=1 ./scripts/autodl_setup_smolvla_s3.sh
+# After a ≥16 GB GPU is attached, re-run WITHOUT that flag to enforce the VRAM gate.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,18 +31,22 @@ if free_gb < 25:
 PY
 
 echo "[autodl-setup] GPU:"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv || {
-  echo "[autodl-setup] FATAL: nvidia-smi failed" >&2
-  exit 2
-}
+if [[ "${S3_SKIP_GPU_CHECK:-0}" == "1" ]]; then
+  echo "[autodl-setup] S3_SKIP_GPU_CHECK=1 — skip nvidia-smi / VRAM gate (CPU-only env install)"
+else
+  nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv || {
+    echo "[autodl-setup] FATAL: nvidia-smi failed" >&2
+    exit 2
+  }
+fi
 
 # Prefer conda if available; else venv under autodl-tmp
 if command -v conda >/dev/null 2>&1; then
   # shellcheck disable=SC1091
   source "$(conda info --base)/etc/profile.d/conda.sh"
   if ! conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
-    # lerobot>=0.5.0 requires Python>=3.12; do not create 3.10/3.11 envs.
-    conda create -y -n "$ENV_NAME" python=3.12
+    # Match Recovery preflight-qualified python==3.12.13 when possible.
+    conda create -y -n "$ENV_NAME" python=3.12.13
   fi
   conda activate "$ENV_NAME"
 else
@@ -77,10 +83,18 @@ PY
 python -m pip install -U pip setuptools wheel
 # Torch CUDA wheel — preflight-bound; default cu124. Override with S3_TORCH_INDEX.
 TORCH_INDEX="${S3_TORCH_INDEX:-https://download.pytorch.org/whl/cu124}"
-python -m pip install torch torchvision --index-url "$TORCH_INDEX"
+python -m pip install torch==2.6.0 torchvision==0.21.0 --index-url "$TORCH_INDEX"
 python -m pip install -r "$LOCK"
+# Re-pin the Recovery preflight-qualified stack after lock ranges resolve.
+python -m pip install \
+  "lerobot==0.5.1" \
+  "transformers==4.57.6" \
+  "peft==0.19.1" \
+  "accelerate==1.14.0" \
+  "safetensors==0.8.0"
 
 python - <<'PY'
+import os
 import torch
 print("torch", torch.__version__, "cuda", torch.cuda.is_available())
 if torch.cuda.is_available():
@@ -89,6 +103,8 @@ if torch.cuda.is_available():
     print("vram_total_gb", round(props.total_memory / (1024**3), 2))
     if props.total_memory < 15 * (1024**3):
         raise SystemExit("GPU VRAM < 15GB — S3 LoRA No-Go on this instance")
+elif os.environ.get("S3_SKIP_GPU_CHECK") != "1":
+    raise SystemExit("CUDA unavailable — S3 LoRA No-Go (set S3_SKIP_GPU_CHECK=1 for CPU-only env install)")
 PY
 
 export HF_HOME

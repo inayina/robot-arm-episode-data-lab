@@ -16,6 +16,48 @@ from __future__ import annotations
 
 from typing import Any, Mapping, MutableMapping
 
+from training.smolvla_s3.visual_allowlist import (
+    POLICY_CAMERA1,
+    POLICY_CAMERA2,
+    VARIANT_A,
+    VARIANT_B,
+    DEFAULT_RENAME_MAP,
+    REQUIRED_CAMERA_COUNT,
+)
+
+CAMERA_VARIANT_SCENE_ONLY = "scene_only"
+CAMERA_VARIANT_SCENE_PLUS_WRIST = "scene_plus_wrist"
+_VARIANT_BY_INFERENCE = {
+    CAMERA_VARIANT_SCENE_ONLY: VARIANT_A,
+    CAMERA_VARIANT_SCENE_PLUS_WRIST: VARIANT_B,
+}
+
+
+def inference_variant_to_allowlist(camera_variant: str) -> str:
+    normalized = str(camera_variant or CAMERA_VARIANT_SCENE_ONLY)
+    if normalized not in _VARIANT_BY_INFERENCE:
+        raise ValueError(
+            "camera_variant must be scene_only or scene_plus_wrist, "
+            f"got {camera_variant!r}"
+        )
+    return _VARIANT_BY_INFERENCE[normalized]
+
+
+def camera_rename_map(camera_variant: str) -> dict[str, str]:
+    return dict(DEFAULT_RENAME_MAP[inference_variant_to_allowlist(camera_variant)])
+
+
+def policy_visual_features(
+    camera_variant: str, *, shape: tuple[int, int, int] = (3, 240, 320)
+) -> dict[str, dict[str, Any]]:
+    allowlist = inference_variant_to_allowlist(camera_variant)
+    keys = [POLICY_CAMERA1] if allowlist == VARIANT_A else [POLICY_CAMERA1, POLICY_CAMERA2]
+    if len(keys) != REQUIRED_CAMERA_COUNT[allowlist]:
+        raise AssertionError("camera count drifted from allowlist")
+    return {
+        key: {"type": "VISUAL", "shape": list(shape)} for key in keys
+    }
+
 
 def image_feature_keys(features: Mapping[str, Any] | None) -> list[str]:
     return sorted(

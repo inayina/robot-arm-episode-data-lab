@@ -1,0 +1,101 @@
+# SmolVLA wrist ablation v1 — dual-camera phaseaware50 schema / collection map.
+#
+# Parent release_id: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+# Authorized by human (2026-08-18): collect 50 matched scene+wrist episodes
+# and build one immutable parent release if QA passes.
+# NOT authorized: A/B LoRA, open-loop A/B, Isaac.
+#
+# Historical v3 release smolvla_s3_panda_abs_eef_scene_v3_phaseaware50 is immutable.
+# Same P0–P4 XY / seeds / timing as v3 so later A/B views share one parent.
+
+contract_version: smolvla_wrist_ablation_v1_phaseaware50_v0
+experiment_id: smolvla_wrist_ablation_v1
+release_id: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+cameras: [scene, wrist]
+enable_wrist_camera: true
+wrist_geometry_id: H_knuckle_z05
+grasp_assist_enabled: false
+enable_tactile: false
+publish_depth: false
+policy_action_semantics: absolute_eef_gripper_v0
+state_contract: observation.state[15]
+split_policy: phaseaware50
+visual_allowlist_variant: B_scene_wrist
+number_of_policy_cameras: 2
+authorized_to_train: false
+authorized_isaac: false
+splits:
+  train: 36
+  validation: 4
+  benchmark: 10
+
+# Geometric-ish timing (same as v3_phaseaware50; not Phase-1 smoke holds).
+timing:
+  pre_close_hold_s: 0.4
+  close_duration_s: 0.8
+  grasp_pause_s: 0.5
+  hover_duration_s: 3.0
+  descend_duration_s: 6.0
+  lift_duration_s: 8.0
+  post_lift_hold_s: 4.0
+
+# Distractors parked clear of red target (≥0.10 m).
+park_distractors:
+  object_blue_cylinder: [0.52, -0.14]
+  object_green_sphere: [0.52, 0.14]
+
+positions:
+  P0:
+    role: train_val
+    seed: 60
+    xy: [0.36, -0.10]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P1:
+    role: train_val
+    seed: 61
+    xy: [0.40, 0.10]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P2:
+    role: train_val
+    seed: 62
+    xy: [0.44, -0.06]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P3:
+    role: train_val
+    seed: 63
+    xy: [0.38, 0.06]
+    accepted: 10
+    train: 9
+    validation: 1
+    benchmark: 0
+  P4:
+    role: benchmark_ood
+    seed: 64
+    xy: [0.48, 0.00]
+    accepted: 10
+    train: 0
+    validation: 0
+    benchmark: 10
+
+qa_profile: phaseaware50
+phaseaware_thresholds:
+  expert_binary_close_transitions: 1
+  reopen_count_max: 0
+  gripper_cmd_min: 0.0
+  gripper_cmd_max: 1.0
+  # 10 Hz quantization of 0.8 s close: 4 frames = 0.4 s.
+  # Human-authorized 2026-08-18 (option 1). Historical v3 YAML stays at min=5.
+  close_ramp_frames_min: 4
+  close_ramp_frames_max: 15
+  max_ee_step_l2_p90_m: 0.012
+  pick_xy_tolerance_m: 0.02
+  pick_z_relative_max_m: 0.03

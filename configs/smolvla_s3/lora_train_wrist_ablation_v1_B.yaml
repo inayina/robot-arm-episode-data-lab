@@ -1,0 +1,141 @@
+# SmolVLA wrist ablation v1 — B (scene+wrist) LoRA train config.
+#
+# Configure-only. Formal execute requires AutoDL (≥16 GB) REAL preflight Pass
+# then SMOLVLA_S3_EXECUTE_TRAIN=1. Local RTX PRO 500 / ~6 GB is No-Go.
+# Do NOT train arm A. Do NOT run Isaac from this file.
+#
+# max_steps = ceil(8731 train frames / batch 8) * 5 epochs = 5460.
+# Parent release: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+
+contract_version: smolvla_wrist_ablation_v1_B_peft_v0
+status: configured_not_trained
+experiment_id: smolvla_wrist_ablation_v1_B
+release_id: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+release_manifest: data/releases/smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50/manifest.json
+parent_release_id: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+policy_action_semantics: absolute_eef_gripper_v0
+quaternion_order: xyzw
+claims_task_success: false
+authorized_to_train: true
+authorized_isaac: false
+visual_allowlist_variant: B_scene_wrist
+number_of_policy_cameras: 2
+historical_v3_immutable: true
+
+base_checkpoint:
+  model_id: lerobot/smolvla_base
+  revision: main
+  revision_pin_rule: "Set SMOLVLA_BASE_REVISION to the exact cached 40-hex commit."
+  local_dir_env: SMOLVLA_BASE_DIR
+
+environment_lock:
+  file: configs/smolvla_s3/environment.lock.txt
+  notes: "Use the Recovery preflight-qualified stack on AutoDL; do not use local LeRobot 0.5.2."
+
+dependency_versions_expected:
+  lerobot: ">=0.5.1,<0.6"
+  torch: ">=2.0,<2.8"
+  transformers: ">=4.40"
+  peft: ">=0.18,<0.20"
+  python: ">=3.12"
+
+dependency_versions_preflight_qualified:
+  python: "==3.12.13"
+  lerobot: "==0.5.1"
+  torch: "==2.6.0+cu124"
+  torchvision: "==0.21.0+cu124"
+  transformers: "==4.57.6"
+  peft: "==0.19.1"
+  accelerate: "==1.14.0"
+  safetensors: "==0.8.0"
+
+peft:
+  method_type: LORA
+  r: 64
+  lora_alpha: 64
+  lora_dropout: 0.05
+  bias: none
+  target_modules: >-
+    (model\.vlm_with_expert\.lm_expert\..*\.(q|v)_proj|model\.(state_proj|action_in_proj|action_out_proj|action_time_mlp_in|action_time_mlp_out))
+  full_training_modules: []
+
+freeze:
+  strategy: official_smolvla_peft_regex
+  train_base_weights: false
+  train_vision_encoder: false
+  freeze_base_vlm: true
+
+state_contract:
+  name: observation.state[15]
+  dim: 15
+  layout:
+    - joint_position[7]
+    - ee_pose_xyzw[7]
+    - measured_gripper[1]
+  exclude_from_policy_state:
+    - observation.object_pose
+    - observation.ft
+  pads_to_max_state_dim: 32
+
+train_budget_candidate:
+  action_chunk_size: 10
+  inference_action_steps_initial: 5
+  effective_epochs_initial: 5
+  effective_epochs_max: 10
+  train_frames: 8731
+  notes: "Do not hard-code 1000 steps; computed from this parent train split."
+
+train:
+  seed: 42
+  batch_size: 8
+  gradient_accumulation_steps: 1
+  precision: bf16
+  learning_rate: 1.0e-3
+  lr_scheduler: cosine
+  lr_warmup_steps: 50
+  weight_decay: 1.0e-4
+  max_steps: 5460
+  logging_steps: 10
+  eval_every_steps: 100
+  save_every_steps: 100
+  max_grad_norm: 1.0
+  dataloader_workers: 2
+  action_chunk_size: 10
+  entrypoint: lerobot-train
+  no_architecture_change: true
+  no_new_loss: true
+  no_auto_hparam_search: true
+
+inference:
+  action_steps: 5
+  empty_cameras: 0
+  camera_variant: scene_plus_wrist
+  canonical_mode: canonical_first_action
+  diagnostic_mode: queued_diagnostic
+  async_double_buffer: false
+  notes: >
+    B declares camera1+camera2 (scene→camera1, wrist→camera2). empty_cameras=0.
+    Missing wrist must fail, not pad. Third camera / tactile / camera3 forbidden.
+    Queued diagnostic is never canonical-gate eligible.
+
+output:
+  root: runs/smolvla_wrist_ablation_v1
+  run_id_template: "{experiment_id}_{timestamp_utc}"
+  require_fresh_dir: true
+  save_optimizer: true
+  save_lora_adapters: true
+
+eval_gate_config: configs/smolvla_s3/eval_gate_v3.yaml
+
+gates:
+  require_preflight_pass: true
+  require_human_confirm_for_full_train: true
+  forbid_auto_start_train_from_preflight: true
+  require_phase0_split_materialization_pass: true
+  require_visual_allowlist_pass: true
+  require_dual_camera_preflight_pass: true
+  require_dependency_version_match: true
+  require_preflight_config_sha256_match: true
+  forbid_auto_train: true
+  forbid_isaac: true
+  forbid_arm_a: true

@@ -1,0 +1,81 @@
+# SmolVLA wrist ablation v1 — dual-camera contract (NO formal train).
+#
+# Parent experiment namespace. Historical Recovery v3 remains immutable.
+# Visual variable is the only intended difference between A and B:
+#   A_scene_only:  state[15] + scene
+#   B_scene_wrist: state[15] + scene + H_knuckle_z05 wrist
+# Third camera / tactile / depth are forbidden.
+
+contract_version: smolvla_wrist_ablation_v1
+status: parent_release_built
+experiment_id: smolvla_wrist_ablation_v1
+parent_release_id: smolvla_wrist_ablation_v1_panda_abs_eef_scene_wrist_phaseaware50
+claims_task_success: false
+authorized_to_train: false
+authorized_to_collect_matched_ab: true
+authorized_isaac: false
+builds_release: true
+historical_v3_immutable: true
+historical_v3_release_id: smolvla_s3_panda_abs_eef_scene_v3_phaseaware50
+
+state_contract:
+  name: observation.state[15]
+  dim: 15
+  layout:
+    - joint_position[7]
+    - ee_pose_xyzw[7]
+    - measured_gripper[1]
+  exclude_from_policy_state:
+    - observation.object_pose
+    - observation.ft
+
+visual_allowlist:
+  A_scene_only:
+    dataset_keys: [observation.images.scene]
+    policy_keys: [observation.images.camera1]
+    number_of_policy_cameras: 1
+  B_scene_wrist:
+    dataset_keys: [observation.images.scene, observation.images.wrist]
+    policy_keys: [observation.images.camera1, observation.images.camera2]
+    number_of_policy_cameras: 2
+  forbidden:
+    - observation.images.tactile_left
+    - observation.images.tactile_right
+    - observation.images.camera3
+    - observation.images.empty_camera_0
+    - observation.depth.scene
+  notes: >
+    Gripper/fingers inside wrist RGB are expected eye-in-hand content,
+    not a separate policy camera.
+
+peft:
+  method_type: LORA
+  r: 64
+  lora_alpha: 64
+  lora_dropout: 0.05
+  bias: none
+  target_modules: >-
+    (model\.vlm_with_expert\.lm_expert\..*\.(q|v)_proj|model\.(state_proj|action_in_proj|action_out_proj|action_time_mlp_in|action_time_mlp_out))
+  full_training_modules: []
+
+train:
+  seed: 42
+  batch_size: 8
+  action_chunk_size: 10
+  learning_rate: 1.0e-3
+  max_steps: 0
+
+inference:
+  action_steps: 5
+  empty_cameras: 0
+  camera_variant: scene_plus_wrist
+  canonical_mode: canonical_first_action
+  diagnostic_mode: queued_diagnostic
+
+gates:
+  forbid_auto_train: true
+  forbid_isaac: true
+  forbid_third_camera: true
+  require_phase1_wrist_smoke_pass: true
+  require_dual_camera_preflight_pass: true
+  require_visual_allowlist_pass: true

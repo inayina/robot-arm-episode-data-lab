@@ -100,10 +100,21 @@ def validate_release(release_dir: Path) -> dict[str, Any]:
                 "/home/ina/dev/ros2-arm-teleoperation-suite/data",
             )
         )
-        for kind in ("parquet", "video"):
+        kinds = ["parquet", "video"]
+        cameras = list(manifest.get("cameras") or ["scene"])
+        if cameras == ["scene", "wrist"]:
+            if not row.get("wrist_rgb_complete"):
+                errors.append(f"incomplete wrist RGB: {row['episode_id']}")
+            kinds.append("wrist_video")
+        elif cameras != ["scene"]:
+            errors.append(f"unsupported cameras in manifest: {cameras}")
+        for kind in kinds:
             abs_key = f"{kind}_path"
             rel_key = f"{kind}_relpath"
             sha_key = f"{kind}_sha256"
+            if abs_key not in row:
+                errors.append(f"missing {abs_key}: {row.get('episode_id')}")
+                continue
             candidates = [Path(row[abs_key])]
             if rel_key in row:
                 candidates.append(upstream_root / row[rel_key])

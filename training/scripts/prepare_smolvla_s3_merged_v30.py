@@ -29,6 +29,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from training.smolvla_s3.state15 import STATE15_DIM, compose_state15  # noqa: E402
+from training.smolvla_s3.visual_allowlist import (  # noqa: E402
+    DATASET_WRIST,
+    VARIANT_A,
+    VARIANT_B,
+    audit_visual_keys,
+    dataset_visual_keys_from_video_tree,
+)
 
 
 STAT_KEYS = (
@@ -58,6 +65,38 @@ def _sha256_file(path: Path, chunk: int = 1024 * 1024) -> str:
                 break
             digest.update(block)
     return digest.hexdigest()
+
+
+def _video_keys_for_source(source: Path, info: dict[str, Any]) -> list[str]:
+    """Fail-closed scene / scene+wrist video keys. Rejects tactile/depth/third cam."""
+    info_keys = [
+        key
+        for key, feature in (info.get("features") or {}).items()
+        if isinstance(feature, dict) and feature.get("dtype") == "video"
+    ]
+    if not info_keys:
+        info_keys = ["observation.images.scene"]
+    tree_keys = dataset_visual_keys_from_video_tree(source)
+    if set(tree_keys) != set(info_keys):
+        raise ValueError(
+            f"{source}: video tree {tree_keys} != info.json video keys {info_keys}"
+        )
+    variant = VARIANT_B if DATASET_WRIST in info_keys else VARIANT_A
+    report = audit_visual_keys(
+        variant=variant,
+        stage="train_root_source",
+        observed_keys=tree_keys,
+    )
+    if not report["passed"]:
+        raise ValueError(
+            f"{source}: visual allowlist failed "
+            f"unexpected={report['unexpected_visual_keys']} "
+            f"missing={report['missing_required_visual_keys']}"
+        )
+    preferred = ["observation.images.scene", "observation.images.wrist"]
+    return [key for key in preferred if key in info_keys] + [
+        key for key in info_keys if key not in preferred
+    ]
 
 
 def parse_episode_ref(ref: str) -> tuple[str, int]:
@@ -142,13 +181,7 @@ def materialize_filtered_v21_root(
         if line.strip()
     ]
     by_index = {int(row["episode_index"]): row for row in episodes}
-    video_keys = [
-        key
-        for key, feature in info.get("features", {}).items()
-        if feature.get("dtype") == "video"
-    ]
-    if not video_keys:
-        video_keys = ["observation.images.scene"]
+    video_keys = _video_keys_for_source(source, info)
 
     (dest / "meta").mkdir(parents=True)
     (dest / "data" / "chunk-000").mkdir(parents=True)
@@ -501,6 +534,10 @@ def _normalize_aggregate(
         ),
         "action": _fixed_list(values["action"], 8),
     }
+    if "task_phase" in values:
+        arrays["task_phase"] = pa.array(values["task_phase"], type=pa.string())
+    else:
+        info["features"].pop("task_phase", None)
     pq.write_table(pa.table(arrays), data_path)
 
     # aggregate_datasets keeps these canonical LeRobot columns in parquet but
@@ -537,10 +574,12 @@ def _normalize_aggregate(
         encoding="utf-8",
     )
 
-    episodes[
-        "videos/observation.images.scene/from_timestamp"
-    ] = from_timestamps
-    episodes["videos/observation.images.scene/to_timestamp"] = to_timestamps
+    video_keys = _video_keys_for_source(root, info)
+    if not video_keys:
+        video_keys = ["observation.images.scene"]
+    for key in video_keys:
+        episodes[f"videos/{key}/from_timestamp"] = from_timestamps
+        episodes[f"videos/{key}/to_timestamp"] = to_timestamps
     pq.write_table(
         pa.Table.from_pandas(episodes, preserve_index=False), episodes_path
     )
@@ -555,7 +594,8 @@ def _normalize_aggregate(
     stats_path = root / "meta" / "stats.json"
     stats = json.loads(stats_path.read_text(encoding="utf-8"))
     stats["observation.state"] = _stats(policy_state_values)
-    stats["observation.images.scene"] = image_stats
+    for key in video_keys:
+        stats[key] = image_stats
     stats_path.write_text(
         json.dumps(stats, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -572,6 +612,7 @@ def materialize_merged_train_root(
     allow_unfiltered: bool,
     state_contract: str = STATE_CONTRACT_SOURCE7,
     skip_lerobot_load_smoke: bool = False,
+    video_backend: str | None = None,
 ) -> dict[str, Any]:
     sources = [path.resolve() for path in sources]
     output = output.resolve()
@@ -637,6 +678,19 @@ def materialize_merged_train_root(
         for work in work_roots:
             shutil.rmtree(work, ignore_errors=True)
     _normalize_aggregate(output, state_contract=state_contract)
+    tree_keys = dataset_visual_keys_from_video_tree(output)
+    variant = VARIANT_B if DATASET_WRIST in tree_keys else VARIANT_A
+    visual_report = audit_visual_keys(
+        variant=variant,
+        stage="train_root_merged",
+        observed_keys=tree_keys,
+    )
+    if not visual_report["passed"]:
+        raise RuntimeError(
+            "merged train root visual allowlist failed "
+            f"unexpected={visual_report['unexpected_visual_keys']} "
+            f"missing={visual_report['missing_required_visual_keys']}"
+        )
 
     info = json.loads(
         (output / "meta" / "info.json").read_text(encoding="utf-8")
@@ -675,7 +729,11 @@ def materialize_merged_train_root(
     if not skip_lerobot_load_smoke:
         from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
-        dataset = LeRobotDataset(repo_id=repo_id, root=output)
+        dataset = LeRobotDataset(
+            repo_id=repo_id,
+            root=output,
+            video_backend=video_backend,
+        )
         if len(dataset) != int(info["total_frames"]):
             raise RuntimeError("LeRobotDataset length does not match info.json")
         sample = dataset[0]
@@ -689,6 +747,17 @@ def materialize_merged_train_root(
                 f"{sample['observation.state'].shape}"
             )
         sample_action_shape = list(sample["action"].shape)
+        if variant == VARIANT_B:
+            missing = [
+                key
+                for key in ("observation.images.scene", "observation.images.wrist")
+                if key not in sample
+            ]
+            if missing:
+                raise RuntimeError(
+                    f"B LeRobot sample missing visual keys: {missing}"
+                )
+
 
     report = {
         "passed": True,
@@ -705,6 +774,8 @@ def materialize_merged_train_root(
         "include_split": include_split if splits_json else None,
         "splits_json": str(splits_json.resolve()) if splits_json else None,
         "provenance": PROVENANCE_NAME if splits_json else None,
+        "visual_keys": tree_keys,
+        "visual_allowlist_variant": variant,
     }
     return report
 
@@ -738,6 +809,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip LeRobotDataset load smoke (tests / offline hosts).",
     )
+    parser.add_argument(
+        "--video-backend",
+        choices=["pyav", "torchcodec", "video_reader"],
+        default=None,
+        help="Explicit LeRobot video decoder for the load smoke.",
+    )
     args = parser.parse_args(argv)
 
     if args.validate_train_root is not None:
@@ -763,6 +840,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_unfiltered=bool(args.allow_unfiltered),
         state_contract=args.state_contract,
         skip_lerobot_load_smoke=bool(args.skip_lerobot_load_smoke),
+        video_backend=args.video_backend,
     )
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0

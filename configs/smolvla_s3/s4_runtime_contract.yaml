@@ -17,5 +17,8 @@ workspace_max: [0.65, 0.40, 0.75]
 image_height: 240
 image_width: 320
 camera_key: observation.images.scene
+camera_keys:
+  - observation.images.scene
+  - observation.images.wrist
 claims_task_success: false
 claims_sim2real: false

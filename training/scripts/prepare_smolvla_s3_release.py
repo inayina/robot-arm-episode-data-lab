@@ -82,9 +82,46 @@ def _normalize_xyzw(q: np.ndarray) -> np.ndarray:
     return q
 
 
-def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
+def _normalize_cameras(cameras: list[str]) -> list[str]:
+    if cameras == ["scene"]:
+        return cameras
+    if cameras == ["scene", "wrist"]:
+        return cameras
+    raise ValueError(
+        "cameras must be 'scene' or 'scene,wrist' (no tactile/depth/third camera)"
+    )
+
+
+def _assert_source_visual_allowlist(source_root: Path, cameras: list[str]) -> None:
+    from training.smolvla_s3.visual_allowlist import (
+        VARIANT_A,
+        VARIANT_B,
+        audit_visual_keys,
+        dataset_visual_keys_from_video_tree,
+    )
+
+    variant = VARIANT_B if cameras == ["scene", "wrist"] else VARIANT_A
+    observed = dataset_visual_keys_from_video_tree(source_root)
+    report = audit_visual_keys(
+        variant=variant,
+        stage="release",
+        observed_keys=observed,
+    )
+    if not report["passed"]:
+        raise ValueError(
+            f"{source_root}: visual allowlist failed "
+            f"unexpected={report['unexpected_visual_keys']} "
+            f"missing={report['missing_required_visual_keys']}"
+        )
+
+
+def _load_episodes(
+    source_root: Path, cameras: list[str] | None = None
+) -> list[dict[str, Any]]:
     import pyarrow.parquet as pq
 
+    cameras = _normalize_cameras(list(cameras or ["scene"]))
+    _assert_source_visual_allowlist(source_root, cameras)
     info = json.loads((source_root / "meta" / "info.json").read_text(encoding="utf-8"))
     episodes: list[dict[str, Any]] = []
     n_eps = int(info["total_episodes"])
@@ -95,6 +132,13 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             / "videos"
             / "chunk-000"
             / "observation.images.scene"
+            / f"episode_{i:06d}.mp4"
+        )
+        wrist_video = (
+            source_root
+            / "videos"
+            / "chunk-000"
+            / "observation.images.wrist"
             / f"episode_{i:06d}.mp4"
         )
         table = pq.read_table(parquet)
@@ -113,6 +157,8 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             raise ValueError(f"{parquet}: missing {missing}")
         if not video.is_file():
             raise ValueError(f"missing RGB video: {video}")
+        if "wrist" in cameras and not wrist_video.is_file():
+            raise ValueError(f"missing wrist RGB video: {wrist_video}")
 
         actions = []
         states = []
@@ -183,6 +229,22 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             raise ValueError(
                 f"video/parquet length mismatch {video}: video={vframes} parquet={n}"
             )
+        wrist_rel = None
+        wrist_sha = None
+        if "wrist" in cameras:
+            wrist_cap = cv2.VideoCapture(str(wrist_video))
+            wrist_frames = int(wrist_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            wrist_cap.release()
+            if wrist_frames != n:
+                raise ValueError(
+                    f"wrist/parquet length mismatch {wrist_video}: "
+                    f"video={wrist_frames} parquet={n}"
+                )
+            wrist_rel = (
+                f"{source_root.name}/videos/chunk-000/observation.images.wrist/"
+                f"episode_{i:06d}.mp4"
+            )
+            wrist_sha = _sha256_file(wrist_video)
 
         ep_id = f"{source_root.name}/episode_{i:06d}"
         rel_parquet = f"{source_root.name}/data/chunk-000/episode_{i:06d}.parquet"
@@ -190,8 +252,7 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
             f"{source_root.name}/videos/chunk-000/observation.images.scene/"
             f"episode_{i:06d}.mp4"
         )
-        episodes.append(
-            {
+        episode_row = {
                 "episode_id": ep_id,
                 "source_root": str(source_root),
                 "source_name": source_root.name,
@@ -229,8 +290,13 @@ def _load_episodes(source_root: Path) -> list[dict[str, Any]]:
                 "_ee_poses": ee_poses,
                 "_states15": states15,
                 "_grips_m": grips_m,
-            }
-        )
+        }
+        if wrist_rel is not None:
+            episode_row["wrist_video_path"] = str(wrist_video)
+            episode_row["wrist_video_relpath"] = wrist_rel
+            episode_row["wrist_video_sha256"] = wrist_sha
+            episode_row["wrist_rgb_complete"] = True
+        episodes.append(episode_row)
     return episodes
 
 
@@ -466,7 +532,7 @@ def main() -> int:
     parser.add_argument(
         "--cameras",
         default="scene",
-        help="Comma-separated camera keys for manifest (default: scene).",
+        help="Comma-separated camera keys: 'scene' or 'scene,wrist'.",
     )
     parser.add_argument(
         "--normalization-source-release",
@@ -483,7 +549,12 @@ def main() -> int:
     release_id = str(args.release_id).strip() or RELEASE_ID
     schema_version = release_id
     compose_state15 = bool(args.compose_state15)
-    cameras = [c.strip() for c in str(args.cameras).split(",") if c.strip()]
+    try:
+        cameras = _normalize_cameras(
+            [c.strip() for c in str(args.cameras).split(",") if c.strip()]
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if out.exists() and any(out.iterdir()):
         # immutable: refuse overwrite unless only regenerating identical release id folder empty of foreign files
         raise SystemExit(
@@ -493,7 +564,7 @@ def main() -> int:
 
     episodes: list[dict[str, Any]] = []
     for src in sources:
-        episodes.extend(_load_episodes(Path(src)))
+        episodes.extend(_load_episodes(Path(src), cameras=cameras))
 
     position_by_source: dict[str, str] = {}
     if args.position_map_json is not None:
@@ -680,6 +751,9 @@ def main() -> int:
         "num_frames": int(sum(e["num_frames"] for e in episodes)),
         "splits": splits,
         "scene_rgb_complete_rate": 1.0,
+        "wrist_rgb_complete_rate": (
+            1.0 if cameras == ["scene", "wrist"] else None
+        ),
         "fields": {
             "joint_state": (
                 "observation.state[15]" if compose_state15 else "observation.state[7]"
@@ -705,6 +779,10 @@ def main() -> int:
         "split_policy": args.split_policy,
         "normalization_source": normalization_source,
         "cameras": cameras,
+        "visual_allowlist_variant": (
+            "B_scene_wrist" if cameras == ["scene", "wrist"] else "A_scene_only"
+        ),
+        "number_of_policy_cameras": len(cameras),
         "state_contract": state15_contract_dict() if compose_state15 else None,
         "compose_state15": compose_state15,
         "grasp_assist_enabled": False,

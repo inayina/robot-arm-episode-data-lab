@@ -18,7 +18,8 @@
 lerobot>=0.5.1,<0.6
 transformers>=4.40,<5.6
 tokenizers>=0.19
-datasets>=5.0
+# lerobot==0.5.1 requires datasets>=4.0,<5.0 (datasets>=5.0 conflicts).
+datasets>=4.0,<5.0
 huggingface_hub>=0.23
 einops>=0.8
 safetensors>=0.4

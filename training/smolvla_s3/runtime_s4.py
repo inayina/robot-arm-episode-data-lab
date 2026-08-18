@@ -47,6 +47,10 @@ class S4RuntimeContract:
     image_height: int = 240
     image_width: int = 320
     camera_key: str = "observation.images.scene"
+    camera_keys: tuple[str, ...] = (
+        "observation.images.scene",
+        "observation.images.wrist",
+    )
     claims_task_success: bool = False
     claims_sim2real: bool = False
 
@@ -86,6 +90,7 @@ def contract_from_mapping(data: Mapping[str, Any]) -> S4RuntimeContract:
         "image_height",
         "image_width",
         "camera_key",
+        "camera_keys",
         "claims_task_success",
         "claims_sim2real",
     )
@@ -96,6 +101,12 @@ def contract_from_mapping(data: Mapping[str, Any]) -> S4RuntimeContract:
     ws_max = tuple(float(v) for v in data["workspace_max"])
     if len(ws_min) != 3 or len(ws_max) != 3:
         raise ValueError("workspace_min/max must have three components")
+    camera_keys = tuple(str(key) for key in data["camera_keys"])
+    if camera_keys != (
+        "observation.images.scene",
+        "observation.images.wrist",
+    ):
+        raise ValueError(f"unsupported S4 camera_keys={camera_keys!r}")
     return S4RuntimeContract(
         contract_version=str(data["contract_version"]),
         policy_action_semantics=str(data["policy_action_semantics"]),
@@ -112,6 +123,7 @@ def contract_from_mapping(data: Mapping[str, Any]) -> S4RuntimeContract:
         image_height=int(data["image_height"]),
         image_width=int(data["image_width"]),
         camera_key=str(data["camera_key"]),
+        camera_keys=camera_keys,
         claims_task_success=bool(data["claims_task_success"]),
         claims_sim2real=bool(data["claims_sim2real"]),
     )
