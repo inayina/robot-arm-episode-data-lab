@@ -1,6 +1,40 @@
 # Three-Repo Canonical Facts
 
-本文件是三仓当前统一事实源，只记录可追溯事实，不用行业经验补全项目状态。
+> **Current State Authority — as of 2026-08-21.** 本文件是三仓唯一当前统一
+> 事实源，只记录可追溯事实，不用行业经验补全项目状态。2026-07-27 的
+> [BOUNDARY_FREEZE.md](BOUNDARY_FREEZE.md) 是历史快照，不是 current authority。
+
+## Current Snapshot
+
+> **Panda Manipulation Runtime, Data & Validation System** — 一个仿真范围内的
+> Panda 策略运行、数据与分层验证系统；不是三个并列产品，也不是已完成真实
+> Panda、Sim2Real 或稳定自主抓取的交付。
+
+| Repository | 当前所有权 | 2026-08-21 current fact |
+| --- | --- | --- |
+| `ros2-arm-teleoperation-suite` | execution, acquisition, Task GT, runtime | pending-chunk、freshness、remote async、authoritative adapter 已实现并有定向测试；node 默认仍为 `legacy`。MuJoCo 已验证有限 authoritative runtime；Isaac learned loop 尚未形成有效 observation/control-state 前置条件。 |
+| `robot-arm-episode-data-lab` | contracts, release, training, evaluation, canonical facts | Mixed Recovery 产出 64 episodes / 14,736 frames，正式训练至 step 7,545；Route A task outcome 为 Reach 1/4、Grasp 0/4、Lift 0/4。 |
+| `ros2-moveit-pybullet-bridge` | supporting replay, risk, diagnostic witness | PolicyRunner 为 replay harness；Risk/HOC 不拥有 Task GT；absolute EEF IK probe 是 diagnostic-only witness。 |
+
+### Current policy conclusion
+
+| Route | Failure class | Current result | What it proves | What it does not prove |
+| --- | --- | --- | --- | --- |
+| **A — Mixed Recovery / MuJoCo** | `POLICY_CAPABILITY_FAILURE` | Reach `1/4`, Grasp `0/4`, Lift `0/4`; gripper minima all `>0.93` | targeted recovery data, immutable release and training pipeline completed; learned policy did not solve stable grasping | Isaac result, physical calibration, real robot or Sim2Real; clean evaluation-to-`007545` attribution while the runtime metadata conflict remains |
+| **B — Dual-camera B / Isaac Stage 5** | historical `EXECUTION_CHAIN_PRECONDITION_BLOCKED`; later bridge closure PASS | original B run had empty telemetry and waited for `/isaac/joint_states`; separate P2 probe later observed raw/canonical/control-state topics and a non-policy command path | the infrastructure prerequisite is now evidenced in a separate run; the old B run remains invalid as a policy sample | that B failed a closed-loop task, that Route A was only an interface problem, or that the policy learned grasping |
+
+Route A evidence residual is tracked in
+[SMOLVLA_MIXED_RECOVERY_PROVENANCE_CORRECTION.md](../SMOLVLA_MIXED_RECOVERY_PROVENANCE_CORRECTION.md).
+`ISAAC_ROS_BRIDGE_EVIDENCE_REQUIRED` passed on 2026-08-21 as a bounded
+non-policy interface closure; evidence is
+[ISAAC_ROS_BRIDGE_EVIDENCE_P2.md](/home/ina/dev/ros2-arm-teleoperation-suite/docs/ISAAC_ROS_BRIDGE_EVIDENCE_P2.md).
+The stop rule remains: do not turn that interface result into a learned-policy
+task rollout or an authorization for any new experiment.
+
+## Historical baseline below
+
+The following 2026-07-27 material is retained for traceability. It must not be used
+as the current route table or to override the snapshot above.
 
 统一一句话主线（2026-07-27 冻结）：
 

@@ -261,8 +261,23 @@ def test_normalize_aggregate_writes_state15_metadata_and_stats(
     root = tmp_path / "aggregate"
     (root / "data" / "chunk-000").mkdir(parents=True)
     (root / "meta" / "episodes" / "chunk-000").mkdir(parents=True)
+    video_dir = root / "videos" / "chunk-000" / "observation.images.scene"
+    video_dir.mkdir(parents=True)
     (root / "meta" / "info.json").write_text(
-        json.dumps({"fps": 10.0, "features": {}}) + "\n", encoding="utf-8"
+        json.dumps(
+            {
+                "fps": 10.0,
+                "features": {
+                    "observation.images.scene": {
+                        "dtype": "video",
+                        "shape": [240, 320, 3],
+                        "names": ["height", "width", "channel"],
+                    }
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
     )
     (root / "meta" / "stats.json").write_text("{}\n", encoding="utf-8")
     rows = 2
@@ -308,6 +323,7 @@ def test_normalize_aggregate_writes_state15_metadata_and_stats(
         ),
         root / "meta" / "episodes" / "chunk-000" / "file-000.parquet",
     )
+    (video_dir / "episode_000000.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
 
     MERGE._normalize_aggregate(
         root, state_contract=MERGE.STATE_CONTRACT_RECOVERY15

@@ -36,7 +36,17 @@ release lock：[manifest.json](../evidence/smolvla_reach_recovery_v1_release_202
 
 ## MuJoCo same-environment closed-loop result
 
-随后使用最终 `007545` checkpoint，在同一 Scene Contract v2、MuJoCo、scene+wrist 双相机和本机 continuous GT evaluator 下，对 P0--P3 各执行 100 actions：
+> **2026-08-21 P0 provenance correction.** The immutable recovery and mixed-release
+> manifests, the final `007545` adapter file, and its static input contract remain
+> independently auditable. However, the final MuJoCo run bundles retain stale
+> checkpoint/release metadata from the older B run (`005460` /
+> `smolvla_wrist_ablation_v1_B`). Until a server-side checkpoint identity can be
+> reconstructed from existing raw logs, these four rollouts are a valid runtime Task
+> GT observation but not an audit-clean attribution to `007545`. This is
+> `EVIDENCE_PROVENANCE_METADATA_CONFLICT`; it does not authorize retraining or a
+> rerun. See [provenance correction](SMOLVLA_MIXED_RECOVERY_PROVENANCE_CORRECTION.md).
+
+报告将下列 rollout 归因于最终 `007545` checkpoint；该归因受上述 provenance residual 限制。在同一 Scene Contract v2、MuJoCo、scene+wrist 双相机和本机 continuous GT evaluator 下，P0--P3 各执行 100 actions：
 
 | case | policy report | GT Reach | GT Grasp | GT Lift | Stage A | measured gripper min |
 | --- | --- | ---: | ---: | ---: | --- | ---: |
@@ -51,7 +61,7 @@ release lock：[manifest.json](../evidence/smolvla_reach_recovery_v1_release_202
 
 本轮为采集稳定性新增并验证了两个运行时门禁修复：当前 launch 日志确认 controller active 的 fallback，以及 `sync_slop=0.12s / sync_queue_size=120`；recovery expert 的 ALIGN 段固定默认 5 秒、末端 XY 门禁仍为 2 cm。相关上游入口为 `scripts/run_mujoco_policy_visited_recovery.sh`。
 
-回归：上游 recovery/runtime 测试 `34 passed`；中游新增 recovery/Scene Contract 测试 `5 passed`；扩展中游合同回归 `194 passed, 1 failed`。唯一失败是既有 train-split materialization 的无视频 fixture 与 video-tree fail-closed 检查冲突，不涉及本轮 recovery 产物；本轮 shell syntax、release lock integrity 和进程清理均 Pass。
+历史回归记录为：上游 recovery/runtime 测试 `34 passed`；中游新增 recovery/Scene Contract 测试 `5 passed`；扩展中游合同回归曾为 `194 passed, 1 failed`。唯一失败是既有 train-split materialization fixture 未构造其声明的 scene video tree，与 fail-closed 合同冲突；不涉及本轮 recovery 产物。该 fixture 已在 P0 收口中修正，相关回归结果以本次提交后的测试输出为准。
 
 下一 Gate：单独授权有界闭环评测；本报告不自动授权 Isaac、扩 seed 或追加训练。
 

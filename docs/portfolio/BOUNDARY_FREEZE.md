@@ -1,4 +1,10 @@
-# 三仓边界冻结（对外口径 · 2026-07-27）
+# 三仓边界冻结（历史快照 · 2026-07-27）
+
+> **Historical / Superseded as Current State.** 本文记录 2026-07-27 的边界
+> 收口决定，不能用作三仓当前事实。2026-08-21 之后的 Mixed Recovery / MuJoCo
+> 与 Dual-camera B / Isaac Stage 5 事实由
+> [THREE_REPO_CANONICAL_FACTS.md](THREE_REPO_CANONICAL_FACTS.md) 唯一维护。
+> 历史内容和证据路径保持不动，避免破坏 provenance。
 
 **状态**：在本文整理完成前，**冻结**新 Gate、新 runtime lane、新 risk 维度、新 dashboard 页面提交。  
 **基线 commit**：`d7ba9d53e9df94c0c4565ba31114cf9b1511a878`（中游 `main`）  

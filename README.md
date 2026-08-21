@@ -2,15 +2,18 @@
 
 [![CI](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/inayina/robot-arm-episode-data-lab/actions/workflows/ci.yml)
 
-**Panda 模仿学习数据管线、策略训练与分层评测**
+**Panda Manipulation Runtime, Data & Validation System 的数据、训练与评测层**
+
+> **Current as of 2026-08-21.** 三仓是一个仿真范围内的 Panda 系统，不是三个
+> 平行项目。当前 learned-policy 结论明确为：Mixed Recovery 的 MuJoCo Task GT 为
+> Reach `1/4`、Grasp `0/4`、Lift `0/4`，策略尚未学会稳定抓取；Dual-camera B 的
+> Isaac 尝试被 ROS observation/control-state 前置条件阻塞，不能当作策略任务失败。
+> 唯一当前事实源见
+> [THREE_REPO_CANONICAL_FACTS.md](docs/portfolio/THREE_REPO_CANONICAL_FACTS.md)。
 
 上游机械臂录下来的 episode，还不能直接拿去训练：字段语义会漂、split 会漏、loss 下降也容易被写成「已经会抓」。本仓把示教收成**有 schema、有版本、有指纹**的训练集，跑 ACT / SmolVLA，再用**分层门禁**分开回答：数据合不合格、离线动作准不准、接口能不能跑、物体有没有被抓起来。
 
 这是三仓机械臂项目的**中游**：不跑 ROS 实时控制，也不在 PyBullet 里执行动作。
-
-![SmolVLA Recovery v3 三后端评测总览](docs/portfolio/smolvla_v3_eval_framework_summary.png)
-
-<p align="center"><sub>同一套报告信封，三列互不替代：离线 Pass、接口 smoke、Isaac 任务真值 Hold。不是任务成功，也不是 Sim2Real。</sub></p>
 
 | Python | PyTorch | LeRobot | ACT | SmolVLA LoRA / PEFT | JSON Schema | SHA256 release |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -86,7 +89,10 @@ bridge_handoff/（JSONL 动作包，不捆绑 PyTorch）
 
 ---
 
-## 数字怎么读（当前结论）
+## 2026-07 历史基线（不作为当前结论）
+
+下列 Recovery v3 / S4 数字保留为历史 evidence。最新 Route A / Route B 见本页顶部、
+[Current Case Studies](docs/portfolio/CURRENT_CASE_STUDIES.md) 与唯一 current authority。
 
 这些数字都有机器可读 JSON，不是口头估计。
 
