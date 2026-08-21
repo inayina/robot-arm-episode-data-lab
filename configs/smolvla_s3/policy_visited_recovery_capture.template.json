@@ -1,0 +1,27 @@
+{
+  "contract_version": "policy_visited_recovery_capture_v1",
+  "simulation_backend": "mujoco",
+  "claims_task_success": false,
+  "expert_source": "human_teleop",
+  "invariant": {
+    "task": "pick up the red box and place it in the left bin",
+    "cameras": ["scene", "wrist"],
+    "state_contract": "observation.state[15]",
+    "action_semantics": "ee_pose_gripper_cmd_v1",
+    "grasp_assist_enabled": false,
+    "object_pose_is_policy_input": false
+  },
+  "policy_rollout": {
+    "evidence_dir": "../../evidence/smolvla_dualcam_timergroup_P0_20260821",
+    "case": "P0",
+    "failure_type": "NO_MEANINGFUL_APPROACH",
+    "failure_onset_action_index": 0,
+    "completed_actions": 100
+  },
+  "episodes": [
+    {
+      "episode_meta": "REPLACE_WITH_RELATIVE_PATH_TO_episode_000000/meta.json",
+      "phase_buckets": ["ALIGN", "DESCEND", "CLOSE", "LIFT"]
+    }
+  ]
+}

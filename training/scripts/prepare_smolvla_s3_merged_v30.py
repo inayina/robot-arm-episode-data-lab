@@ -504,6 +504,16 @@ def _normalize_aggregate(
 
     values = {name: table.column(name).to_pylist() for name in table.column_names}
     policy_state_values, policy_state_dim = _state_values(values, state_contract)
+    language_values = [
+        "pick up the target object" if value is None else str(value)
+        for value in values["language_instruction"]
+    ]
+    task_values = [
+        language if value is None else str(value)
+        for value, language in zip(
+            values["task"], language_values, strict=True
+        )
+    ]
     arrays: dict[str, pa.Array] = {
         "index": pa.array(np.arange(table.num_rows), type=pa.int64()),
         "episode_index": pa.array(episode_index, type=pa.int64()),
@@ -512,9 +522,9 @@ def _normalize_aggregate(
         "task_index": pa.array(values["task_index"], type=pa.int64()),
         "next.done": pa.array(values["next.done"], type=pa.bool_()),
         "next.reward": pa.array(values["next.reward"], type=pa.float32()),
-        "task": pa.array(values["task"], type=pa.string()),
+        "task": pa.array(task_values, type=pa.string()),
         "language_instruction": pa.array(
-            values["language_instruction"], type=pa.string()
+            language_values, type=pa.string()
         ),
         "success": pa.array(values["success"], type=pa.bool_()),
         "safety_estop": pa.array(values["safety_estop"], type=pa.bool_()),
@@ -535,7 +545,10 @@ def _normalize_aggregate(
         "action": _fixed_list(values["action"], 8),
     }
     if "task_phase" in values:
-        arrays["task_phase"] = pa.array(values["task_phase"], type=pa.string())
+        arrays["task_phase"] = pa.array(
+            ["unknown" if value is None else str(value) for value in values["task_phase"]],
+            type=pa.string(),
+        )
     else:
         info["features"].pop("task_phase", None)
     pq.write_table(pa.table(arrays), data_path)

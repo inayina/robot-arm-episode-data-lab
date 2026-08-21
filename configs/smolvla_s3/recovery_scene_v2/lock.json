@@ -1,0 +1,25 @@
+{
+  "claims_task_success": false,
+  "contract_version": "smolvla_recovery_scene_v2",
+  "distractor_policy": "retained_and_fixed_outside_target_approach_zone",
+  "fixed_distractor_xy": {
+    "object_blue_cylinder": [
+      0.55,
+      -0.18
+    ],
+    "object_green_sphere": [
+      0.55,
+      0.18
+    ]
+  },
+  "minimum_pairwise_xy_separation_m": 0.15,
+  "remote_gpu_required_for_config_validation": false,
+  "remote_gpu_required_for_new_policy_traces": true,
+  "sha256": {
+    "P0.yaml": "3282484b9495fb2f2853652205c0a2564b91c4fe9f3571792afce537fc22ef49",
+    "P1.yaml": "4ecfefd5d56f0f7a3581e1216b76f5556dfeed04a8d86b1ae3bccf8ff24ff9ef",
+    "P2.yaml": "feff3f38f73262b1aaa158729b9d07c9a8a743f9f1d82e818acd5ee74ef1e5c9",
+    "P3.yaml": "5d4eb1467258cda6e7a898ef382d8cb3ca13f0eed2879e6effebf571d7859163"
+  },
+  "target_only_ablation_is_release_eligible": false
+}

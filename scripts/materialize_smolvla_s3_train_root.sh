@@ -74,6 +74,12 @@ ARGS=(
   --include-split "$INCLUDE_SPLIT"
   --state-contract "$STATE_CONTRACT"
 )
+if [[ "${S3_SKIP_LEROBOT_LOAD_SMOKE:-0}" == "1" ]]; then
+  ARGS+=(--skip-lerobot-load-smoke)
+fi
+if [[ -n "${S3_VIDEO_BACKEND:-}" ]]; then
+  ARGS+=(--video-backend "$S3_VIDEO_BACKEND")
+fi
 for src in "${SOURCES[@]}"; do
   ARGS+=(--source "$src")
 done
